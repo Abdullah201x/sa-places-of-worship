@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>خارطة الكثافة وفجوات التغطية لأماكن العبادة بالمملكة</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Leaflet Marker Cluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- Sidebar Controls -->
+    <aside id="sidebar">
+      <header>
+        <div class="title-container">
+          <div class="logo-glow"></div>
+          <h1>خارطة أماكن العبادة</h1>
+        </div>
+        <p class="subtitle">عرض تفاعلي للتوزيع الجغرافي ونقاط الكثافة وفجوات التغطية لأماكن العبادة في المملكة العربية السعودية. تم تحليل البيانات خارج نطاق الإنترنت بالاعتماد على قاعدة بيانات OSM للخليج العربي.</p>
+      </header>
+
+      <!-- Mode Toggle -->
+      <div class="control-group">
+        <h2 class="section-title">وضع لوحة التحكم</h2>
+        <div class="mode-toggle-container">
+          <button class="mode-btn active" id="mode-poi" data-mode="poi">كثافة الأماكن</button>
+          <button class="mode-btn" id="mode-gap" data-mode="gap">فجوات التغطية</button>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <section class="stats-grid" aria-label="ملخص الإحصاءات">
+        <div class="stat-card">
+          <span class="stat-val highlight" id="total-count">0</span>
+          <span class="stat-lbl" id="total-count-label">إجمالي الأماكن</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-val" id="visible-count">0</span>
+          <span class="stat-lbl" id="visible-count-label">في النطاق المرئي</span>
+        </div>
+      </section>
+
+      <!-- Gap Info Box -->
+      <div id="gap-info-box" class="info-alert" style="display: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="alert-icon">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>توضح فجوات التغطية الخلايا الجغرافية المأهولة بالسكان (بناءً على شبكة الطرق المكتشفة) والتي تحتوي على <strong>صفر</strong> من المساجد أو أماكن العبادة. تمثل البؤر الحمراء والبرتقالية عجزاً كبيراً في التغطية.</span>
+      </div>
+
+      <!-- Search Section -->
+      <div class="control-group" id="search-section">
+        <h2 class="section-title">البحث عن موقع</h2>
+        <div class="search-wrapper">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="search-input" class="search-input" placeholder="ابحث بالاسم (بالعربية أو الإنجليزية)..." aria-label="البحث عن أماكن العبادة بالاسم">
+        </div>
+      </div>
+
+      <!-- Filters Section -->
+      <div class="control-group" id="filter-section">
+        <h2 class="section-title">تصفية حسب الديانة</h2>
+        <div class="chips-container" id="religion-filters" role="group" aria-label="أزرار اختيار الديانة">
+          <button class="chip active" data-religion="all">الكل</button>
+          <button class="chip" data-religion="muslim">مسلم (المساجد)</button>
+          <button class="chip" data-religion="musalla">مصلى</button>
+          <button class="chip" data-religion="other">أخرى / غير محدد</button>
+        </div>
+      </div>
+
+      <!-- Heatmap Controls -->
+      <div class="control-group">
+        <h2 class="section-title">إعدادات الخارطة الحرارية</h2>
+        <div class="slider-container">
+          <div class="slider-labels">
+            <span>نصف قطر الانتشار</span>
+            <span id="radius-val">25px</span>
+          </div>
+          <input type="range" id="slider-radius" class="slider" min="5" max="60" value="25" aria-label="نصف قطر الانتشار">
+        </div>
+        <br>
+        <div class="slider-container">
+          <div class="slider-labels">
+            <span>مستوى التنعيم (التغبيش)</span>
+            <span id="blur-val">15px</span>
+          </div>
+          <input type="range" id="slider-blur" class="slider" min="5" max="40" value="15" aria-label="مستوى التنعيم">
+        </div>
+      </div>
+
+      <!-- Detail Card (populated on point click) -->
+      <section id="details-panel" aria-label="تفاصيل الموقع المحدد">
+        <h2 class="section-title">تفاصيل الموقع</h2>
+        <div class="details-card">
+          <div class="details-title-ar" id="details-name-ar">اسم المسجد</div>
+          <div class="details-title-en" id="details-name-en">Mosque Name</div>
+          
+          <div class="details-row">
+            <span class="details-label">الديانة</span>
+            <span class="details-val accent" id="details-religion">مسلم</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">المذهب / الطائفة</span>
+            <span class="details-val" id="details-denom">سني</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">المدينة</span>
+            <span class="details-val" id="details-city">الرياض</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">الإحداثيات</span>
+            <span class="details-val" id="details-coords">24.7136, 46.6753</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">معرّف الخريطة (OSM ID)</span>
+            <span class="details-val" id="details-osm-id">12345678</span>
+          </div>
+        </div>
+      </section>
+    </aside>
+    
+    <!-- Map Container -->
+    <main id="map" aria-label="الخارطة التفاعلية"></main>
+
+    <!-- Loading / Error Overlay -->
+    <div id="loading-overlay" role="status" aria-live="polite">
+      <div class="loading-box">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <p id="loading-text">جارٍ تحميل بيانات الخريطة...</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Leaflet Heatmap Plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  
+  <!-- Leaflet Marker Cluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+  
+  <!-- App JS -->
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Large OSM source extract (download separately)
+*.osm.pbf
+
+# Generated data (rebuild via the Python pipeline)
+sa_boundary.geojson
+
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
