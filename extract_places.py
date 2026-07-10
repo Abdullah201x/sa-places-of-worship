@@ -15,7 +15,8 @@ class PlacesOfWorshipExtractor(osmium.SimpleHandler):
         self.features = []
 
     def node(self, n):
-        if 'amenity' in n.tags and n.tags['amenity'] == 'place_of_worship':
+        if ('amenity' in n.tags and n.tags['amenity'] in ('place_of_worship', 'mosque')) or \
+           ('building' in n.tags and n.tags['building'] == 'mosque'):
             # Check coordinates
             try:
                 lon, lat = n.location.lon, n.location.lat
@@ -26,7 +27,8 @@ class PlacesOfWorshipExtractor(osmium.SimpleHandler):
                 pass
 
     def way(self, w):
-        if 'amenity' in w.tags and w.tags['amenity'] == 'place_of_worship':
+        if ('amenity' in w.tags and w.tags['amenity'] in ('place_of_worship', 'mosque')) or \
+           ('building' in w.tags and w.tags['building'] == 'mosque'):
             # Calculate centroid
             try:
                 lats = []
@@ -45,15 +47,26 @@ class PlacesOfWorshipExtractor(osmium.SimpleHandler):
                 pass
 
     def _create_feature(self, osm_id, lat, lon, tags, geom_type, osm_obj):
+        religion = tags.get("religion", "unknown")
+        if religion == "unknown":
+            if tags.get("building") == "mosque" or tags.get("amenity") == "mosque":
+                religion = "muslim"
+
         properties = {
             "osm_id": osm_id,
             "geom_type": geom_type,
             "name": tags.get("name", ""),
             "name_en": tags.get("name:en", ""),
-            "religion": tags.get("religion", "unknown"),
+            "name_original": tags.get("name", ""),
+            "name_en_original": tags.get("name:en", ""),
+            "religion": religion,
             "denomination": tags.get("denomination", "unknown"),
             "building": tags.get("building", ""),
+            "amenity": tags.get("amenity", ""),
             "place_of_worship": tags.get("place_of_worship", ""),
+            "wheelchair": tags.get("wheelchair", ""),
+            "female": tags.get("female", tags.get("worship:female", tags.get("female_prayer_space", ""))),
+            "capacity": tags.get("capacity", ""),
             "addr_city": tags.get("addr:city", ""),
             "last_edited_by": osm_obj.user,
             "user_id": osm_obj.uid,

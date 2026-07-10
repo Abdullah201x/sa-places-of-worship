@@ -29,12 +29,23 @@
         <p class="subtitle">عرض تفاعلي للتوزيع الجغرافي ونقاط الكثافة وفجوات التغطية لأماكن العبادة في المملكة العربية السعودية. تم تحليل البيانات خارج نطاق الإنترنت بالاعتماد على قاعدة بيانات OSM للخليج العربي.</p>
       </header>
 
+      <!-- User Profile Widget (OSM Auth) -->
+      <div id="user-profile-widget" class="user-profile-card" style="display: none;">
+        <div class="user-avatar" id="user-avatar-lbl">👤</div>
+        <div class="user-info">
+          <span class="user-status-text">مرحباً، <strong id="user-display-name">-</strong></span>
+          <span class="user-role-text">مساهم في OpenStreetMap</span>
+        </div>
+        <button id="btn-osm-logout" class="osm-logout-btn" title="تسجيل الخروج">تسجيل خروج</button>
+      </div>
+
       <!-- Mode Toggle -->
       <div class="control-group">
         <h2 class="section-title">وضع لوحة التحكم</h2>
         <div class="mode-toggle-container">
           <button class="mode-btn active" id="mode-poi" data-mode="poi">كثافة الأماكن</button>
           <button class="mode-btn" id="mode-gap" data-mode="gap">فجوات التغطية</button>
+          <button class="mode-btn" id="mode-improve" data-mode="improve">تحسين البيانات</button>
         </div>
       </div>
 
@@ -60,6 +71,29 @@
         <span>توضح فجوات التغطية الخلايا الجغرافية المأهولة بالسكان (بناءً على شبكة الطرق المكتشفة) والتي تحتوي على <strong>صفر</strong> من المساجد أو أماكن العبادة. تمثل البؤر الحمراء والبرتقالية عجزاً كبيراً في التغطية.</span>
       </div>
 
+      <!-- Base Map Selection -->
+      <div class="control-group" id="basemap-section">
+        <h2 class="section-title">خارطة الأساس</h2>
+        <div class="chips-container" id="basemap-filters" role="group" aria-label="أزرار اختيار خارطة الأساس">
+          <button class="chip active" data-basemap="dark">داكن (Black)</button>
+          <button class="chip" data-basemap="satellite">أقمار صناعية (Esri)</button>
+          <button class="chip" data-basemap="light">فاتح (Light)</button>
+          <button class="chip" data-basemap="streets">شوارع (Streets)</button>
+        </div>
+      </div>
+
+      <!-- Qibla Compass Toggle -->
+      <div class="control-group" id="compass-toggle-section">
+        <h2 class="section-title">مؤشر اتجاه القبلة</h2>
+        <div class="switch-control-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="qibla-compass-toggle">
+            <span class="slider-switch round"></span>
+          </label>
+          <span class="switch-label" id="qibla-switch-label">عرض مؤشر القبلة في منتصف الخريطة</span>
+        </div>
+      </div>
+
       <!-- Search Section -->
       <div class="control-group" id="search-section">
         <h2 class="section-title">البحث عن موقع</h2>
@@ -80,6 +114,19 @@
           <button class="chip" data-religion="muslim">مسلم (المساجد)</button>
           <button class="chip" data-religion="musalla">مصلى</button>
           <button class="chip" data-religion="other">أخرى / غير محدد</button>
+        </div>
+      </div>
+
+      <!-- Quality Issues Filters (Improvement Mode Only) -->
+      <div class="control-group" id="improve-filter-section" style="display: none;">
+        <h2 class="section-title">نوع مشكلة جودة البيانات</h2>
+        <div class="chips-container" id="improve-filters" role="group" aria-label="أزرار اختيار نوع مشكلة جودة البيانات">
+          <button class="chip active" data-improve="all">جميع المشاكل</button>
+          <button class="chip" data-improve="missing_amenity">مسجد بدون تصنيف دار عبادة</button>
+          <button class="chip" data-improve="missing_name">بلا اسم محدد</button>
+          <button class="chip" data-improve="missing_name_en">الاسم بالإنجليزية مفقود</button>
+          <button class="chip" data-improve="missing_denom">المذهب غير محدد</button>
+          <button class="chip" data-improve="missing_wheelchair">مفقود الكراسي المتحركة</button>
         </div>
       </div>
 
@@ -166,12 +213,110 @@
             <span class="details-label">تاريخ آخر تعديل</span>
             <span class="details-val" id="details-edited-at">-</span>
           </div>
+
+          <!-- Quality Issues Warning Box -->
+          <div id="details-quality-issues" class="quality-issues-box">
+            <h3 class="quality-issues-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <span>مشاكل جودة البيانات المكتشفة</span>
+            </h3>
+            <ul id="details-issues-list" class="issues-list">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+          
+          <!-- Mapper Editing Tools -->
+          <div id="details-mapper-tools" class="mapper-tools-box">
+            <h3 class="mapper-tools-title">🛠️ أدوات تعديل ومساهمة الخرائط</h3>
+            <div class="mapper-buttons">
+              <a id="btn-edit-osm" class="mapper-btn id-editor" href="#" target="_blank" rel="noopener noreferrer">تعديل عبر iD Editor (ويب)</a>
+              <button id="btn-edit-josm" class="mapper-btn josm-editor">تعديل عبر JOSM (تحكم عن بعد)</button>
+              <a id="btn-view-osm" class="mapper-btn osm-site" href="#" target="_blank" rel="noopener noreferrer">عرض المعلم على OSM</a>
+            </div>
+          </div>
         </div>
       </section>
     </aside>
     
     <!-- Map Container -->
     <main id="map" aria-label="الخارطة التفاعلية"></main>
+    
+    <!-- Qibla Compass Center Overlay -->
+    <div id="qibla-compass" class="qibla-compass hidden" aria-hidden="true">
+      <div class="compass-needle-container">
+        <svg class="compass-needle-svg" viewBox="0 0 40 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- 3D Beveled Qibla/Kaaba Gold Pointer -->
+          <path d="M20 10 L10 50 L20 44 Z" fill="url(#qibla-needle-gold-light)" />
+          <path d="M20 10 L30 50 L20 44 Z" fill="url(#qibla-needle-gold-dark)" />
+          
+          <!-- 3D Beveled Counterweight Blue Pointer -->
+          <path d="M20 90 L12 50 L20 56 Z" fill="url(#qibla-needle-cyan-light)" opacity="0.75" />
+          <path d="M20 90 L28 50 L20 56 Z" fill="url(#qibla-needle-cyan-dark)" opacity="0.75" />
+          
+          <!-- Center Pivot -->
+          <circle cx="20" cy="50" r="4.5" fill="#ffffff" stroke="#ffb03a" stroke-width="1.5" />
+          <circle cx="20" cy="50" r="1.5" fill="#ffb03a" />
+          
+          <defs>
+            <linearGradient id="qibla-needle-gold-light" x1="15" y1="10" x2="20" y2="44" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#fff0aa" />
+              <stop offset="100%" stop-color="#ffd700" />
+            </linearGradient>
+            <linearGradient id="qibla-needle-gold-dark" x1="25" y1="10" x2="20" y2="44" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#ffd700" />
+              <stop offset="100%" stop-color="#c58b00" />
+            </linearGradient>
+            <linearGradient id="qibla-needle-cyan-light" x1="16" y1="50" x2="20" y2="90" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#8cffff" />
+              <stop offset="100%" stop-color="#00d2df" />
+            </linearGradient>
+            <linearGradient id="qibla-needle-cyan-dark" x1="24" y1="50" x2="20" y2="90" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#00d2df" />
+              <stop offset="100%" stop-color="#008ca0" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <!-- OSM Authentication Overlay -->
+    <div id="osm-auth-overlay" class="auth-overlay hidden">
+      <div class="auth-card">
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">🔐</div>
+          <h2>التحقق من الهوية (OSM Auth)</h2>
+          <p>تحتوي قاعدة البيانات على بيانات مساهمي الخرائط (GDPR). بموجب تراخيص Geofabrik، يقتصر عرض هذه البيانات المفصلة على مساهمي OpenStreetMap فقط.</p>
+        </div>
+        
+        <div class="auth-body">
+          <div class="client-id-config">
+            <label for="osm-client-id">معرّف العميل لتطبيق OAuth 2.0:</label>
+            <input type="text" id="osm-client-id" class="auth-input" placeholder="أدخل Client ID الخاص بك..." />
+            <p class="input-help">يرجى تسجيل تطبيق ويب عام (Public Web App) في إعدادات حسابك على OSM بالصلاحية <code>read_prefs</code> ووضع عنوان العودة (Redirect URI) مساوياً لعنوان موقعك الحالي.</p>
+          </div>
+
+          <button id="btn-osm-login" class="auth-submit-btn">
+            <span>تسجيل الدخول باستخدام حساب OSM</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h6v6"></path>
+              <path d="M10 14L21 3"></path>
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            </svg>
+          </button>
+
+
+        </div>
+        
+        <div class="auth-footer">
+          <span>مصدر البيانات: Geofabrik / OpenStreetMap contributors</span>
+        </div>
+      </div>
+    </div>
 
     <!-- Loading / Error Overlay -->
     <div id="loading-overlay" role="status" aria-live="polite">
@@ -185,6 +330,9 @@
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Leaflet Boundary Canvas Plugin -->
+  <script src="https://cdn.jsdelivr.net/gh/aparshin/leaflet-boundary-canvas@master/src/BoundaryCanvas.js"></script>
   
   <!-- Leaflet Heatmap Plugin -->
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
