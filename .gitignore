@@ -2,7 +2,7 @@
 *.osm.pbf
 
 # Generated data (rebuild via the Python pipeline)
-sa_boundary.geojson
+# sa_boundary.geojson
 
 
 # Python
