@@ -83,23 +83,43 @@
         </div>
       </div>
 
+      <!-- Date Filter Section -->
+      <div class="control-group" id="date-filter-section">
+        <h2 class="section-title">تصفية حسب تاريخ آخر تعديل</h2>
+        <div class="slider-container">
+          <div class="slider-labels">
+            <span>من</span>
+            <span id="date-from-val">-</span>
+          </div>
+          <input type="range" id="slider-date-from" class="slider" min="0" max="1" value="0" aria-label="من تاريخ آخر تعديل">
+        </div>
+        <br>
+        <div class="slider-container">
+          <div class="slider-labels">
+            <span>إلى</span>
+            <span id="date-to-val">-</span>
+          </div>
+          <input type="range" id="slider-date-to" class="slider" min="0" max="1" value="1" aria-label="إلى تاريخ آخر تعديل">
+        </div>
+      </div>
+
       <!-- Heatmap Controls -->
       <div class="control-group">
         <h2 class="section-title">إعدادات الخارطة الحرارية</h2>
         <div class="slider-container">
           <div class="slider-labels">
             <span>نصف قطر الانتشار</span>
-            <span id="radius-val">25px</span>
+            <span id="radius-val">10px</span>
           </div>
-          <input type="range" id="slider-radius" class="slider" min="5" max="60" value="25" aria-label="نصف قطر الانتشار">
+          <input type="range" id="slider-radius" class="slider" min="5" max="60" value="10" aria-label="نصف قطر الانتشار">
         </div>
         <br>
         <div class="slider-container">
           <div class="slider-labels">
             <span>مستوى التنعيم (التغبيش)</span>
-            <span id="blur-val">15px</span>
+            <span id="blur-val">10px</span>
           </div>
-          <input type="range" id="slider-blur" class="slider" min="5" max="40" value="15" aria-label="مستوى التنعيم">
+          <input type="range" id="slider-blur" class="slider" min="5" max="40" value="10" aria-label="مستوى التنعيم">
         </div>
       </div>
 

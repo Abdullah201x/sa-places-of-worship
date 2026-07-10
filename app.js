@@ -12,6 +12,10 @@ let filteredGaps = [];
 let currentMode = 'poi'; // 'poi' or 'gap'
 let currentReligionFilter = 'all';
 let currentSearchQuery = '';
+let currentDateFrom = null; // day-index (see dayIndex()), set once data loads
+let currentDateTo = null;
+let DATA_MIN_DAY = 0;
+let DATA_MAX_DAY = 1;
 
 // Map configuration
 const MAP_INITIAL_CENTER = [24.0, 45.0]; // Centered on Saudi Arabia
@@ -50,6 +54,16 @@ function debounce(fn, ms) {
     clearTimeout(timer);
     timer = setTimeout(() => fn.apply(this, args), ms);
   };
+}
+
+// Convert an ISO edited_at timestamp to a whole-day index for slider bounds/comparison.
+function dayIndex(isoString) {
+  return Math.floor(new Date(isoString).getTime() / 86400000);
+}
+
+// Render a day-index back to a localized short date for slider labels.
+function formatDay(day) {
+  return new Date(day * 86400000).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 // Escape user-supplied text (OSM names) before injecting into popup HTML.
@@ -144,6 +158,14 @@ function loadData() {
     allGaps = gapData.features;
     filteredGaps = [...allGaps];
 
+    // Derive the date-slider bounds from the real edited_at range in the data.
+    const days = allPlaces.map(f => dayIndex(f.properties.edited_at));
+    DATA_MIN_DAY = Math.min(...days);
+    DATA_MAX_DAY = Math.max(...days);
+    currentDateFrom = DATA_MIN_DAY;
+    currentDateTo = DATA_MAX_DAY;
+    initDateSliders();
+
     // Initial display
     updateDashboardUI();
     hideLoadingOverlay();
@@ -152,6 +174,22 @@ function loadData() {
     console.error('Error loading GeoJSON datasets:', error);
     showLoadingError('فشل في تحميل بيانات الخريطة. يرجى التأكد من تشغيل خادم محلي (مثل: python -m http.server) وفتح الصفحة عبر http://');
   });
+}
+
+// Set the date-range slider bounds/values to the real data span and update their labels.
+function initDateSliders() {
+  const fromSlider = document.getElementById('slider-date-from');
+  const toSlider = document.getElementById('slider-date-to');
+
+  [fromSlider, toSlider].forEach(slider => {
+    slider.min = DATA_MIN_DAY;
+    slider.max = DATA_MAX_DAY;
+  });
+  fromSlider.value = DATA_MIN_DAY;
+  toSlider.value = DATA_MAX_DAY;
+
+  document.getElementById('date-from-val').innerText = formatDay(DATA_MIN_DAY);
+  document.getElementById('date-to-val').innerText = formatDay(DATA_MAX_DAY);
 }
 
 // Hide the loading overlay once data has rendered.
@@ -332,6 +370,7 @@ function updateDashboardUI() {
   const visibleCountLabel = document.getElementById('visible-count-label');
   const searchSection = document.getElementById('search-section');
   const filterSection = document.getElementById('filter-section');
+  const dateFilterSection = document.getElementById('date-filter-section');
   const detailsPanel = document.getElementById('details-panel');
   const gapInfoBox = document.getElementById('gap-info-box');
 
@@ -341,6 +380,7 @@ function updateDashboardUI() {
     visibleCountLabel.innerText = "في النطاق المرئي";
     searchSection.style.display = 'block';
     filterSection.style.display = 'block';
+    dateFilterSection.style.display = 'block';
     gapInfoBox.style.display = 'none';
   } else {
     // Adjust layout for Gap Mode
@@ -348,6 +388,7 @@ function updateDashboardUI() {
     visibleCountLabel.innerText = "الفجوات في النطاق";
     searchSection.style.display = 'none';
     filterSection.style.display = 'none';
+    dateFilterSection.style.display = 'none'; // Gap grid cells have no edited_at metadata
     detailsPanel.style.display = 'none'; // Grid gaps do not have individual clickable POI cards
     gapInfoBox.style.display = 'flex';
   }
@@ -419,14 +460,21 @@ function filterData() {
       const nameEn = (props.name_en || '').toLowerCase();
       const city = (props.addr_city || '').toLowerCase();
       const id = String(props.osm_id);
-      
-      matchesSearch = name.includes(searchInput) || 
-                      nameEn.includes(searchInput) || 
+
+      matchesSearch = name.includes(searchInput) ||
+                      nameEn.includes(searchInput) ||
                       city.includes(searchInput) ||
                       id.includes(searchInput);
     }
 
-    return matchesReligion && matchesSearch;
+    // 3. Check last-modified date range
+    let matchesDate = true;
+    if (currentDateFrom !== null && currentDateTo !== null) {
+      const day = dayIndex(props.edited_at);
+      matchesDate = day >= currentDateFrom && day <= currentDateTo;
+    }
+
+    return matchesReligion && matchesSearch && matchesDate;
   });
 
   updateMapLayers();
@@ -471,7 +519,37 @@ function setupEventListeners() {
     debouncedFilter();
   });
 
-  // 4. Heatmap Radius Control
+  // 4. Last-Modified Date Range Sliders (POI Mode Only)
+  // filterData() rebuilds every marker, so debounce like the search box.
+  const dateFromSlider = document.getElementById('slider-date-from');
+  const dateToSlider = document.getElementById('slider-date-to');
+  const dateFromVal = document.getElementById('date-from-val');
+  const dateToVal = document.getElementById('date-to-val');
+  const debouncedDateFilter = debounce(filterData, 250);
+
+  dateFromSlider.addEventListener('input', (e) => {
+    let val = parseInt(e.target.value, 10);
+    if (val > currentDateTo) {
+      val = currentDateTo;
+      e.target.value = val;
+    }
+    currentDateFrom = val;
+    dateFromVal.innerText = formatDay(val);
+    debouncedDateFilter();
+  });
+
+  dateToSlider.addEventListener('input', (e) => {
+    let val = parseInt(e.target.value, 10);
+    if (val < currentDateFrom) {
+      val = currentDateFrom;
+      e.target.value = val;
+    }
+    currentDateTo = val;
+    dateToVal.innerText = formatDay(val);
+    debouncedDateFilter();
+  });
+
+  // 5. Heatmap Radius Control
   const radiusSlider = document.getElementById('slider-radius');
   const radiusVal = document.getElementById('radius-val');
   radiusSlider.addEventListener('input', (e) => {
@@ -482,7 +560,7 @@ function setupEventListeners() {
     }
   });
 
-  // 5. Heatmap Blur Control
+  // 6. Heatmap Blur Control
   const blurSlider = document.getElementById('slider-blur');
   const blurVal = document.getElementById('blur-val');
   blurSlider.addEventListener('input', (e) => {
