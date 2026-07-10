@@ -43,8 +43,13 @@ python calculate_gaps.py          # -> worship_gaps_sa.geojson
 Notes:
 - The Saudi Arabia boundary uses OSM relation id **307584**
   (`extract_sa_boundary.py`).
-- The gap grid uses ~0.02° cells (~2.2 km) and treats a cell as a "gap" when it
-  has enough drivable-road segments but no places of worship
+- The gap grid uses ~0.004° cells (~440 m, close to typical neighborhood
+  mosque spacing). A cell with enough drivable-road segments qualifies as a
+  candidate, and is flagged as a "gap" based on its actual distance to the
+  nearest place of worship (via a `shapely` STRtree nearest-neighbor query),
+  not just whether one exists somewhere in the same cell. Cells within
+  walking distance (750 m) of a mosque are excluded; gap intensity scales
+  with both road density and how far the nearest mosque actually is
   (`calculate_gaps.py`).
 
 ## Running the front-end

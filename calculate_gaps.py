@@ -4,7 +4,9 @@ import json
 import sys
 import time
 import math
+import shapely
 from shapely.geometry import shape, Point
+from shapely.strtree import STRtree
 
 # Resolve all paths relative to this script so it runs on any machine.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -73,68 +75,99 @@ def main():
     extractor.apply_file(pbf_path, locations=True)
     print(f"Extracted {len(extractor.points)} road segments inside Saudi Arabia in {time.time() - start_time:.2f} seconds.")
 
-    # 4. Map both datasets to a 2D coordinate grid
-    # Grid size in degrees (~0.02 deg is approx 2.2 km)
-    GRID_SIZE = 0.02
-    grid = {}
+    # 4. Map roads to a 2D coordinate grid
+    # Grid size in degrees (~0.004 deg is approx 440 m, close to typical
+    # neighborhood mosque spacing) so a cell no longer spans both
+    # "next to a mosque" and "far from one".
+    GRID_SIZE = 0.004
+    MIN_ROADS_PER_CELL = 2
+    MIN_GAP_DISTANCE_M = 750   # walkable distance; below this, not a gap
+    MAX_GAP_SCORE_DISTANCE_M = 3000
 
-    print("Mapping places of worship to grid...")
-    for f in worship_features:
-        coords = f["geometry"]["coordinates"]
-        lon, lat = coords[0], coords[1]
-        
-        grid_x = int(lon / GRID_SIZE)
-        grid_y = int(lat / GRID_SIZE)
-        key = (grid_x, grid_y)
-        
-        if key not in grid:
-            grid[key] = {"res_count": 0, "worship_count": 0}
-        grid[key]["worship_count"] += 1
+    # Equirectangular scaling around KSA's ~24 deg N latitude, sufficient for
+    # local nearest-neighbor distance (not a true projection).
+    REF_LAT_RAD = math.radians(24.0)
+    M_PER_DEG_LAT = 110_574.0
+    M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
+
+    print("Indexing places of worship for nearest-distance queries...")
+    worship_tree = STRtree([
+        Point(f["geometry"]["coordinates"][0] * M_PER_DEG_LON,
+              f["geometry"]["coordinates"][1] * M_PER_DEG_LAT)
+        for f in worship_features
+    ])
 
     print("Mapping roads to grid...")
+    grid = {}
     for lon, lat in extractor.points:
         grid_x = int(lon / GRID_SIZE)
         grid_y = int(lat / GRID_SIZE)
         key = (grid_x, grid_y)
-        
-        if key not in grid:
-            grid[key] = {"res_count": 0, "worship_count": 0}
-        grid[key]["res_count"] += 1
 
-    # 5. Identify coverage gaps (road count > 0 and worship count == 0)
+        cell = grid.setdefault(key, {"res_count": 0, "sum_lon": 0.0, "sum_lat": 0.0})
+        cell["res_count"] += 1
+        cell["sum_lon"] += lon
+        cell["sum_lat"] += lat
+
+    # 5. Identify coverage gaps by actual distance to the nearest place of worship
     print("Computing coverage gaps...")
+    candidate_keys = []
+    candidate_points = []      # (lon, lat) in degrees, for output/containment
+    candidate_points_m = []    # projected meters, for nearest-distance query
+    candidate_res = []
+
+    for key, cell in grid.items():
+        res_count = cell["res_count"]
+        if res_count < MIN_ROADS_PER_CELL:
+            continue
+
+        rep_lon = cell["sum_lon"] / res_count
+        rep_lat = cell["sum_lat"] / res_count
+
+        candidate_keys.append(key)
+        candidate_points.append((rep_lon, rep_lat))
+        candidate_points_m.append(Point(rep_lon * M_PER_DEG_LON, rep_lat * M_PER_DEG_LAT))
+        candidate_res.append(res_count)
+
     gap_features = []
-    
-    for key, counts in grid.items():
-        res_count = counts["res_count"]
-        worship_count = counts["worship_count"]
-        
-        # A gap is defined as an inhabited cell with zero places of worship
-        # Minimum threshold of 2 road segments to ensure it represents actual infrastructure
-        if res_count >= 2 and worship_count == 0:
-            grid_x, grid_y = key
-            # Cell center coordinates
-            cell_lon = (grid_x + 0.5) * GRID_SIZE
-            cell_lat = (grid_y + 0.5) * GRID_SIZE
-            
-            # Verify cell center is inside Saudi Arabia
-            cell_pt = Point(cell_lon, cell_lat)
-            if boundary_poly.contains(cell_pt):
-                # Calculate gap intensity score based on log of road density
-                gap_score = 1.0 + math.log(res_count)
-                
-                gap_features.append({
-                    "type": "Feature",
-                    "properties": {
-                        "grid_id": f"{grid_x}_{grid_y}",
-                        "roads_count": res_count,
-                        "gap_score": round(gap_score, 3)
-                    },
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [cell_lon, cell_lat]
-                    }
-                })
+    if candidate_points_m:
+        shapely.prepare(boundary_poly)
+        _, distances = worship_tree.query_nearest(
+            candidate_points_m, return_distance=True, all_matches=False
+        )
+        inside_mask = shapely.contains(
+            boundary_poly, [Point(lo, la) for lo, la in candidate_points]
+        )
+
+        for i, key in enumerate(candidate_keys):
+            if not inside_mask[i]:
+                continue
+
+            distance_m = distances[i]
+            if distance_m < MIN_GAP_DISTANCE_M:
+                continue  # close enough to a mosque -> not a gap
+
+            res_count = candidate_res[i]
+            rep_lon, rep_lat = candidate_points[i]
+
+            # Gap intensity blends road density (as before) with how far the
+            # nearest mosque actually is, so a gap right next to a mosque in
+            # the same coarse area no longer masks a genuinely underserved spot.
+            distance_factor = min(distance_m, MAX_GAP_SCORE_DISTANCE_M) / MIN_GAP_DISTANCE_M
+            gap_score = (1.0 + math.log(res_count)) * distance_factor
+
+            gap_features.append({
+                "type": "Feature",
+                "properties": {
+                    "grid_id": f"{key[0]}_{key[1]}",
+                    "roads_count": res_count,
+                    "gap_score": round(gap_score, 3)
+                },
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [round(rep_lon, 6), round(rep_lat, 6)]
+                }
+            })
 
     print(f"Detected {len(gap_features)} coverage gap areas across Saudi Arabia.")
 
