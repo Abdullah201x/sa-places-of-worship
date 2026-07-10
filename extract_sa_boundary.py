@@ -39,7 +39,7 @@ class WayCoordinateCollector(osmium.SimpleHandler):
                 pass
 
 def main():
-    pbf_path = os.path.join(BASE_DIR, "gcc-states-260707.osm.pbf")
+    pbf_path = os.path.join(BASE_DIR, "gcc-states-260709-internal.osm.pbf")
     output_path = os.path.join(BASE_DIR, "sa_boundary.geojson")
     target_rel_id = 307584
 

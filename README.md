@@ -27,7 +27,7 @@ processing happens ahead of time in Python from an OpenStreetMap `.pbf` extract.
   ```
 
 - An OSM `.pbf` extract covering Saudi Arabia, saved in this folder as
-  `gcc-states-260707.osm.pbf` (e.g. a GCC-states extract from Geofabrik).
+  `gcc-states-260709-internal.osm.pbf` (e.g. a GCC-states extract from Geofabrik).
 
 ## Data pipeline
 

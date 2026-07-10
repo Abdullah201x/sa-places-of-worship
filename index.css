@@ -391,6 +391,15 @@ h1 {
   color: var(--color-accent);
 }
 
+.details-link {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.details-link:hover {
+  text-decoration: underline;
+}
+
 /* Custom Zoom Controls */
 .leaflet-control-zoom {
   border: 1px solid var(--panel-border) !important;

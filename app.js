@@ -310,6 +310,20 @@ function showDetails(props, lat, lon) {
   document.getElementById('details-city').innerText = props.addr_city !== '' ? props.addr_city : 'المملكة العربية السعودية';
   document.getElementById('details-coords').innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
   document.getElementById('details-osm-id').innerText = props.osm_id;
+
+  const userLink = document.getElementById('details-user');
+  userLink.innerText = props.last_edited_by || 'مجهول';
+  userLink.href = props.last_edited_by ? `https://www.openstreetmap.org/user/${encodeURIComponent(props.last_edited_by)}` : '#';
+
+  document.getElementById('details-uid').innerText = props.user_id ?? '-';
+
+  const changesetLink = document.getElementById('details-changeset');
+  changesetLink.innerText = props.changeset_id ?? '-';
+  changesetLink.href = props.changeset_id ? `https://www.openstreetmap.org/changeset/${props.changeset_id}` : '#';
+
+  document.getElementById('details-edited-at').innerText = props.edited_at
+    ? new Date(props.edited_at).toLocaleString('ar-SA')
+    : '-';
 }
 
 // Update UI panel labels and counts depending on selected Mode

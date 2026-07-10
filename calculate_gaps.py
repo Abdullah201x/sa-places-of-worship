@@ -41,7 +41,7 @@ class DrivableRoadExtractor(osmium.SimpleHandler):
                     pass
 
 def main():
-    pbf_path = os.path.join(BASE_DIR, "gcc-states-260707.osm.pbf")
+    pbf_path = os.path.join(BASE_DIR, "gcc-states-260709-internal.osm.pbf")
     boundary_path = os.path.join(BASE_DIR, "sa_boundary.geojson")
     worship_path = os.path.join(BASE_DIR, "places_of_worship_sa.geojson")
     output_path = os.path.join(BASE_DIR, "worship_gaps_sa.geojson")
