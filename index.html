@@ -295,9 +295,28 @@
         
         <div class="auth-body">
           <div class="client-id-config">
-            <label for="osm-client-id">معرّف العميل لتطبيق OAuth 2.0:</label>
+            <label for="osm-environment">بيئة العمل (OpenStreetMap Environment):</label>
+            <select id="osm-environment" class="auth-input" style="width: 100%; text-align: right; text-align-last: right; padding-right: 12px; font-family: var(--font-body); cursor: pointer;">
+              <option value="production" style="background: #12141d; color: #fff;">بيئة الإنتاج (Production - openstreetmap.org)</option>
+              <option value="dev" style="background: #12141d; color: #fff;">بيئة التطوير (Dev - apis.dev.openstreetmap.org)</option>
+            </select>
+          </div>
+
+          <div class="client-id-config">
+            <label for="osm-client-id">معرّف العميل (Client ID):</label>
             <input type="text" id="osm-client-id" class="auth-input" placeholder="أدخل Client ID الخاص بك..." />
-            <p class="input-help">يرجى تسجيل تطبيق ويب عام (Public Web App) في إعدادات حسابك على OSM بالصلاحية <code>read_prefs</code> ووضع عنوان العودة (Redirect URI) مساوياً لعنوان موقعك الحالي.</p>
+          </div>
+
+          <div class="client-id-config">
+            <label for="osm-client-secret">الرمز السري للعميل (Client Secret - اختياري):</label>
+            <input type="password" id="osm-client-secret" class="auth-input" placeholder="أدخل Client Secret (إذا كان التطبيق سرياً)..." />
+            <p class="input-help">اتركه فارغاً إذا قمت بإلغاء تحديد خيار "Confidential application" أثناء تسجيل التطبيق.</p>
+          </div>
+
+          <div class="client-id-config" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); padding: 10px 14px; border-radius: 12px; gap: 6px;">
+            <span style="font-family: var(--font-body); font-size: 11px; color: var(--color-text-muted);">عنوان العودة المطلوب (Redirect URI):</span>
+            <div id="osm-redirect-uri-display" style="font-family: monospace; font-size: 11.5px; color: var(--color-primary); user-select: all; text-align: left; direction: ltr; overflow-x: auto; white-space: nowrap; padding-bottom: 2px;">loading...</div>
+            <p class="input-help">يجب تطابق هذا العنوان تماماً مع إعدادات التطبيق في OpenStreetMap.</p>
           </div>
 
           <button id="btn-osm-login" class="auth-submit-btn">

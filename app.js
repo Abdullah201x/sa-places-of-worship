@@ -5,12 +5,25 @@ let basemaps = {};
 let currentBasemap = null;
 
 // OSM OAuth 2.0 State Variables
+let OSM_ENVIRONMENT = localStorage.getItem('osm_oauth_environment') || 'production';
 let OSM_CLIENT_ID = localStorage.getItem('osm_oauth_client_id') || '';
+let OSM_CLIENT_SECRET = localStorage.getItem('osm_oauth_client_secret') || '';
 // Automatically resolve Redirect URI based on the current window location (without parameters)
 const OSM_REDIRECT_URI = window.location.origin + window.location.pathname;
-const OSM_AUTH_URL = 'https://www.openstreetmap.org/oauth2/authorize';
-const OSM_TOKEN_URL = 'https://www.openstreetmap.org/oauth2/token';
-const OSM_USER_DETAILS_URL = 'https://api.openstreetmap.org/api/0.6/user/details.json';
+
+let OSM_AUTH_URL = '';
+let OSM_TOKEN_URL = '';
+let OSM_USER_DETAILS_URL = '';
+
+function updateOsmUrls() {
+  const isDev = OSM_ENVIRONMENT === 'dev';
+  const base = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://www.openstreetmap.org';
+  const apiBase = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://api.openstreetmap.org';
+  OSM_AUTH_URL = `${base}/oauth2/authorize`;
+  OSM_TOKEN_URL = `${base}/oauth2/token`;
+  OSM_USER_DETAILS_URL = `${apiBase}/api/0.6/user/details.json`;
+}
+updateOsmUrls();
 
 // Temporary storage for loaded data if auth is pending
 let pendingPoiData = null;
@@ -948,17 +961,30 @@ function setupEventListeners() {
     loginBtn.addEventListener('click', redirectToOSM);
   }
   
-
-
   const logoutBtn = document.getElementById('btn-osm-logout');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', logoutOSM);
   }
 
-  // Pre-fill the Client ID input if already saved
+  // Pre-fill fields if saved
+  const envSelect = document.getElementById('osm-environment');
+  if (envSelect && OSM_ENVIRONMENT) {
+    envSelect.value = OSM_ENVIRONMENT;
+  }
+
   const clientIdInput = document.getElementById('osm-client-id');
   if (clientIdInput && OSM_CLIENT_ID) {
     clientIdInput.value = OSM_CLIENT_ID;
+  }
+
+  const clientSecretInput = document.getElementById('osm-client-secret');
+  if (clientSecretInput && OSM_CLIENT_SECRET) {
+    clientSecretInput.value = OSM_CLIENT_SECRET;
+  }
+
+  const redirectUriDisplay = document.getElementById('osm-redirect-uri-display');
+  if (redirectUriDisplay) {
+    redirectUriDisplay.innerText = OSM_REDIRECT_URI;
   }
 }
 
@@ -1002,14 +1028,27 @@ async function generateChallenge(verifier) {
 }
 
 async function redirectToOSM() {
+  const envSelect = document.getElementById('osm-environment');
+  if (envSelect) {
+    OSM_ENVIRONMENT = envSelect.value;
+    localStorage.setItem('osm_oauth_environment', OSM_ENVIRONMENT);
+  }
+
   const clientIdInput = document.getElementById('osm-client-id').value.trim();
   if (!clientIdInput) {
     showToast('الرجاء إدخال معرّف العميل (Client ID) للاستمرار.', 'error');
     return;
   }
   
+  const clientSecretInput = document.getElementById('osm-client-secret').value.trim();
+  
   OSM_CLIENT_ID = clientIdInput;
   localStorage.setItem('osm_oauth_client_id', OSM_CLIENT_ID);
+  
+  OSM_CLIENT_SECRET = clientSecretInput;
+  localStorage.setItem('osm_oauth_client_secret', OSM_CLIENT_SECRET);
+
+  updateOsmUrls();
   
   const codeVerifier = generateRandomString(64);
   sessionStorage.setItem('osm_oauth_code_verifier', codeVerifier);
@@ -1035,8 +1074,11 @@ async function handleOAuthCallback() {
   const state = params.get('state');
   
   if (code && state) {
-    // Save saved client ID back to state in case page reloads
+    // Save saved settings back to state in case page reloads
+    OSM_ENVIRONMENT = localStorage.getItem('osm_oauth_environment') || 'production';
     OSM_CLIENT_ID = localStorage.getItem('osm_oauth_client_id') || '';
+    OSM_CLIENT_SECRET = localStorage.getItem('osm_oauth_client_secret') || '';
+    updateOsmUrls();
     
     const cleanUrl = window.location.origin + window.location.pathname;
     window.history.replaceState({}, document.title, cleanUrl);
@@ -1058,18 +1100,25 @@ async function handleOAuthCallback() {
     
     try {
       showLoadingText('جارٍ تأكيد الهوية وتبادل الرموز مع OSM...');
+      
+      const payload = {
+        client_id: OSM_CLIENT_ID,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: OSM_REDIRECT_URI,
+        code_verifier: codeVerifier
+      };
+      
+      if (OSM_CLIENT_SECRET) {
+        payload.client_secret = OSM_CLIENT_SECRET;
+      }
+      
       const response = await fetch(OSM_TOKEN_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: new URLSearchParams({
-          client_id: OSM_CLIENT_ID,
-          grant_type: 'authorization_code',
-          code: code,
-          redirect_uri: OSM_REDIRECT_URI,
-          code_verifier: codeVerifier
-        })
+        body: new URLSearchParams(payload)
       });
       
       if (!response.ok) {
@@ -1104,6 +1153,9 @@ async function checkAuthStatus() {
   if (!token) return false;
   
   try {
+    OSM_ENVIRONMENT = localStorage.getItem('osm_oauth_environment') || 'production';
+    updateOsmUrls();
+    
     const response = await fetch(OSM_USER_DETAILS_URL, {
       headers: {
         'Authorization': `Bearer ${token}`
