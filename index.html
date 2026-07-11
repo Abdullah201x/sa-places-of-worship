@@ -238,6 +238,16 @@
               <a id="btn-view-osm" class="mapper-btn osm-site" href="#" target="_blank" rel="noopener noreferrer">عرض المعلم على OSM</a>
             </div>
           </div>
+
+          <!-- Guest Mode Editing Block -->
+          <div id="details-guest-tools-notice" class="info-alert" style="display: none; margin-top: 16px; margin-bottom: 0; background: rgba(0, 242, 254, 0.04); border-color: rgba(0, 242, 254, 0.15); color: #c4f7ff;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="alert-icon" style="color: var(--color-primary);">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>أدوات التعديل وبيانات المساهمين التفصيلية مغلقة حالياً. الرجاء <strong>تسجيل الدخول باستخدام OSM</strong> للوصول لهذه البيانات والمساهمة في تحسين جودة الخارطة.</span>
+          </div>
         </div>
       </section>
     </aside>
@@ -293,43 +303,119 @@
           <p>تحتوي قاعدة البيانات على بيانات مساهمي الخرائط (GDPR). بموجب تراخيص Geofabrik، يقتصر عرض هذه البيانات المفصلة على مساهمي OpenStreetMap فقط.</p>
         </div>
         
-        <div class="auth-body">
-          <div class="client-id-config">
-            <label for="osm-environment">بيئة العمل (OpenStreetMap Environment):</label>
-            <select id="osm-environment" class="auth-input" style="width: 100%; text-align: right; text-align-last: right; padding-right: 12px; font-family: var(--font-body); cursor: pointer;">
-              <option value="production" style="background: #12141d; color: #fff;">بيئة الإنتاج (Production - openstreetmap.org)</option>
-              <option value="dev" style="background: #12141d; color: #fff;">بيئة التطوير (Dev - apis.dev.openstreetmap.org)</option>
-            </select>
-          </div>
-
-          <div class="client-id-config">
-            <label for="osm-client-id">معرّف العميل (Client ID):</label>
-            <input type="text" id="osm-client-id" class="auth-input" placeholder="أدخل Client ID الخاص بك..." />
-          </div>
-
-          <div class="client-id-config">
-            <label for="osm-client-secret">الرمز السري للعميل (Client Secret - اختياري):</label>
-            <input type="password" id="osm-client-secret" class="auth-input" placeholder="أدخل Client Secret (إذا كان التطبيق سرياً)..." />
-            <p class="input-help">اتركه فارغاً إذا قمت بإلغاء تحديد خيار "Confidential application" أثناء تسجيل التطبيق.</p>
-          </div>
-
-          <div class="client-id-config" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); padding: 10px 14px; border-radius: 12px; gap: 6px;">
-            <span style="font-family: var(--font-body); font-size: 11px; color: var(--color-text-muted);">عنوان العودة المطلوب (Redirect URI):</span>
-            <div id="osm-redirect-uri-display" style="font-family: monospace; font-size: 11.5px; color: var(--color-primary); user-select: all; text-align: left; direction: ltr; overflow-x: auto; white-space: nowrap; padding-bottom: 2px;">loading...</div>
-            <p class="input-help">يجب تطابق هذا العنوان تماماً مع إعدادات التطبيق في OpenStreetMap.</p>
-          </div>
-
-          <button id="btn-osm-login" class="auth-submit-btn">
-            <span>تسجيل الدخول باستخدام حساب OSM</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M15 3h6v6"></path>
-              <path d="M10 14L21 3"></path>
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-            </svg>
-          </button>
-
-
+        <!-- Tabs Header -->
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" data-target="tab-login">تسجيل الدخول</button>
+          <button class="auth-tab-btn" data-target="tab-guide">دليل الإعداد 💡</button>
         </div>
+        
+        <div class="auth-body">
+          <!-- Login Tab Content -->
+          <div id="tab-login" class="tab-content">
+            <div class="client-id-config">
+              <label for="osm-environment">بيئة العمل (OpenStreetMap Environment):</label>
+              <select id="osm-environment" class="auth-input" style="width: 100%; text-align: right; text-align-last: right; padding-right: 12px; font-family: var(--font-body); cursor: pointer;">
+                <option value="production" style="background: #12141d; color: #fff;">بيئة الإنتاج (Production - openstreetmap.org)</option>
+                <option value="dev" style="background: #12141d; color: #fff;">بيئة التطوير (Dev - apis.dev.openstreetmap.org)</option>
+              </select>
+            </div>
+
+            <div class="client-id-config">
+              <label for="osm-client-id">معرّف العميل (Client ID):</label>
+              <input type="text" id="osm-client-id" class="auth-input" placeholder="أدخل Client ID الخاص بك..." />
+            </div>
+
+            <div class="client-id-config">
+              <label for="osm-client-secret">الرمز السري للعميل (Client Secret - اختياري):</label>
+              <input type="password" id="osm-client-secret" class="auth-input" placeholder="أدخل Client Secret (إذا كان التطبيق سرياً)..." />
+              <p class="input-help">اتركه فارغاً إذا قمت بإلغاء تحديد خيار "Confidential application" أثناء تسجيل التطبيق.</p>
+            </div>
+
+            <div class="client-id-config" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 14px; border-radius: 12px; gap: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-family: var(--font-body); font-size: 11px; color: var(--color-text-muted);">عنوان العودة المطلوب (Redirect URI):</span>
+                <button id="btn-copy-redirect-uri" class="copy-uri-btn" title="نسخ العنوان">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>نسخ</span>
+                </button>
+              </div>
+              <div id="osm-redirect-uri-display" style="font-family: monospace; font-size: 11.5px; color: var(--color-primary); user-select: all; text-align: left; direction: ltr; overflow-x: auto; white-space: nowrap; padding-bottom: 2px;">loading...</div>
+              <p class="input-help">يجب تطابق هذا العنوان تماماً مع إعدادات التطبيق في OpenStreetMap.</p>
+            </div>
+
+            <button id="btn-osm-login" class="auth-submit-btn">
+              <span>تسجيل الدخول باستخدام حساب OSM</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h6v6"></path>
+                <path d="M10 14L21 3"></path>
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              </svg>
+            </button>
+
+            <div class="auth-divider">
+              <span>أو</span>
+            </div>
+
+            <button id="btn-osm-skip" class="auth-skip-btn">
+              <span>استكشاف الخريطة كزائر (بيانات مجهلة)</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Guide Tab Content -->
+          <div id="tab-guide" class="tab-content hidden">
+            <div class="guide-container">
+              <p class="guide-intro">
+                تحتاج إلى تسجيل هذا الموقع كـ "تطبيق مستهلك" (OAuth 2.0) في حسابك على OpenStreetMap للحصول على معرّف العميل (Client ID). اتبع الخطوات البسيطة التالية:
+              </p>
+              <div class="guide-steps">
+                <div class="guide-step">
+                  <span class="step-num">1</span>
+                  <div class="step-text">
+                    سجّل الدخول إلى حسابك على <a href="https://www.openstreetmap.org" target="_blank" class="details-link">OpenStreetMap.org</a>.
+                  </div>
+                </div>
+                <div class="guide-step">
+                  <span class="step-num">2</span>
+                  <div class="step-text">
+                    انتقل لإنشاء تطبيق جديد: 
+                    <a href="https://www.openstreetmap.org/oauth2/applications/new" target="_blank" class="details-link" style="word-break: break-all;">openstreetmap.org/oauth2/applications/new</a>
+                    <p class="input-help" style="margin-top: 4px;">(أو بيئة التطوير: <a href="https://master.apis.dev.openstreetmap.org/oauth2/applications/new" target="_blank" class="details-link">apis.dev.openstreetmap.org</a>)</p>
+                  </div>
+                </div>
+                <div class="guide-step">
+                  <span class="step-num">3</span>
+                  <div class="step-text">
+                    املأ البيانات بالتالي:
+                    <ul class="guide-sublist">
+                      <li><strong>الاسم (Name):</strong> خارطة أماكن العبادة</li>
+                      <li><strong>رابط العودة (Redirect URI):</strong> انسخ الرابط المعروض في تبويب تسجيل الدخول وصقه هنا تماماً.</li>
+                      <li><strong>تطبيق سري (Confidential application):</strong> <span style="color: #ffb03a;">ألغِ تحديد هذا الخيار</span> (غير مطلوب لمواقع الواجهة الأمامية).</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="guide-step">
+                  <span class="step-num">4</span>
+                  <div class="step-text">
+                    في قسم الصلاحيات (Scopes)، حدد فقط صلاحية:
+                    <br><strong>☑ Read user preferences (قراءة تفضيلات المستخدم)</strong>.
+                  </div>
+                </div>
+                <div class="guide-step">
+                  <span class="step-num">5</span>
+                  <div class="step-text">
+                    اضغط على زر <strong>تسجيل (Register)</strong> في الأسفل، ثم انسخ <strong>معرّف العميل (Client ID)</strong> الناتج وضعه في حقل الدخول.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         
         <div class="auth-footer">
           <span>مصدر البيانات: Geofabrik / OpenStreetMap contributors</span>

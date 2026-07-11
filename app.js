@@ -10,6 +10,7 @@ let OSM_CLIENT_ID = localStorage.getItem('osm_oauth_client_id') || '';
 let OSM_CLIENT_SECRET = localStorage.getItem('osm_oauth_client_secret') || '';
 // Automatically resolve Redirect URI based on the current window location (without parameters)
 const OSM_REDIRECT_URI = window.location.origin + window.location.pathname;
+let isOsmAnonymized = sessionStorage.getItem('osm_auth_skipped') === 'true';
 
 let OSM_AUTH_URL = '';
 let OSM_TOKEN_URL = '';
@@ -359,8 +360,8 @@ function loadData() {
       pendingBoundaryData = boundaryData;
       
       checkAuthStatus().then(isAuthenticated => {
-        if (isAuthenticated) {
-          // User is authorized, initialize dashboard
+        if (isAuthenticated || isOsmAnonymized) {
+          // User is authorized or skipped, initialize dashboard
           initializeDashboard(poiData, gapData, boundaryData);
         } else {
           // User is not authorized, show login overlay
@@ -612,14 +613,57 @@ function showDetails(props, lat, lon) {
   document.getElementById('details-osm-id').innerText = props.osm_id;
 
   const userLink = document.getElementById('details-user');
-  userLink.innerText = props.last_edited_by || 'مجهول';
-  userLink.href = props.last_edited_by ? `https://www.openstreetmap.org/user/${encodeURIComponent(props.last_edited_by)}` : '#';
-
-  document.getElementById('details-uid').innerText = props.user_id ?? '-';
-
   const changesetLink = document.getElementById('details-changeset');
-  changesetLink.innerText = props.changeset_id ?? '-';
-  changesetLink.href = props.changeset_id ? `https://www.openstreetmap.org/changeset/${props.changeset_id}` : '#';
+  const mapperTools = document.getElementById('details-mapper-tools');
+  const guestToolsNotice = document.getElementById('details-guest-tools-notice');
+
+  if (isOsmAnonymized) {
+    userLink.innerText = 'مساهم OSM (سجل دخولك)';
+    userLink.href = '#';
+    userLink.style.pointerEvents = 'none';
+    userLink.style.opacity = '0.6';
+    userLink.style.textDecoration = 'none';
+
+    document.getElementById('details-uid').innerText = 'محجوب بموجب GDPR';
+
+    changesetLink.innerText = 'محجوب بموجب GDPR';
+    changesetLink.href = '#';
+    changesetLink.style.pointerEvents = 'none';
+    changesetLink.style.opacity = '0.6';
+    changesetLink.style.textDecoration = 'none';
+
+    if (mapperTools) mapperTools.style.display = 'none';
+    if (guestToolsNotice) guestToolsNotice.style.display = 'flex';
+  } else {
+    userLink.innerText = props.last_edited_by || 'مجهول';
+    userLink.href = props.last_edited_by ? `https://www.openstreetmap.org/user/${encodeURIComponent(props.last_edited_by)}` : '#';
+    userLink.style.pointerEvents = 'auto';
+    userLink.style.opacity = '1';
+    userLink.style.textDecoration = '';
+
+    document.getElementById('details-uid').innerText = props.user_id ?? '-';
+
+    changesetLink.innerText = props.changeset_id ?? '-';
+    changesetLink.href = props.changeset_id ? `https://www.openstreetmap.org/changeset/${props.changeset_id}` : '#';
+    changesetLink.style.pointerEvents = 'auto';
+    changesetLink.style.opacity = '1';
+    changesetLink.style.textDecoration = '';
+
+    if (mapperTools) mapperTools.style.display = 'block';
+    if (guestToolsNotice) guestToolsNotice.style.display = 'none';
+
+    // Update mapper editing tools
+    const type = props.geom_type === 'Point' ? 'node' : 'way';
+    document.getElementById('btn-view-osm').href = `https://www.openstreetmap.org/${type}/${props.osm_id}`;
+    document.getElementById('btn-edit-osm').href = `https://www.openstreetmap.org/edit?editor=id&${type}=${props.osm_id}`;
+    
+    const josmBtn = document.getElementById('btn-edit-josm');
+    const newJosmBtn = josmBtn.cloneNode(true);
+    josmBtn.parentNode.replaceChild(newJosmBtn, josmBtn);
+    newJosmBtn.addEventListener('click', () => {
+      editInJOSM(lat, lon, props.osm_id, props.geom_type);
+    });
+  }
 
   document.getElementById('details-edited-at').innerText = props.edited_at
     ? new Date(props.edited_at).toLocaleString('ar-SA')
@@ -636,20 +680,6 @@ function showDetails(props, lat, lon) {
   } else {
     issuesBox.style.display = 'none';
   }
-
-  // Update mapper editing tools
-  const type = props.geom_type === 'Point' ? 'node' : 'way';
-  document.getElementById('btn-view-osm').href = `https://www.openstreetmap.org/${type}/${props.osm_id}`;
-  document.getElementById('btn-edit-osm').href = `https://www.openstreetmap.org/edit?editor=id&${type}=${props.osm_id}`;
-  
-  const josmBtn = document.getElementById('btn-edit-josm');
-  const newJosmBtn = josmBtn.cloneNode(true);
-  josmBtn.parentNode.replaceChild(newJosmBtn, josmBtn);
-  newJosmBtn.addEventListener('click', () => {
-    editInJOSM(lat, lon, props.osm_id, props.geom_type);
-  });
-  
-  document.getElementById('details-mapper-tools').style.display = 'block';
 }
 
 // Update UI panel labels and counts depending on selected Mode
@@ -963,8 +993,83 @@ function setupEventListeners() {
   
   const logoutBtn = document.getElementById('btn-osm-logout');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', logoutOSM);
+    logoutBtn.addEventListener('click', () => {
+      const token = localStorage.getItem('osm_access_token');
+      if (token) {
+        logoutOSM();
+      } else {
+        const authOverlay = document.getElementById('osm-auth-overlay');
+        if (authOverlay) {
+          authOverlay.classList.remove('hidden');
+        }
+      }
+    });
   }
+
+  // Handle skip/guest mode login
+  const skipBtn = document.getElementById('btn-osm-skip');
+  if (skipBtn) {
+    skipBtn.addEventListener('click', () => {
+      isOsmAnonymized = true;
+      sessionStorage.setItem('osm_auth_skipped', 'true');
+      
+      // Close overlay
+      const authOverlay = document.getElementById('osm-auth-overlay');
+      if (authOverlay) {
+        authOverlay.classList.add('hidden');
+      }
+      
+      // Initialize dashboard using pending data
+      if (pendingPoiData && pendingGapData && pendingBoundaryData) {
+        initializeDashboard(pendingPoiData, pendingGapData, pendingBoundaryData);
+      } else {
+        // Fallback: reload page to fetch correctly
+        window.location.reload();
+      }
+    });
+  }
+
+  // Handle Redirect URI copy button
+  const copyUriBtn = document.getElementById('btn-copy-redirect-uri');
+  if (copyUriBtn) {
+    copyUriBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(OSM_REDIRECT_URI).then(() => {
+        // Find text label and swap momentarily
+        const btnText = copyUriBtn.querySelector('span');
+        const originalText = btnText.innerText;
+        btnText.innerText = 'تم النسخ!';
+        showToast('تم نسخ عنوان العودة (Redirect URI) إلى الحافظة.');
+        setTimeout(() => {
+          btnText.innerText = originalText;
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy Redirect URI:', err);
+        showToast('فشل في نسخ عنوان العودة تلقائياً. يرجى نسخه يدوياً.', 'error');
+      });
+    });
+  }
+
+  // Handle Auth Card Tab Switching
+  const tabBtns = document.querySelectorAll('.auth-tab-btn');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      // Remove active class from all buttons
+      tabBtns.forEach(b => b.classList.remove('active'));
+      // Add active class to clicked button
+      btn.classList.add('active');
+      
+      // Hide all tab contents
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabContents.forEach(content => content.classList.add('hidden'));
+      
+      // Show targeted tab content
+      const targetId = btn.getAttribute('data-target');
+      const targetContent = document.getElementById(targetId);
+      if (targetContent) {
+        targetContent.classList.remove('hidden');
+      }
+    });
+  });
 
   // Pre-fill fields if saved
   const envSelect = document.getElementById('osm-environment');
@@ -1181,21 +1286,43 @@ async function checkAuthStatus() {
 function updateUserWidgetUI() {
   const widget = document.getElementById('user-profile-widget');
   const nameEl = document.getElementById('user-display-name');
+  const roleEl = widget ? widget.querySelector('.user-role-text') : null;
+  const statusEl = widget ? widget.querySelector('.user-status-text') : null;
+  const logoutBtn = document.getElementById('btn-osm-logout');
   
   const token = localStorage.getItem('osm_access_token');
   
-  if (token) {
-    const displayName = localStorage.getItem('osm_user_display_name') || 'مستخدم OSM';
-    if (nameEl) nameEl.innerText = displayName;
-    if (widget) widget.style.display = 'flex';
-  } else {
-    if (widget) widget.style.display = 'none';
+  if (widget) {
+    if (token) {
+      const displayName = localStorage.getItem('osm_user_display_name') || 'مستخدم OSM';
+      if (nameEl) nameEl.innerText = displayName;
+      if (statusEl) statusEl.innerHTML = `مرحباً، <strong id="user-display-name">${escapeHtml(displayName)}</strong>`;
+      if (roleEl) roleEl.innerText = 'مساهم في OpenStreetMap';
+      if (logoutBtn) {
+        logoutBtn.innerText = 'تسجيل خروج';
+        logoutBtn.className = 'osm-logout-btn';
+        logoutBtn.title = 'تسجيل الخروج';
+      }
+      widget.style.display = 'flex';
+    } else if (isOsmAnonymized) {
+      if (statusEl) statusEl.innerHTML = `<span style="color: var(--color-text-muted);">تصفح كـ <strong>زائر (بيانات مجهلة)</strong></span>`;
+      if (roleEl) roleEl.innerText = 'سجل دخولك لعرض المطورين والتعديل';
+      if (logoutBtn) {
+        logoutBtn.innerText = 'تسجيل دخول';
+        logoutBtn.className = 'osm-login-btn-small';
+        logoutBtn.title = 'تسجيل الدخول باستخدام OSM';
+      }
+      widget.style.display = 'flex';
+    } else {
+      widget.style.display = 'none';
+    }
   }
 }
 
 function logoutOSM() {
   localStorage.removeItem('osm_access_token');
   localStorage.removeItem('osm_user_display_name');
+  sessionStorage.removeItem('osm_auth_skipped');
   showToast('تم تسجيل الخروج بنجاح.');
   window.location.reload();
 }
