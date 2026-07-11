@@ -1,3 +1,4 @@
+import glob
 import os
 import osmium
 import sys
@@ -7,6 +8,14 @@ from shapely.ops import polygonize, unary_union
 
 # Resolve all paths relative to this script so it runs on any machine.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def find_pbf(base_dir):
+    matches = glob.glob(os.path.join(base_dir, "*.osm.pbf"))
+    if not matches:
+        sys.exit("No .osm.pbf file found in " + base_dir)
+    if len(matches) > 1:
+        sys.exit("Multiple .osm.pbf files found, expected exactly one: " + ", ".join(matches))
+    return matches[0]
 
 class RelationWayCollector(osmium.SimpleHandler):
     def __init__(self, target_relation_id):
@@ -39,7 +48,7 @@ class WayCoordinateCollector(osmium.SimpleHandler):
                 pass
 
 def main():
-    pbf_path = os.path.join(BASE_DIR, "gcc-states-260709-internal.osm.pbf")
+    pbf_path = find_pbf(BASE_DIR)
     output_path = os.path.join(BASE_DIR, "sa_boundary.geojson")
     target_rel_id = 307584
 

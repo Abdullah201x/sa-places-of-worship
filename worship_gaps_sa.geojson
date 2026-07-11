@@ -27591,13 +27591,13 @@
       "properties": {
         "grid_id": "9948_5375",
         "roads_count": 5,
-        "gap_score": 2.794
+        "gap_score": 2.776
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          39.792965,
-          21.500959
+          39.792968,
+          21.500904
         ]
       }
     },
@@ -70251,7 +70251,7 @@
       "properties": {
         "grid_id": "12513_6680",
         "roads_count": 4,
-        "gap_score": 3.646
+        "gap_score": 3.022
       },
       "geometry": {
         "type": "Point",
@@ -207666,7 +207666,7 @@
       "properties": {
         "grid_id": "11648_6163",
         "roads_count": 6,
-        "gap_score": 3.234
+        "gap_score": 3.233
       },
       "geometry": {
         "type": "Point",
@@ -471096,7 +471096,7 @@
       "properties": {
         "grid_id": "10916_6241",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 4.854
       },
       "geometry": {
         "type": "Point",
@@ -471996,7 +471996,7 @@
       "properties": {
         "grid_id": "10917_6241",
         "roads_count": 4,
-        "gap_score": 9.545
+        "gap_score": 7.193
       },
       "geometry": {
         "type": "Point",
@@ -813096,7 +813096,7 @@
       "properties": {
         "grid_id": "10916_6249",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 8.168
       },
       "geometry": {
         "type": "Point",

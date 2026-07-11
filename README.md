@@ -26,8 +26,10 @@ processing happens ahead of time in Python from an OpenStreetMap `.pbf` extract.
   pip install osmium shapely
   ```
 
-- An OSM `.pbf` extract covering Saudi Arabia, saved in this folder as
-  `gcc-states-260709-internal.osm.pbf` (e.g. a GCC-states extract from Geofabrik).
+- Exactly one OSM `.pbf` extract covering Saudi Arabia, saved in this folder
+  (e.g. a GCC-states extract from Geofabrik). The scripts auto-detect it by
+  globbing for `*.osm.pbf`, so no filename is hardcoded — just drop in the
+  new extract and remove the old one when updating data.
 
 ## Data pipeline
 
