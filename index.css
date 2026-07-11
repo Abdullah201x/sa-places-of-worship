@@ -180,6 +180,13 @@ h1 {
   margin-bottom: 24px;
 }
 
+.section-hint {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  margin: 0 0 12px 0;
+}
+
 .search-wrapper {
   position: relative;
   width: 100%;

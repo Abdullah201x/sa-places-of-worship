@@ -168,13 +168,33 @@ function editInJOSM(lat, lon, osmId, geomType) {
   const type = geomType === 'Point' ? 'node' : 'way';
   const delta = 0.0015;
   const url = `http://127.0.0.1:8111/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}&select=${type}${osmId}`;
-  
+
   fetch(url)
     .then(res => {
       if (res.ok) {
         showToast('تم إرسال الموقع ومعرّف المعلم إلى JOSM بنجاح!');
       } else {
         showToast('فشل JOSM في تحميل المعلم. تأكد من تفعيل Remote Control.', 'error');
+      }
+    })
+    .catch(err => {
+      showToast('تعذر الاتصال بـ JOSM. يرجى تشغيل JOSM وتفعيل التحكم عن بعد (Remote Control) في الإعدادات.', 'error');
+    });
+}
+
+// Send the currently visible map viewport (used in Gap Mode after locating an
+// underserved area via the heatmap + Qibla compass) to JOSM Remote Control so
+// the user can survey the area and add a new mosque node with its own ID.
+function openAreaInJOSM() {
+  const bounds = map.getBounds();
+  const url = `http://127.0.0.1:8111/load_and_zoom?left=${bounds.getWest()}&right=${bounds.getEast()}&top=${bounds.getNorth()}&bottom=${bounds.getSouth()}`;
+
+  fetch(url)
+    .then(res => {
+      if (res.ok) {
+        showToast('تم إرسال النطاق الحالي إلى JOSM. يمكنك الآن إضافة معلم المسجد.');
+      } else {
+        showToast('فشل JOSM في تحميل النطاق. تأكد من تفعيل Remote Control.', 'error');
       }
     })
     .catch(err => {
@@ -692,6 +712,7 @@ function updateDashboardUI() {
   const dateFilterSection = document.getElementById('date-filter-section');
   const detailsPanel = document.getElementById('details-panel');
   const gapInfoBox = document.getElementById('gap-info-box');
+  const gapJosmBox = document.getElementById('gap-josm-box');
 
   if (currentMode === 'poi') {
     // Restore POI Mode controls
@@ -702,6 +723,7 @@ function updateDashboardUI() {
     improveFilterSection.style.display = 'none';
     dateFilterSection.style.display = 'block';
     gapInfoBox.style.display = 'none';
+    gapJosmBox.style.display = 'none';
   } else if (currentMode === 'improve') {
     // Quality Improvement Mode controls
     totalCountLabel.innerText = "أماكن تحتاج تحسين";
@@ -711,6 +733,7 @@ function updateDashboardUI() {
     improveFilterSection.style.display = 'block';
     dateFilterSection.style.display = 'block';
     gapInfoBox.style.display = 'none';
+    gapJosmBox.style.display = 'none';
   } else {
     // Adjust layout for Gap Mode
     totalCountLabel.innerText = "الفجوات المكتشفة";
@@ -721,6 +744,7 @@ function updateDashboardUI() {
     dateFilterSection.style.display = 'none'; // Gap grid cells have no edited_at metadata
     detailsPanel.style.display = 'none'; // Grid gaps do not have individual clickable POI cards
     gapInfoBox.style.display = 'flex';
+    gapJosmBox.style.display = 'block';
   }
 
   updateMapLayers();
@@ -850,6 +874,11 @@ function setupEventListeners() {
     currentMode = 'improve';
     filterData();
     updateDashboardUI();
+  });
+
+  // Gap Mode: open the currently viewed area in JOSM to survey/add a mosque
+  document.getElementById('btn-open-area-josm').addEventListener('click', () => {
+    openAreaInJOSM();
   });
 
   // Basemap Chips Selector
