@@ -286,6 +286,19 @@ function openAreaInJOSM() {
     });
 }
 
+// Update the iD Editor link for the currently viewed map area so that the user
+// can open the area in iD Editor and add a new mosque node.
+function updateIdEditorAreaLink() {
+  const idBtn = document.getElementById('btn-open-area-id');
+  if (idBtn && map) {
+    const isDev = OSM_ENVIRONMENT === 'dev';
+    const base = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://www.openstreetmap.org';
+    const center = map.getCenter();
+    const zoom = Math.max(16, Math.round(map.getZoom()));
+    idBtn.href = `${base}/edit?editor=id#map=${zoom}/${center.lat.toFixed(5)}/${center.lng.toFixed(5)}`;
+  }
+}
+
 // Show animated non-blocking toast notification
 function showToast(message, type = 'success') {
   // Remove existing toast if any
@@ -430,9 +443,11 @@ function initMap() {
   const debouncedUpdateStats = debounce(updateStats, 150);
   map.on('moveend', debouncedUpdateStats);
   map.on('moveend', debouncedUpdateSatelliteZoomCap);
+  map.on('moveend', updateIdEditorAreaLink);
   map.on('zoomend', () => {
     debouncedUpdateStats();
     toggleLayersByZoom(); // layer swap must stay immediate
+    updateIdEditorAreaLink();
   });
 
   // Update Qibla compass dynamically as the map moves
@@ -971,6 +986,7 @@ function updateDashboardUI() {
     detailsPanel.style.display = 'none'; // Grid gaps do not have individual clickable POI cards
     gapInfoBox.style.display = 'flex';
     gapJosmBox.style.display = 'block';
+    updateIdEditorAreaLink();
   }
 
   updateMapLayers();
@@ -1106,6 +1122,14 @@ function setupEventListeners() {
   document.getElementById('btn-open-area-josm').addEventListener('click', () => {
     openAreaInJOSM();
   });
+
+  // Gap Mode: open the currently viewed area in iD Editor
+  const btnOpenAreaId = document.getElementById('btn-open-area-id');
+  if (btnOpenAreaId) {
+    btnOpenAreaId.addEventListener('click', () => {
+      updateIdEditorAreaLink();
+    });
+  }
 
   // Basemap Chips Selector
   const basemapChips = document.querySelectorAll('#basemap-filters .chip');
