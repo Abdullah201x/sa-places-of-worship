@@ -87,6 +87,66 @@ function debounce(fn, ms) {
   };
 }
 
+// Esri's World_Imagery is a mosaic: real capture resolution varies by location, so a single
+// global maxZoom either blurs out well-covered areas or shows Esri's "Map data not yet
+// available" placeholder tile where it doesn't. Esri exposes a lightweight "tilemap" endpoint
+// (same technique used by the iD/RapiD OSM editors) that reports tile availability without
+// downloading imagery, so we can discover the true max zoom for the current view and overzoom
+// up to it instead of guessing a fixed cap.
+const ESRI_TILEMAP_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tilemap';
+const ESRI_ASSUMED_MIN_ZOOM = 13; // always-available global mosaic level; skip probing below this
+const ESRI_MAX_PROBE_ZOOM = 21;   // Esri rarely publishes real imagery deeper than this
+
+async function esriTilesAvailable(zoom, centerLatLng) {
+  const point = map.project(centerLatLng, zoom);
+  const tileSize = 256;
+  const x = Math.floor(point.x / tileSize);
+  const y = Math.floor(point.y / tileSize);
+  try {
+    const res = await fetch(`${ESRI_TILEMAP_URL}/${zoom}/${y}/${x}/4/4`);
+    if (!res.ok) return false;
+    const json = await res.json();
+    return Array.isArray(json.data) && json.data.every(v => v === 1);
+  } catch (e) {
+    return false;
+  }
+}
+
+// Binary search between the always-available floor and the probe ceiling for the deepest
+// zoom with real imagery at the given point.
+async function findEsriMaxZoom(centerLatLng) {
+  let lo = ESRI_ASSUMED_MIN_ZOOM;
+  let hi = ESRI_MAX_PROBE_ZOOM;
+  let best = lo;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    const available = await esriTilesAvailable(mid, centerLatLng);
+    if (available) {
+      best = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return best;
+}
+
+// Re-probes real imagery availability for the current view and raises/lowers the satellite
+// layer's zoom ceiling to match, so users can overzoom exactly as far as real data allows.
+async function updateSatelliteZoomCap() {
+  if (currentBasemap !== basemaps['satellite']) return;
+  const layer = basemaps['satellite'];
+  const maxFound = await findEsriMaxZoom(map.getCenter());
+  if (currentBasemap !== basemaps['satellite']) return; // basemap may have changed while awaiting
+  layer.options.maxNativeZoom = maxFound;
+  map.setMaxZoom(maxFound + 1); // small CSS-upscale buffer past the last confirmed real tile
+  if (map.hasLayer(layer)) {
+    layer.redraw();
+  }
+}
+
+const debouncedUpdateSatelliteZoomCap = debounce(updateSatelliteZoomCap, 400);
+
 // Convert an ISO edited_at timestamp to a whole-day index for slider bounds/comparison.
 function dayIndex(isoString) {
   return Math.floor(new Date(isoString).getTime() / 86400000);
@@ -345,6 +405,7 @@ function initMap() {
   // Stat recomputation loops over every feature, so debounce it to keep panning smooth.
   const debouncedUpdateStats = debounce(updateStats, 150);
   map.on('moveend', debouncedUpdateStats);
+  map.on('moveend', debouncedUpdateSatelliteZoomCap);
   map.on('zoomend', () => {
     debouncedUpdateStats();
     toggleLayersByZoom(); // layer swap must stay immediate
@@ -738,7 +799,10 @@ function updateMapLayers() {
     const smoothingRadius = Math.round((blurVal - 5) / 35 * 3);
     const smoothed = buildSmoothedLookup(scoreByCell, maxScore, smoothingRadius);
 
-    heatmapLayer = new GapGradientLayer(smoothed.scoreByCell, smoothed.maxScore, { maxZoom: 19 }).addTo(map);
+    // Explicit zIndex keeps the heatmap above whichever basemap tile layer is active, since
+    // GridLayer has no bringToFront/bringToBack (those only exist on L.Path) and basemap
+    // swaps re-append a fresh tile container that would otherwise stack on top by DOM order.
+    heatmapLayer = new GapGradientLayer(smoothed.scoreByCell, smoothed.maxScore, { maxZoom: 19, zIndex: 650 }).addTo(map);
 
     // Disable marker clusters in gap mode since points are virtual grid cells
     toggleLayersByZoom();
@@ -1031,8 +1095,10 @@ function setupEventListeners() {
         map.removeLayer(currentBasemap);
         currentBasemap = basemaps[selectedBasemap];
         currentBasemap.addTo(map);
-        if (heatmapLayer) {
-          heatmapLayer.bringToFront();
+        if (selectedBasemap === 'satellite') {
+          updateSatelliteZoomCap();
+        } else {
+          map.setMaxZoom(currentBasemap.options.maxZoom);
         }
       }
 
