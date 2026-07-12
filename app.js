@@ -1029,6 +1029,9 @@ function setupEventListeners() {
         map.removeLayer(currentBasemap);
         currentBasemap = basemaps[selectedBasemap];
         currentBasemap.addTo(map);
+        if (heatmapLayer) {
+          heatmapLayer.bringToFront();
+        }
       }
 
       // Automatic Qibla compass visibility triggers based on basemap
