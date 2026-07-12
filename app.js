@@ -155,10 +155,17 @@ async function updateSatelliteZoomCap() {
   const layer = basemaps['satellite'];
   const maxFound = await findEsriMaxZoom(map.getCenter());
   if (currentBasemap !== basemaps['satellite']) return; // basemap may have changed while awaiting
-  layer.options.maxNativeZoom = maxFound;
-  map.setMaxZoom(maxFound + 1); // small CSS-upscale buffer past the last confirmed real tile
-  if (map.hasLayer(layer)) {
-    layer.redraw();
+  
+  // Only update and redraw if the zoom capability has actually changed
+  if (layer.options.maxNativeZoom !== maxFound) {
+    const oldMax = layer.options.maxNativeZoom;
+    layer.options.maxNativeZoom = maxFound;
+    map.setMaxZoom(maxFound + 1); // small CSS-upscale buffer past the last confirmed real tile
+    
+    // Only redraw if we are currently at a zoom level that relies on tile scaling
+    if (map.hasLayer(layer) && map.getZoom() >= Math.min(oldMax, maxFound)) {
+      layer.redraw();
+    }
   }
 }
 
