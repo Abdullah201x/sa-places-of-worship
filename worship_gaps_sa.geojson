@@ -6,7 +6,7 @@
       "properties": {
         "grid_id": "12554_6554",
         "roads_count": 2,
-        "gap_score": 3.713
+        "gap_score": 3.704
       },
       "geometry": {
         "type": "Point",
@@ -51,7 +51,7 @@
       "properties": {
         "grid_id": "12548_6554",
         "roads_count": 4,
-        "gap_score": 2.664
+        "gap_score": 2.673
       },
       "geometry": {
         "type": "Point",
@@ -66,7 +66,7 @@
       "properties": {
         "grid_id": "12548_6555",
         "roads_count": 5,
-        "gap_score": 2.814
+        "gap_score": 2.828
       },
       "geometry": {
         "type": "Point",
@@ -2121,7 +2121,7 @@
       "properties": {
         "grid_id": "12552_6554",
         "roads_count": 15,
-        "gap_score": 4.631
+        "gap_score": 4.609
       },
       "geometry": {
         "type": "Point",
@@ -3126,7 +3126,7 @@
       "properties": {
         "grid_id": "12553_6554",
         "roads_count": 15,
-        "gap_score": 6.259
+        "gap_score": 6.237
       },
       "geometry": {
         "type": "Point",
@@ -10775,14 +10775,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "9794_5389",
-        "roads_count": 21,
-        "gap_score": 4.507
+        "roads_count": 20,
+        "gap_score": 4.375
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          39.177885,
-          21.557853
+          39.177821,
+          21.557863
         ]
       }
     },
@@ -15531,7 +15531,7 @@
       "properties": {
         "grid_id": "12548_6553",
         "roads_count": 14,
-        "gap_score": 5.773
+        "gap_score": 5.781
       },
       "geometry": {
         "type": "Point",
@@ -15546,7 +15546,7 @@
       "properties": {
         "grid_id": "12549_6553",
         "roads_count": 10,
-        "gap_score": 4.121
+        "gap_score": 4.122
       },
       "geometry": {
         "type": "Point",
@@ -15799,21 +15799,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11693_6178",
-        "roads_count": 23,
-        "gap_score": 6.984
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.77428,
-          24.713524
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11691_6177",
         "roads_count": 11,
         "gap_score": 3.797
@@ -15861,58 +15846,13 @@
       "properties": {
         "grid_id": "11692_6178",
         "roads_count": 16,
-        "gap_score": 6.923
+        "gap_score": 3.956
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           46.770365,
           24.713937
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11692_6179",
-        "roads_count": 13,
-        "gap_score": 6.338
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.769929,
-          24.717999
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11694_6179",
-        "roads_count": 18,
-        "gap_score": 7.265
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.777746,
-          24.718484
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11696_6179",
-        "roads_count": 26,
-        "gap_score": 4.889
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.786183,
-          24.718367
         ]
       }
     },
@@ -16144,24 +16084,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11693_6179",
-        "roads_count": 11,
-        "gap_score": 7.461
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.773838,
-          24.717948
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11693_6177",
         "roads_count": 20,
-        "gap_score": 4.95
+        "gap_score": 4.365
       },
       "geometry": {
         "type": "Point",
@@ -16176,28 +16101,13 @@
       "properties": {
         "grid_id": "11694_6177",
         "roads_count": 15,
-        "gap_score": 4.026
+        "gap_score": 3.861
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           46.77768,
           24.709893
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11694_6178",
-        "roads_count": 19,
-        "gap_score": 5.561
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.778025,
-          24.713572
         ]
       }
     },
@@ -16474,36 +16384,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11692_6180",
-        "roads_count": 21,
-        "gap_score": 6.504
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.770469,
-          24.721709
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11693_6180",
-        "roads_count": 23,
-        "gap_score": 6.872
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.774245,
-          24.721745
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11696_6184",
         "roads_count": 14,
         "gap_score": 4.966
@@ -16543,21 +16423,6 @@
         "coordinates": [
           46.814004,
           24.73389
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11694_6180",
-        "roads_count": 15,
-        "gap_score": 5.976
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.777889,
-          24.721993
         ]
       }
     },
@@ -16663,36 +16528,6 @@
         "coordinates": [
           39.14921,
           21.549769
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11695_6180",
-        "roads_count": 11,
-        "gap_score": 4.016
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.781369,
-          24.72194
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11695_6179",
-        "roads_count": 11,
-        "gap_score": 4.87
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.782541,
-          24.717723
         ]
       }
     },
@@ -16954,21 +16789,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11694_6181",
-        "roads_count": 24,
-        "gap_score": 5.755
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.777676,
-          24.725591
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11695_6183",
         "roads_count": 16,
         "gap_score": 5.811
@@ -16978,21 +16798,6 @@
         "coordinates": [
           46.782991,
           24.734507
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11693_6181",
-        "roads_count": 25,
-        "gap_score": 4.871
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          46.774501,
-          24.725482
         ]
       }
     },
@@ -22776,7 +22581,7 @@
       "properties": {
         "grid_id": "12545_6552",
         "roads_count": 7,
-        "gap_score": 9.098
+        "gap_score": 9.107
       },
       "geometry": {
         "type": "Point",
@@ -22791,7 +22596,7 @@
       "properties": {
         "grid_id": "12545_6550",
         "roads_count": 8,
-        "gap_score": 11.586
+        "gap_score": 11.593
       },
       "geometry": {
         "type": "Point",
@@ -22821,7 +22626,7 @@
       "properties": {
         "grid_id": "12546_6552",
         "roads_count": 18,
-        "gap_score": 10.805
+        "gap_score": 10.816
       },
       "geometry": {
         "type": "Point",
@@ -22836,7 +22641,7 @@
       "properties": {
         "grid_id": "12546_6550",
         "roads_count": 8,
-        "gap_score": 10.843
+        "gap_score": 10.847
       },
       "geometry": {
         "type": "Point",
@@ -22866,7 +22671,7 @@
       "properties": {
         "grid_id": "12549_6548",
         "roads_count": 9,
-        "gap_score": 12.762
+        "gap_score": 12.757
       },
       "geometry": {
         "type": "Point",
@@ -22896,7 +22701,7 @@
       "properties": {
         "grid_id": "12547_6553",
         "roads_count": 8,
-        "gap_score": 6.296
+        "gap_score": 6.305
       },
       "geometry": {
         "type": "Point",
@@ -22911,7 +22716,7 @@
       "properties": {
         "grid_id": "12546_6551",
         "roads_count": 19,
-        "gap_score": 12.358
+        "gap_score": 12.366
       },
       "geometry": {
         "type": "Point",
@@ -23239,21 +23044,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12536_6531",
-        "roads_count": 9,
-        "gap_score": 12.789
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.14607,
-          26.126392
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12505_6549",
         "roads_count": 5,
         "gap_score": 10.438
@@ -23314,24 +23104,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12536_6525",
-        "roads_count": 10,
-        "gap_score": 12.252
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.145943,
-          26.10287
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12538_6521",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 8.166
       },
       "geometry": {
         "type": "Point",
@@ -23346,7 +23121,7 @@
       "properties": {
         "grid_id": "12538_6522",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 8.142
       },
       "geometry": {
         "type": "Point",
@@ -23361,7 +23136,7 @@
       "properties": {
         "grid_id": "12539_6529",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 4.636
       },
       "geometry": {
         "type": "Point",
@@ -23376,7 +23151,7 @@
       "properties": {
         "grid_id": "12539_6524",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 3.874
       },
       "geometry": {
         "type": "Point",
@@ -23391,7 +23166,7 @@
       "properties": {
         "grid_id": "12538_6529",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 2.363
       },
       "geometry": {
         "type": "Point",
@@ -23406,7 +23181,7 @@
       "properties": {
         "grid_id": "12540_6534",
         "roads_count": 11,
-        "gap_score": 13.592
+        "gap_score": 10.987
       },
       "geometry": {
         "type": "Point",
@@ -23451,7 +23226,7 @@
       "properties": {
         "grid_id": "12540_6535",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 10.183
       },
       "geometry": {
         "type": "Point",
@@ -23473,21 +23248,6 @@
         "coordinates": [
           50.16578,
           26.142815
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12535_6529",
-        "roads_count": 13,
-        "gap_score": 14.26
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.141645,
-          26.117995
         ]
       }
     },
@@ -24336,7 +24096,7 @@
       "properties": {
         "grid_id": "12548_6551",
         "roads_count": 15,
-        "gap_score": 9.478
+        "gap_score": 9.479
       },
       "geometry": {
         "type": "Point",
@@ -24351,7 +24111,7 @@
       "properties": {
         "grid_id": "12548_6552",
         "roads_count": 16,
-        "gap_score": 7.6
+        "gap_score": 7.604
       },
       "geometry": {
         "type": "Point",
@@ -24366,7 +24126,7 @@
       "properties": {
         "grid_id": "12547_6550",
         "roads_count": 11,
-        "gap_score": 11.126
+        "gap_score": 11.128
       },
       "geometry": {
         "type": "Point",
@@ -24381,7 +24141,7 @@
       "properties": {
         "grid_id": "12547_6552",
         "roads_count": 7,
-        "gap_score": 6.833
+        "gap_score": 6.839
       },
       "geometry": {
         "type": "Point",
@@ -24396,7 +24156,7 @@
       "properties": {
         "grid_id": "12547_6554",
         "roads_count": 7,
-        "gap_score": 5.055
+        "gap_score": 5.067
       },
       "geometry": {
         "type": "Point",
@@ -24411,7 +24171,7 @@
       "properties": {
         "grid_id": "12547_6551",
         "roads_count": 7,
-        "gap_score": 8.244
+        "gap_score": 8.247
       },
       "geometry": {
         "type": "Point",
@@ -24426,7 +24186,7 @@
       "properties": {
         "grid_id": "12549_6551",
         "roads_count": 16,
-        "gap_score": 9.057
+        "gap_score": 9.054
       },
       "geometry": {
         "type": "Point",
@@ -24441,7 +24201,7 @@
       "properties": {
         "grid_id": "12550_6550",
         "roads_count": 19,
-        "gap_score": 11.581
+        "gap_score": 11.571
       },
       "geometry": {
         "type": "Point",
@@ -26526,7 +26286,7 @@
       "properties": {
         "grid_id": "12546_6554",
         "roads_count": 18,
-        "gap_score": 8.642
+        "gap_score": 8.66
       },
       "geometry": {
         "type": "Point",
@@ -69216,13 +68976,13 @@
       "properties": {
         "grid_id": "9508_6028",
         "roads_count": 2,
-        "gap_score": 2.64
+        "gap_score": 2.742
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          38.034198,
-          24.112846
+          38.033806,
+          24.112612
         ]
       }
     },
@@ -70948,51 +70708,6 @@
         "coordinates": [
           49.602771,
           25.533952
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12405_6367",
-        "roads_count": 17,
-        "gap_score": 13.6
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          49.62222,
-          25.470429
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12406_6367",
-        "roads_count": 3,
-        "gap_score": 8.073
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          49.624602,
-          25.470727
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12404_6366",
-        "roads_count": 14,
-        "gap_score": 9.716
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          49.617459,
-          25.466118
         ]
       }
     },
@@ -132051,7 +131766,7 @@
       "properties": {
         "grid_id": "12552_6555",
         "roads_count": 8,
-        "gap_score": 3.328
+        "gap_score": 3.311
       },
       "geometry": {
         "type": "Point",
@@ -132081,7 +131796,7 @@
       "properties": {
         "grid_id": "12553_6555",
         "roads_count": 10,
-        "gap_score": 5.378
+        "gap_score": 5.36
       },
       "geometry": {
         "type": "Point",
@@ -132111,7 +131826,7 @@
       "properties": {
         "grid_id": "12546_6557",
         "roads_count": 5,
-        "gap_score": 6.302
+        "gap_score": 6.317
       },
       "geometry": {
         "type": "Point",
@@ -132126,7 +131841,7 @@
       "properties": {
         "grid_id": "12544_6554",
         "roads_count": 5,
-        "gap_score": 8.344
+        "gap_score": 8.356
       },
       "geometry": {
         "type": "Point",
@@ -132141,7 +131856,7 @@
       "properties": {
         "grid_id": "12544_6555",
         "roads_count": 2,
-        "gap_score": 5.164
+        "gap_score": 5.173
       },
       "geometry": {
         "type": "Point",
@@ -132156,7 +131871,7 @@
       "properties": {
         "grid_id": "12545_6555",
         "roads_count": 4,
-        "gap_score": 6.387
+        "gap_score": 6.4
       },
       "geometry": {
         "type": "Point",
@@ -132171,7 +131886,7 @@
       "properties": {
         "grid_id": "12547_6555",
         "roads_count": 4,
-        "gap_score": 3.792
+        "gap_score": 3.805
       },
       "geometry": {
         "type": "Point",
@@ -132186,7 +131901,7 @@
       "properties": {
         "grid_id": "12546_6555",
         "roads_count": 10,
-        "gap_score": 7.188
+        "gap_score": 7.206
       },
       "geometry": {
         "type": "Point",
@@ -132201,7 +131916,7 @@
       "properties": {
         "grid_id": "12546_6556",
         "roads_count": 4,
-        "gap_score": 5.537
+        "gap_score": 5.551
       },
       "geometry": {
         "type": "Point",
@@ -132216,7 +131931,7 @@
       "properties": {
         "grid_id": "12545_6556",
         "roads_count": 4,
-        "gap_score": 6.312
+        "gap_score": 6.326
       },
       "geometry": {
         "type": "Point",
@@ -132231,7 +131946,7 @@
       "properties": {
         "grid_id": "12549_6552",
         "roads_count": 11,
-        "gap_score": 6.138
+        "gap_score": 6.134
       },
       "geometry": {
         "type": "Point",
@@ -132246,7 +131961,7 @@
       "properties": {
         "grid_id": "12550_6553",
         "roads_count": 20,
-        "gap_score": 4.274
+        "gap_score": 4.264
       },
       "geometry": {
         "type": "Point",
@@ -132261,7 +131976,7 @@
       "properties": {
         "grid_id": "12553_6551",
         "roads_count": 4,
-        "gap_score": 6.543
+        "gap_score": 6.531
       },
       "geometry": {
         "type": "Point",
@@ -132276,7 +131991,7 @@
       "properties": {
         "grid_id": "12552_6549",
         "roads_count": 13,
-        "gap_score": 13.087
+        "gap_score": 13.074
       },
       "geometry": {
         "type": "Point",
@@ -132291,7 +132006,7 @@
       "properties": {
         "grid_id": "12550_6549",
         "roads_count": 19,
-        "gap_score": 13.878
+        "gap_score": 13.868
       },
       "geometry": {
         "type": "Point",
@@ -132306,7 +132021,7 @@
       "properties": {
         "grid_id": "12549_6549",
         "roads_count": 15,
-        "gap_score": 13.104
+        "gap_score": 13.099
       },
       "geometry": {
         "type": "Point",
@@ -132321,7 +132036,7 @@
       "properties": {
         "grid_id": "12549_6550",
         "roads_count": 18,
-        "gap_score": 11.641
+        "gap_score": 11.636
       },
       "geometry": {
         "type": "Point",
@@ -132336,7 +132051,7 @@
       "properties": {
         "grid_id": "12551_6549",
         "roads_count": 13,
-        "gap_score": 12.648
+        "gap_score": 12.637
       },
       "geometry": {
         "type": "Point",
@@ -132381,7 +132096,7 @@
       "properties": {
         "grid_id": "12548_6549",
         "roads_count": 5,
-        "gap_score": 9.557
+        "gap_score": 9.555
       },
       "geometry": {
         "type": "Point",
@@ -132396,7 +132111,7 @@
       "properties": {
         "grid_id": "12546_6553",
         "roads_count": 17,
-        "gap_score": 9.421
+        "gap_score": 9.435
       },
       "geometry": {
         "type": "Point",
@@ -132411,7 +132126,7 @@
       "properties": {
         "grid_id": "12545_6551",
         "roads_count": 9,
-        "gap_score": 11.768
+        "gap_score": 11.776
       },
       "geometry": {
         "type": "Point",
@@ -132426,7 +132141,7 @@
       "properties": {
         "grid_id": "12548_6550",
         "roads_count": 14,
-        "gap_score": 11.15
+        "gap_score": 11.148
       },
       "geometry": {
         "type": "Point",
@@ -137691,7 +137406,7 @@
       "properties": {
         "grid_id": "12544_6553",
         "roads_count": 8,
-        "gap_score": 10.222
+        "gap_score": 10.236
       },
       "geometry": {
         "type": "Point",
@@ -174036,7 +173751,7 @@
       "properties": {
         "grid_id": "12534_6531",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 4.096
       },
       "geometry": {
         "type": "Point",
@@ -174051,7 +173766,7 @@
       "properties": {
         "grid_id": "12533_6532",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 5.294
       },
       "geometry": {
         "type": "Point",
@@ -174066,7 +173781,7 @@
       "properties": {
         "grid_id": "12536_6534",
         "roads_count": 8,
-        "gap_score": 12.318
+        "gap_score": 7.944
       },
       "geometry": {
         "type": "Point",
@@ -174081,7 +173796,7 @@
       "properties": {
         "grid_id": "12537_6533",
         "roads_count": 11,
-        "gap_score": 13.592
+        "gap_score": 7.132
       },
       "geometry": {
         "type": "Point",
@@ -174096,7 +173811,7 @@
       "properties": {
         "grid_id": "12537_6532",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 5.007
       },
       "geometry": {
         "type": "Point",
@@ -174111,7 +173826,7 @@
       "properties": {
         "grid_id": "12533_6531",
         "roads_count": 10,
-        "gap_score": 13.21
+        "gap_score": 5.764
       },
       "geometry": {
         "type": "Point",
@@ -174126,7 +173841,7 @@
       "properties": {
         "grid_id": "12538_6533",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 6.729
       },
       "geometry": {
         "type": "Point",
@@ -174141,7 +173856,7 @@
       "properties": {
         "grid_id": "12537_6534",
         "roads_count": 17,
-        "gap_score": 15.333
+        "gap_score": 10.407
       },
       "geometry": {
         "type": "Point",
@@ -174156,7 +173871,7 @@
       "properties": {
         "grid_id": "12534_6532",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 5.374
       },
       "geometry": {
         "type": "Point",
@@ -174171,7 +173886,7 @@
       "properties": {
         "grid_id": "12538_6532",
         "roads_count": 4,
-        "gap_score": 9.545
+        "gap_score": 4.181
       },
       "geometry": {
         "type": "Point",
@@ -174186,7 +173901,7 @@
       "properties": {
         "grid_id": "12536_6533",
         "roads_count": 13,
-        "gap_score": 14.26
+        "gap_score": 7.272
       },
       "geometry": {
         "type": "Point",
@@ -174201,7 +173916,7 @@
       "properties": {
         "grid_id": "12534_6530",
         "roads_count": 11,
-        "gap_score": 13.592
+        "gap_score": 4.052
       },
       "geometry": {
         "type": "Point",
@@ -174214,24 +173929,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12535_6531",
-        "roads_count": 11,
-        "gap_score": 13.592
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.142161,
-          26.125711
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12535_6534",
         "roads_count": 13,
-        "gap_score": 14.26
+        "gap_score": 8.668
       },
       "geometry": {
         "type": "Point",
@@ -174246,7 +173946,7 @@
       "properties": {
         "grid_id": "12538_6534",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 7.693
       },
       "geometry": {
         "type": "Point",
@@ -174261,7 +173961,7 @@
       "properties": {
         "grid_id": "12536_6532",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 4.342
       },
       "geometry": {
         "type": "Point",
@@ -174276,7 +173976,7 @@
       "properties": {
         "grid_id": "12535_6533",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 6.615
       },
       "geometry": {
         "type": "Point",
@@ -174291,7 +173991,7 @@
       "properties": {
         "grid_id": "12535_6532",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 4.836
       },
       "geometry": {
         "type": "Point",
@@ -174336,7 +174036,7 @@
       "properties": {
         "grid_id": "12537_6535",
         "roads_count": 24,
-        "gap_score": 16.712
+        "gap_score": 13.844
       },
       "geometry": {
         "type": "Point",
@@ -174351,7 +174051,7 @@
       "properties": {
         "grid_id": "12537_6536",
         "roads_count": 18,
-        "gap_score": 15.561
+        "gap_score": 13.639
       },
       "geometry": {
         "type": "Point",
@@ -174366,7 +174066,7 @@
       "properties": {
         "grid_id": "12536_6535",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 8.874
       },
       "geometry": {
         "type": "Point",
@@ -174381,7 +174081,7 @@
       "properties": {
         "grid_id": "12536_6536",
         "roads_count": 3,
-        "gap_score": 8.394
+        "gap_score": 6.374
       },
       "geometry": {
         "type": "Point",
@@ -174396,7 +174096,7 @@
       "properties": {
         "grid_id": "12538_6535",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 9.447
       },
       "geometry": {
         "type": "Point",
@@ -174409,69 +174109,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12537_6531",
-        "roads_count": 13,
-        "gap_score": 14.26
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.149127,
-          26.125462
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12537_6530",
-        "roads_count": 4,
-        "gap_score": 9.545
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.149582,
-          26.121695
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12536_6530",
-        "roads_count": 13,
-        "gap_score": 14.26
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.145726,
-          26.121368
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12535_6530",
-        "roads_count": 17,
-        "gap_score": 15.333
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.141342,
-          26.121655
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12533_6528",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 5.318
       },
       "geometry": {
         "type": "Point",
@@ -174486,7 +174126,7 @@
       "properties": {
         "grid_id": "12534_6528",
         "roads_count": 10,
-        "gap_score": 13.21
+        "gap_score": 4.785
       },
       "geometry": {
         "type": "Point",
@@ -174501,7 +174141,7 @@
       "properties": {
         "grid_id": "12535_6528",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 3.587
       },
       "geometry": {
         "type": "Point",
@@ -174514,54 +174154,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12537_6528",
-        "roads_count": 2,
-        "gap_score": 6.773
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.148623,
-          26.115406
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12536_6528",
-        "roads_count": 12,
-        "gap_score": 13.94
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.146138,
-          26.114339
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12535_6527",
-        "roads_count": 9,
-        "gap_score": 12.608
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.141289,
-          26.110085
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12533_6529",
         "roads_count": 8,
-        "gap_score": 12.318
+        "gap_score": 4.888
       },
       "geometry": {
         "type": "Point",
@@ -174574,24 +174169,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12536_6527",
-        "roads_count": 10,
-        "gap_score": 13.21
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.145114,
-          26.109866
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12533_6524",
         "roads_count": 3,
-        "gap_score": 4.422
+        "gap_score": 2.644
       },
       "geometry": {
         "type": "Point",
@@ -174606,43 +174186,13 @@
       "properties": {
         "grid_id": "12534_6529",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 2.916
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           50.137793,
           26.118794
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12534_6527",
-        "roads_count": 8,
-        "gap_score": 11.408
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.138708,
-          26.109867
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12534_6525",
-        "roads_count": 10,
-        "gap_score": 9.034
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.137673,
-          26.10198
         ]
       }
     },
@@ -174664,36 +174214,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12534_6526",
-        "roads_count": 12,
-        "gap_score": 11.179
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.137992,
-          26.106119
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12533_6526",
-        "roads_count": 4,
-        "gap_score": 7.306
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.135527,
-          26.10659
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12534_6522",
         "roads_count": 10,
         "gap_score": 6.671
@@ -174703,36 +174223,6 @@
         "coordinates": [
           50.137697,
           26.09001
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12536_6526",
-        "roads_count": 5,
-        "gap_score": 10.035
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.145115,
-          26.105547
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12535_6525",
-        "roads_count": 3,
-        "gap_score": 7.03
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.142701,
-          26.102911
         ]
       }
     },
@@ -174754,24 +174244,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12535_6526",
-        "roads_count": 6,
-        "gap_score": 9.683
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.141845,
-          26.10515
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12534_6523",
         "roads_count": 11,
-        "gap_score": 7.224
+        "gap_score": 5.679
       },
       "geometry": {
         "type": "Point",
@@ -174786,7 +174261,7 @@
       "properties": {
         "grid_id": "12535_6523",
         "roads_count": 8,
-        "gap_score": 8.25
+        "gap_score": 4.634
       },
       "geometry": {
         "type": "Point",
@@ -174801,7 +174276,7 @@
       "properties": {
         "grid_id": "12535_6522",
         "roads_count": 2,
-        "gap_score": 4.045
+        "gap_score": 3.573
       },
       "geometry": {
         "type": "Point",
@@ -174814,24 +174289,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12535_6524",
-        "roads_count": 10,
-        "gap_score": 9.707
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.14228,
-          26.0982
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12537_6522",
         "roads_count": 10,
-        "gap_score": 11.833
+        "gap_score": 7.781
       },
       "geometry": {
         "type": "Point",
@@ -174846,7 +174306,7 @@
       "properties": {
         "grid_id": "12534_6524",
         "roads_count": 10,
-        "gap_score": 7.582
+        "gap_score": 3.898
       },
       "geometry": {
         "type": "Point",
@@ -174861,7 +174321,7 @@
       "properties": {
         "grid_id": "12538_6523",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 6.049
       },
       "geometry": {
         "type": "Point",
@@ -174876,7 +174336,7 @@
       "properties": {
         "grid_id": "12536_6523",
         "roads_count": 7,
-        "gap_score": 9.949
+        "gap_score": 4.643
       },
       "geometry": {
         "type": "Point",
@@ -174891,7 +174351,7 @@
       "properties": {
         "grid_id": "12536_6521",
         "roads_count": 4,
-        "gap_score": 7.879
+        "gap_score": 6.667
       },
       "geometry": {
         "type": "Point",
@@ -174906,7 +174366,7 @@
       "properties": {
         "grid_id": "12533_6530",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 4.518
       },
       "geometry": {
         "type": "Point",
@@ -174921,7 +174381,7 @@
       "properties": {
         "grid_id": "12537_6523",
         "roads_count": 8,
-        "gap_score": 11.455
+        "gap_score": 5.613
       },
       "geometry": {
         "type": "Point",
@@ -174936,7 +174396,7 @@
       "properties": {
         "grid_id": "12536_6522",
         "roads_count": 6,
-        "gap_score": 8.928
+        "gap_score": 6.522
       },
       "geometry": {
         "type": "Point",
@@ -174951,7 +174411,7 @@
       "properties": {
         "grid_id": "12537_6524",
         "roads_count": 4,
-        "gap_score": 9.533
+        "gap_score": 3.831
       },
       "geometry": {
         "type": "Point",
@@ -174966,7 +174426,7 @@
       "properties": {
         "grid_id": "12537_6520",
         "roads_count": 10,
-        "gap_score": 13.033
+        "gap_score": 11.894
       },
       "geometry": {
         "type": "Point",
@@ -174981,7 +174441,7 @@
       "properties": {
         "grid_id": "12536_6524",
         "roads_count": 3,
-        "gap_score": 7.017
+        "gap_score": 2.494
       },
       "geometry": {
         "type": "Point",
@@ -187701,7 +187161,7 @@
       "properties": {
         "grid_id": "12405_6365",
         "roads_count": 6,
-        "gap_score": 7.897
+        "gap_score": 4.411
       },
       "geometry": {
         "type": "Point",
@@ -205881,7 +205341,7 @@
       "properties": {
         "grid_id": "12403_6365",
         "roads_count": 14,
-        "gap_score": 7.009
+        "gap_score": 6.666
       },
       "geometry": {
         "type": "Point",
@@ -205896,7 +205356,7 @@
       "properties": {
         "grid_id": "12404_6365",
         "roads_count": 15,
-        "gap_score": 9.307
+        "gap_score": 5.64
       },
       "geometry": {
         "type": "Point",
@@ -205911,7 +205371,7 @@
       "properties": {
         "grid_id": "12403_6366",
         "roads_count": 10,
-        "gap_score": 7.552
+        "gap_score": 4.304
       },
       "geometry": {
         "type": "Point",
@@ -205924,54 +205384,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12405_6368",
-        "roads_count": 9,
-        "gap_score": 12.461
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          49.62284,
-          25.473747
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12404_6367",
-        "roads_count": 24,
-        "gap_score": 12.883
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          49.618186,
-          25.470256
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12404_6368",
-        "roads_count": 9,
-        "gap_score": 10.981
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          49.617908,
-          25.474146
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12404_6369",
         "roads_count": 2,
-        "gap_score": 6.405
+        "gap_score": 1.921
       },
       "geometry": {
         "type": "Point",
@@ -205984,24 +205399,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12403_6368",
-        "roads_count": 18,
-        "gap_score": 12.138
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          49.614806,
-          25.473858
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12403_6369",
         "roads_count": 16,
-        "gap_score": 13.517
+        "gap_score": 5.3
       },
       "geometry": {
         "type": "Point",
@@ -206016,7 +205416,7 @@
       "properties": {
         "grid_id": "12403_6367",
         "roads_count": 16,
-        "gap_score": 9.992
+        "gap_score": 3.905
       },
       "geometry": {
         "type": "Point",
@@ -206106,7 +205506,7 @@
       "properties": {
         "grid_id": "12399_6370",
         "roads_count": 28,
-        "gap_score": 15.814
+        "gap_score": 15.642
       },
       "geometry": {
         "type": "Point",
@@ -206121,7 +205521,7 @@
       "properties": {
         "grid_id": "12399_6371",
         "roads_count": 19,
-        "gap_score": 15.778
+        "gap_score": 15.145
       },
       "geometry": {
         "type": "Point",
@@ -206421,7 +205821,7 @@
       "properties": {
         "grid_id": "12400_6370",
         "roads_count": 4,
-        "gap_score": 8.532
+        "gap_score": 7.163
       },
       "geometry": {
         "type": "Point",
@@ -206436,7 +205836,7 @@
       "properties": {
         "grid_id": "12402_6372",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 5.45
       },
       "geometry": {
         "type": "Point",
@@ -214806,7 +214206,7 @@
       "properties": {
         "grid_id": "12403_6370",
         "roads_count": 6,
-        "gap_score": 10.752
+        "gap_score": 4.878
       },
       "geometry": {
         "type": "Point",
@@ -214821,7 +214221,7 @@
       "properties": {
         "grid_id": "12402_6370",
         "roads_count": 5,
-        "gap_score": 9.816
+        "gap_score": 5.345
       },
       "geometry": {
         "type": "Point",
@@ -214836,7 +214236,7 @@
       "properties": {
         "grid_id": "12404_6370",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 4.691
       },
       "geometry": {
         "type": "Point",
@@ -307881,7 +307281,7 @@
       "properties": {
         "grid_id": "12553_6553",
         "roads_count": 5,
-        "gap_score": 4.81
+        "gap_score": 4.795
       },
       "geometry": {
         "type": "Point",
@@ -378741,7 +378141,7 @@
       "properties": {
         "grid_id": "12545_6553",
         "roads_count": 4,
-        "gap_score": 7.196
+        "gap_score": 7.206
       },
       "geometry": {
         "type": "Point",
@@ -414696,7 +414096,7 @@
       "properties": {
         "grid_id": "12553_6549",
         "roads_count": 17,
-        "gap_score": 14.593
+        "gap_score": 14.576
       },
       "geometry": {
         "type": "Point",
@@ -414711,7 +414111,7 @@
       "properties": {
         "grid_id": "12553_6550",
         "roads_count": 5,
-        "gap_score": 8.712
+        "gap_score": 8.701
       },
       "geometry": {
         "type": "Point",
@@ -414726,7 +414126,7 @@
       "properties": {
         "grid_id": "12553_6552",
         "roads_count": 6,
-        "gap_score": 6.318
+        "gap_score": 6.304
       },
       "geometry": {
         "type": "Point",
@@ -414846,7 +414246,7 @@
       "properties": {
         "grid_id": "12551_6550",
         "roads_count": 18,
-        "gap_score": 11.675
+        "gap_score": 11.662
       },
       "geometry": {
         "type": "Point",
@@ -414861,7 +414261,7 @@
       "properties": {
         "grid_id": "12552_6550",
         "roads_count": 22,
-        "gap_score": 12.774
+        "gap_score": 12.758
       },
       "geometry": {
         "type": "Point",
@@ -414906,7 +414306,7 @@
       "properties": {
         "grid_id": "12552_6553",
         "roads_count": 22,
-        "gap_score": 6.409
+        "gap_score": 6.387
       },
       "geometry": {
         "type": "Point",
@@ -414921,7 +414321,7 @@
       "properties": {
         "grid_id": "12552_6552",
         "roads_count": 17,
-        "gap_score": 7.801
+        "gap_score": 7.782
       },
       "geometry": {
         "type": "Point",
@@ -414936,7 +414336,7 @@
       "properties": {
         "grid_id": "12551_6551",
         "roads_count": 14,
-        "gap_score": 8.755
+        "gap_score": 8.742
       },
       "geometry": {
         "type": "Point",
@@ -414951,7 +414351,7 @@
       "properties": {
         "grid_id": "12551_6552",
         "roads_count": 16,
-        "gap_score": 6.931
+        "gap_score": 6.917
       },
       "geometry": {
         "type": "Point",
@@ -414966,7 +414366,7 @@
       "properties": {
         "grid_id": "12552_6551",
         "roads_count": 17,
-        "gap_score": 9.824
+        "gap_score": 9.807
       },
       "geometry": {
         "type": "Point",
@@ -414981,7 +414381,7 @@
       "properties": {
         "grid_id": "12551_6553",
         "roads_count": 13,
-        "gap_score": 4.55
+        "gap_score": 4.534
       },
       "geometry": {
         "type": "Point",
@@ -414996,7 +414396,7 @@
       "properties": {
         "grid_id": "12550_6552",
         "roads_count": 16,
-        "gap_score": 6.273
+        "gap_score": 6.264
       },
       "geometry": {
         "type": "Point",
@@ -415011,7 +414411,7 @@
       "properties": {
         "grid_id": "12550_6551",
         "roads_count": 15,
-        "gap_score": 8.788
+        "gap_score": 8.78
       },
       "geometry": {
         "type": "Point",
@@ -416226,7 +415626,7 @@
       "properties": {
         "grid_id": "12541_6533",
         "roads_count": 35,
-        "gap_score": 18.221
+        "gap_score": 15.085
       },
       "geometry": {
         "type": "Point",
@@ -416241,7 +415641,7 @@
       "properties": {
         "grid_id": "12540_6532",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 8.171
       },
       "geometry": {
         "type": "Point",
@@ -416256,7 +415656,7 @@
       "properties": {
         "grid_id": "12540_6533",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 8.67
       },
       "geometry": {
         "type": "Point",
@@ -416271,7 +415671,7 @@
       "properties": {
         "grid_id": "12542_6532",
         "roads_count": 4,
-        "gap_score": 9.545
+        "gap_score": 8.492
       },
       "geometry": {
         "type": "Point",
@@ -416286,7 +415686,7 @@
       "properties": {
         "grid_id": "12539_6534",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 8.783
       },
       "geometry": {
         "type": "Point",
@@ -446541,7 +445941,7 @@
       "properties": {
         "grid_id": "12534_6537",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 5.462
       },
       "geometry": {
         "type": "Point",
@@ -446556,7 +445956,7 @@
       "properties": {
         "grid_id": "12538_6536",
         "roads_count": 34,
-        "gap_score": 18.105
+        "gap_score": 17.238
       },
       "geometry": {
         "type": "Point",
@@ -446571,7 +445971,7 @@
       "properties": {
         "grid_id": "12535_6536",
         "roads_count": 10,
-        "gap_score": 13.21
+        "gap_score": 7.47
       },
       "geometry": {
         "type": "Point",
@@ -446586,7 +445986,7 @@
       "properties": {
         "grid_id": "12534_6535",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 5.3
       },
       "geometry": {
         "type": "Point",
@@ -446601,7 +446001,7 @@
       "properties": {
         "grid_id": "12534_6536",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 5.877
       },
       "geometry": {
         "type": "Point",
@@ -446616,7 +446016,7 @@
       "properties": {
         "grid_id": "12535_6535",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 6.387
       },
       "geometry": {
         "type": "Point",
@@ -446631,7 +446031,7 @@
       "properties": {
         "grid_id": "12535_6537",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 8.178
       },
       "geometry": {
         "type": "Point",
@@ -526566,7 +525966,7 @@
       "properties": {
         "grid_id": "12536_6540",
         "roads_count": 15,
-        "gap_score": 14.832
+        "gap_score": 14.234
       },
       "geometry": {
         "type": "Point",
@@ -526596,7 +525996,7 @@
       "properties": {
         "grid_id": "12534_6541",
         "roads_count": 16,
-        "gap_score": 15.09
+        "gap_score": 14.08
       },
       "geometry": {
         "type": "Point",
@@ -526611,7 +526011,7 @@
       "properties": {
         "grid_id": "12533_6541",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 5.836
       },
       "geometry": {
         "type": "Point",
@@ -526641,7 +526041,7 @@
       "properties": {
         "grid_id": "12537_6539",
         "roads_count": 10,
-        "gap_score": 13.21
+        "gap_score": 13.064
       },
       "geometry": {
         "type": "Point",
@@ -526716,7 +526116,7 @@
       "properties": {
         "grid_id": "12537_6538",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 9.735
       },
       "geometry": {
         "type": "Point",
@@ -526821,7 +526221,7 @@
       "properties": {
         "grid_id": "12535_6540",
         "roads_count": 15,
-        "gap_score": 14.832
+        "gap_score": 12.795
       },
       "geometry": {
         "type": "Point",
@@ -526836,7 +526236,7 @@
       "properties": {
         "grid_id": "12536_6539",
         "roads_count": 10,
-        "gap_score": 13.21
+        "gap_score": 11.578
       },
       "geometry": {
         "type": "Point",
@@ -526851,7 +526251,7 @@
       "properties": {
         "grid_id": "12534_6539",
         "roads_count": 11,
-        "gap_score": 13.592
+        "gap_score": 9.12
       },
       "geometry": {
         "type": "Point",
@@ -526866,7 +526266,7 @@
       "properties": {
         "grid_id": "12534_6540",
         "roads_count": 14,
-        "gap_score": 14.556
+        "gap_score": 11.408
       },
       "geometry": {
         "type": "Point",
@@ -526881,7 +526281,7 @@
       "properties": {
         "grid_id": "12533_6540",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 5.034
       },
       "geometry": {
         "type": "Point",
@@ -526896,7 +526296,7 @@
       "properties": {
         "grid_id": "12533_6539",
         "roads_count": 11,
-        "gap_score": 13.592
+        "gap_score": 8.415
       },
       "geometry": {
         "type": "Point",
@@ -526911,7 +526311,7 @@
       "properties": {
         "grid_id": "12535_6539",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 9.515
       },
       "geometry": {
         "type": "Point",
@@ -526926,7 +526326,7 @@
       "properties": {
         "grid_id": "12536_6538",
         "roads_count": 12,
-        "gap_score": 13.94
+        "gap_score": 11.144
       },
       "geometry": {
         "type": "Point",
@@ -526941,7 +526341,7 @@
       "properties": {
         "grid_id": "12534_6538",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 7.13
       },
       "geometry": {
         "type": "Point",
@@ -526956,7 +526356,7 @@
       "properties": {
         "grid_id": "12535_6538",
         "roads_count": 12,
-        "gap_score": 13.94
+        "gap_score": 9.225
       },
       "geometry": {
         "type": "Point",
@@ -526971,7 +526371,7 @@
       "properties": {
         "grid_id": "12536_6537",
         "roads_count": 4,
-        "gap_score": 9.545
+        "gap_score": 6.831
       },
       "geometry": {
         "type": "Point",
@@ -527001,7 +526401,7 @@
       "properties": {
         "grid_id": "12531_6538",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 4.331
       },
       "geometry": {
         "type": "Point",
@@ -527016,7 +526416,7 @@
       "properties": {
         "grid_id": "12529_6538",
         "roads_count": 8,
-        "gap_score": 12.107
+        "gap_score": 5.81
       },
       "geometry": {
         "type": "Point",
@@ -527031,7 +526431,7 @@
       "properties": {
         "grid_id": "12529_6539",
         "roads_count": 4,
-        "gap_score": 9.545
+        "gap_score": 5.385
       },
       "geometry": {
         "type": "Point",
@@ -527046,7 +526446,7 @@
       "properties": {
         "grid_id": "12528_6538",
         "roads_count": 4,
-        "gap_score": 8.679
+        "gap_score": 4.62
       },
       "geometry": {
         "type": "Point",
@@ -527061,7 +526461,7 @@
       "properties": {
         "grid_id": "12528_6537",
         "roads_count": 7,
-        "gap_score": 9.84
+        "gap_score": 5.08
       },
       "geometry": {
         "type": "Point",
@@ -527076,7 +526476,7 @@
       "properties": {
         "grid_id": "12531_6537",
         "roads_count": 3,
-        "gap_score": 8.394
+        "gap_score": 2.274
       },
       "geometry": {
         "type": "Point",
@@ -527091,7 +526491,7 @@
       "properties": {
         "grid_id": "12528_6539",
         "roads_count": 6,
-        "gap_score": 10.801
+        "gap_score": 7.328
       },
       "geometry": {
         "type": "Point",
@@ -527106,7 +526506,7 @@
       "properties": {
         "grid_id": "12527_6538",
         "roads_count": 5,
-        "gap_score": 8.055
+        "gap_score": 6.323
       },
       "geometry": {
         "type": "Point",
@@ -527121,7 +526521,7 @@
       "properties": {
         "grid_id": "12527_6539",
         "roads_count": 3,
-        "gap_score": 7.522
+        "gap_score": 5.985
       },
       "geometry": {
         "type": "Point",
@@ -527136,7 +526536,7 @@
       "properties": {
         "grid_id": "12530_6539",
         "roads_count": 3,
-        "gap_score": 8.394
+        "gap_score": 4.165
       },
       "geometry": {
         "type": "Point",
@@ -527151,7 +526551,7 @@
       "properties": {
         "grid_id": "12530_6538",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 5.167
       },
       "geometry": {
         "type": "Point",
@@ -527166,7 +526566,7 @@
       "properties": {
         "grid_id": "12530_6537",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 2.653
       },
       "geometry": {
         "type": "Point",
@@ -527181,7 +526581,7 @@
       "properties": {
         "grid_id": "12532_6538",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 5.379
       },
       "geometry": {
         "type": "Point",
@@ -527196,43 +526596,13 @@
       "properties": {
         "grid_id": "12528_6534",
         "roads_count": 2,
-        "gap_score": 5.716
+        "gap_score": 2.511
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           50.1149,
           26.139742
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12532_6536",
-        "roads_count": 11,
-        "gap_score": 13.592
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.129371,
-          26.145819
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12532_6534",
-        "roads_count": 3,
-        "gap_score": 8.394
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.129266,
-          26.138476
         ]
       }
     },
@@ -528169,21 +527539,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12536_6529",
-        "roads_count": 6,
-        "gap_score": 11.167
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.146354,
-          26.118736
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10320_5029",
         "roads_count": 2,
         "gap_score": 6.773
@@ -528231,7 +527586,7 @@
       "properties": {
         "grid_id": "12537_6526",
         "roads_count": 11,
-        "gap_score": 13.592
+        "gap_score": 3.679
       },
       "geometry": {
         "type": "Point",
@@ -528246,7 +527601,7 @@
       "properties": {
         "grid_id": "12533_6527",
         "roads_count": 2,
-        "gap_score": 5.987
+        "gap_score": 2.274
       },
       "geometry": {
         "type": "Point",
@@ -528321,7 +527676,7 @@
       "properties": {
         "grid_id": "12532_6537",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 3.158
       },
       "geometry": {
         "type": "Point",
@@ -528334,24 +527689,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12531_6536",
-        "roads_count": 7,
-        "gap_score": 11.784
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.125484,
-          26.145722
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12529_6537",
         "roads_count": 7,
-        "gap_score": 11.541
+        "gap_score": 3.387
       },
       "geometry": {
         "type": "Point",
@@ -528364,60 +527704,15 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12531_6535",
-        "roads_count": 15,
-        "gap_score": 14.832
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.125767,
-          26.142293
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12530_6536",
-        "roads_count": 9,
-        "gap_score": 12.789
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.121887,
-          26.146346
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12529_6534",
         "roads_count": 3,
-        "gap_score": 8.389
+        "gap_score": 2.434
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           50.119183,
           26.137956
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12532_6535",
-        "roads_count": 5,
-        "gap_score": 10.438
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.128844,
-          26.142297
         ]
       }
     },
@@ -528471,7 +527766,7 @@
       "properties": {
         "grid_id": "12527_6537",
         "roads_count": 11,
-        "gap_score": 9.233
+        "gap_score": 7.715
       },
       "geometry": {
         "type": "Point",
@@ -528486,7 +527781,7 @@
       "properties": {
         "grid_id": "12527_6536",
         "roads_count": 10,
-        "gap_score": 8.968
+        "gap_score": 6.599
       },
       "geometry": {
         "type": "Point",
@@ -528501,7 +527796,7 @@
       "properties": {
         "grid_id": "12528_6536",
         "roads_count": 11,
-        "gap_score": 11.259
+        "gap_score": 4.794
       },
       "geometry": {
         "type": "Point",
@@ -528531,7 +527826,7 @@
       "properties": {
         "grid_id": "12526_6537",
         "roads_count": 2,
-        "gap_score": 4.149
+        "gap_score": 4.108
       },
       "geometry": {
         "type": "Point",
@@ -528544,39 +527839,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12529_6536",
-        "roads_count": 12,
-        "gap_score": 12.933
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.117729,
-          26.145083
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12530_6535",
-        "roads_count": 6,
-        "gap_score": 11.167
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.121289,
-          26.141617
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12529_6535",
         "roads_count": 7,
-        "gap_score": 10.897
+        "gap_score": 2.996
       },
       "geometry": {
         "type": "Point",
@@ -528591,7 +527856,7 @@
       "properties": {
         "grid_id": "12527_6535",
         "roads_count": 13,
-        "gap_score": 9.703
+        "gap_score": 7.089
       },
       "geometry": {
         "type": "Point",
@@ -528606,7 +527871,7 @@
       "properties": {
         "grid_id": "12528_6535",
         "roads_count": 7,
-        "gap_score": 9.534
+        "gap_score": 4.382
       },
       "geometry": {
         "type": "Point",
@@ -528636,7 +527901,7 @@
       "properties": {
         "grid_id": "12532_6542",
         "roads_count": 4,
-        "gap_score": 9.545
+        "gap_score": 9.325
       },
       "geometry": {
         "type": "Point",
@@ -529116,7 +528381,7 @@
       "properties": {
         "grid_id": "12533_6542",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 11.694
       },
       "geometry": {
         "type": "Point",
@@ -529161,7 +528426,7 @@
       "properties": {
         "grid_id": "12532_6541",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 9.798
       },
       "geometry": {
         "type": "Point",
@@ -529386,7 +528651,7 @@
       "properties": {
         "grid_id": "12531_6542",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 11.587
       },
       "geometry": {
         "type": "Point",
@@ -529401,7 +528666,7 @@
       "properties": {
         "grid_id": "12530_6541",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 5.759
       },
       "geometry": {
         "type": "Point",
@@ -529416,7 +528681,7 @@
       "properties": {
         "grid_id": "12531_6541",
         "roads_count": 9,
-        "gap_score": 12.789
+        "gap_score": 10.704
       },
       "geometry": {
         "type": "Point",
@@ -530016,7 +529281,7 @@
       "properties": {
         "grid_id": "12543_6554",
         "roads_count": 4,
-        "gap_score": 8.807
+        "gap_score": 8.819
       },
       "geometry": {
         "type": "Point",
@@ -530031,7 +529296,7 @@
       "properties": {
         "grid_id": "12544_6552",
         "roads_count": 10,
-        "gap_score": 12.294
+        "gap_score": 12.307
       },
       "geometry": {
         "type": "Point",
@@ -551886,7 +551151,7 @@
       "properties": {
         "grid_id": "12407_6364",
         "roads_count": 3,
-        "gap_score": 7.964
+        "gap_score": 4.963
       },
       "geometry": {
         "type": "Point",
@@ -551901,7 +551166,7 @@
       "properties": {
         "grid_id": "12409_6369",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 4.289
       },
       "geometry": {
         "type": "Point",
@@ -551916,7 +551181,7 @@
       "properties": {
         "grid_id": "12410_6369",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 7.577
       },
       "geometry": {
         "type": "Point",
@@ -551931,7 +551196,7 @@
       "properties": {
         "grid_id": "12409_6368",
         "roads_count": 3,
-        "gap_score": 8.394
+        "gap_score": 5.112
       },
       "geometry": {
         "type": "Point",
@@ -553596,7 +552861,7 @@
       "properties": {
         "grid_id": "12401_6371",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 7.218
       },
       "geometry": {
         "type": "Point",
@@ -553611,7 +552876,7 @@
       "properties": {
         "grid_id": "12401_6370",
         "roads_count": 4,
-        "gap_score": 9.271
+        "gap_score": 6.417
       },
       "geometry": {
         "type": "Point",
@@ -553836,7 +553101,7 @@
       "properties": {
         "grid_id": "12404_6364",
         "roads_count": 4,
-        "gap_score": 5.683
+        "gap_score": 4.461
       },
       "geometry": {
         "type": "Point",
@@ -553851,7 +553116,7 @@
       "properties": {
         "grid_id": "12405_6364",
         "roads_count": 9,
-        "gap_score": 8.972
+        "gap_score": 6.352
       },
       "geometry": {
         "type": "Point",
@@ -553888,21 +553153,6 @@
         "coordinates": [
           49.609947,
           25.450017
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12405_6366",
-        "roads_count": 10,
-        "gap_score": 10.8
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          49.621769,
-          25.467305
         ]
       }
     },
@@ -562251,7 +561501,7 @@
       "properties": {
         "grid_id": "12536_6520",
         "roads_count": 4,
-        "gap_score": 8.193
+        "gap_score": 8.146
       },
       "geometry": {
         "type": "Point",
@@ -562266,7 +561516,7 @@
       "properties": {
         "grid_id": "12537_6519",
         "roads_count": 4,
-        "gap_score": 9.545
+        "gap_score": 9.214
       },
       "geometry": {
         "type": "Point",
@@ -639396,7 +638646,7 @@
       "properties": {
         "grid_id": "12548_6556",
         "roads_count": 2,
-        "gap_score": 2.276
+        "gap_score": 2.285
       },
       "geometry": {
         "type": "Point",
@@ -641616,7 +640866,7 @@
       "properties": {
         "grid_id": "12409_6365",
         "roads_count": 4,
-        "gap_score": 8.139
+        "gap_score": 6.473
       },
       "geometry": {
         "type": "Point",
@@ -660591,7 +659841,7 @@
       "properties": {
         "grid_id": "12402_6367",
         "roads_count": 14,
-        "gap_score": 8.335
+        "gap_score": 5.632
       },
       "geometry": {
         "type": "Point",
@@ -660606,7 +659856,7 @@
       "properties": {
         "grid_id": "12401_6368",
         "roads_count": 2,
-        "gap_score": 4.319
+        "gap_score": 3.81
       },
       "geometry": {
         "type": "Point",
@@ -660621,7 +659871,7 @@
       "properties": {
         "grid_id": "12402_6369",
         "roads_count": 7,
-        "gap_score": 9.606
+        "gap_score": 5.29
       },
       "geometry": {
         "type": "Point",
@@ -660636,7 +659886,7 @@
       "properties": {
         "grid_id": "12402_6368",
         "roads_count": 6,
-        "gap_score": 7.845
+        "gap_score": 4.231
       },
       "geometry": {
         "type": "Point",
@@ -660651,7 +659901,7 @@
       "properties": {
         "grid_id": "12401_6367",
         "roads_count": 11,
-        "gap_score": 7.02
+        "gap_score": 7.002
       },
       "geometry": {
         "type": "Point",
@@ -660936,7 +660186,7 @@
       "properties": {
         "grid_id": "12407_6362",
         "roads_count": 4,
-        "gap_score": 7.99
+        "gap_score": 7.855
       },
       "geometry": {
         "type": "Point",
@@ -660951,7 +660201,7 @@
       "properties": {
         "grid_id": "12407_6363",
         "roads_count": 8,
-        "gap_score": 11.225
+        "gap_score": 8.84
       },
       "geometry": {
         "type": "Point",
@@ -672756,7 +672006,7 @@
       "properties": {
         "grid_id": "12534_6534",
         "roads_count": 14,
-        "gap_score": 14.556
+        "gap_score": 7.381
       },
       "geometry": {
         "type": "Point",
@@ -672771,7 +672021,7 @@
       "properties": {
         "grid_id": "12534_6533",
         "roads_count": 15,
-        "gap_score": 14.832
+        "gap_score": 8.564
       },
       "geometry": {
         "type": "Point",
@@ -672816,7 +672066,7 @@
       "properties": {
         "grid_id": "12554_6550",
         "roads_count": 9,
-        "gap_score": 12.341
+        "gap_score": 12.326
       },
       "geometry": {
         "type": "Point",
@@ -678801,7 +678051,7 @@
       "properties": {
         "grid_id": "12540_6530",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 3.332
       },
       "geometry": {
         "type": "Point",
@@ -678816,7 +678066,7 @@
       "properties": {
         "grid_id": "12539_6530",
         "roads_count": 3,
-        "gap_score": 8.394
+        "gap_score": 3.367
       },
       "geometry": {
         "type": "Point",
@@ -679851,7 +679101,7 @@
       "properties": {
         "grid_id": "12539_6525",
         "roads_count": 11,
-        "gap_score": 13.592
+        "gap_score": 7.845
       },
       "geometry": {
         "type": "Point",
@@ -679866,7 +679116,7 @@
       "properties": {
         "grid_id": "12538_6525",
         "roads_count": 20,
-        "gap_score": 15.983
+        "gap_score": 6.939
       },
       "geometry": {
         "type": "Point",
@@ -679881,7 +679131,7 @@
       "properties": {
         "grid_id": "12537_6525",
         "roads_count": 18,
-        "gap_score": 15.561
+        "gap_score": 4.61
       },
       "geometry": {
         "type": "Point",
@@ -679896,7 +679146,7 @@
       "properties": {
         "grid_id": "12538_6526",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 4.139
       },
       "geometry": {
         "type": "Point",
@@ -679911,7 +679161,7 @@
       "properties": {
         "grid_id": "12538_6524",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 4.959
       },
       "geometry": {
         "type": "Point",
@@ -680676,7 +679926,7 @@
       "properties": {
         "grid_id": "12545_6554",
         "roads_count": 2,
-        "gap_score": 4.422
+        "gap_score": 4.43
       },
       "geometry": {
         "type": "Point",
@@ -726561,7 +725811,7 @@
       "properties": {
         "grid_id": "12400_6372",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 10.736
       },
       "geometry": {
         "type": "Point",
@@ -726576,7 +725826,7 @@
       "properties": {
         "grid_id": "12400_6371",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 5.561
       },
       "geometry": {
         "type": "Point",
@@ -726666,7 +725916,7 @@
       "properties": {
         "grid_id": "12403_6373",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 9.369
       },
       "geometry": {
         "type": "Point",
@@ -726681,7 +725931,7 @@
       "properties": {
         "grid_id": "12402_6373",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 5.887
       },
       "geometry": {
         "type": "Point",
@@ -726696,7 +725946,7 @@
       "properties": {
         "grid_id": "12404_6371",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 5.98
       },
       "geometry": {
         "type": "Point",
@@ -726711,7 +725961,7 @@
       "properties": {
         "grid_id": "12405_6371",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 3.37
       },
       "geometry": {
         "type": "Point",
@@ -727026,7 +726276,7 @@
       "properties": {
         "grid_id": "12406_6370",
         "roads_count": 3,
-        "gap_score": 8.394
+        "gap_score": 3.283
       },
       "geometry": {
         "type": "Point",
@@ -727041,7 +726291,7 @@
       "properties": {
         "grid_id": "12407_6370",
         "roads_count": 6,
-        "gap_score": 11.167
+        "gap_score": 4.822
       },
       "geometry": {
         "type": "Point",
@@ -727056,7 +726306,7 @@
       "properties": {
         "grid_id": "12406_6369",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 2.313
       },
       "geometry": {
         "type": "Point",
@@ -727071,7 +726321,7 @@
       "properties": {
         "grid_id": "12407_6369",
         "roads_count": 4,
-        "gap_score": 9.545
+        "gap_score": 3.37
       },
       "geometry": {
         "type": "Point",
@@ -727084,24 +726334,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12406_6368",
-        "roads_count": 2,
-        "gap_score": 6.773
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          49.627707,
-          25.475385
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12407_6368",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 3.283
       },
       "geometry": {
         "type": "Point",
@@ -738651,7 +737886,7 @@
       "properties": {
         "grid_id": "12400_6369",
         "roads_count": 3,
-        "gap_score": 6.443
+        "gap_score": 5.841
       },
       "geometry": {
         "type": "Point",
@@ -761256,7 +760491,7 @@
       "properties": {
         "grid_id": "12531_6539",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 3.165
       },
       "geometry": {
         "type": "Point",
@@ -767841,7 +767076,7 @@
       "properties": {
         "grid_id": "12405_6363",
         "roads_count": 4,
-        "gap_score": 6.628
+        "gap_score": 5.875
       },
       "geometry": {
         "type": "Point",
@@ -770946,7 +770181,7 @@
       "properties": {
         "grid_id": "12406_6365",
         "roads_count": 2,
-        "gap_score": 5.547
+        "gap_score": 2.825
       },
       "geometry": {
         "type": "Point",
@@ -777921,7 +777156,7 @@
       "properties": {
         "grid_id": "12547_6557",
         "roads_count": 2,
-        "gap_score": 3.833
+        "gap_score": 3.843
       },
       "geometry": {
         "type": "Point",
@@ -780268,21 +779503,6 @@
         "coordinates": [
           49.273272,
           27.046667
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12538_6530",
-        "roads_count": 2,
-        "gap_score": 6.773
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.152845,
-          26.121251
         ]
       }
     },
@@ -794256,7 +793476,7 @@
       "properties": {
         "grid_id": "12401_6369",
         "roads_count": 2,
-        "gap_score": 5.606
+        "gap_score": 4.165
       },
       "geometry": {
         "type": "Point",
@@ -797451,7 +796671,7 @@
       "properties": {
         "grid_id": "12547_6556",
         "roads_count": 2,
-        "gap_score": 2.929
+        "gap_score": 2.939
       },
       "geometry": {
         "type": "Point",
@@ -894351,7 +893571,7 @@
       "properties": {
         "grid_id": "12528_6533",
         "roads_count": 5,
-        "gap_score": 9.313
+        "gap_score": 5.051
       },
       "geometry": {
         "type": "Point",
@@ -894366,7 +893586,7 @@
       "properties": {
         "grid_id": "12529_6533",
         "roads_count": 10,
-        "gap_score": 12.967
+        "gap_score": 5.62
       },
       "geometry": {
         "type": "Point",
@@ -894379,24 +893599,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "12531_6534",
-        "roads_count": 7,
-        "gap_score": 11.784
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.1265,
-          26.137249
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12530_6534",
         "roads_count": 7,
-        "gap_score": 11.784
+        "gap_score": 3.077
       },
       "geometry": {
         "type": "Point",
@@ -894411,7 +893616,7 @@
       "properties": {
         "grid_id": "12531_6533",
         "roads_count": 5,
-        "gap_score": 10.438
+        "gap_score": 3.626
       },
       "geometry": {
         "type": "Point",
@@ -894426,7 +893631,7 @@
       "properties": {
         "grid_id": "12530_6533",
         "roads_count": 2,
-        "gap_score": 6.773
+        "gap_score": 2.449
       },
       "geometry": {
         "type": "Point",
