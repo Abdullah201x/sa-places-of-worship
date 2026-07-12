@@ -46,12 +46,19 @@ Notes:
 - The Saudi Arabia boundary uses OSM relation id **307584**
   (`extract_sa_boundary.py`).
 - The gap grid uses ~0.004° cells (~440 m, close to typical neighborhood
-  mosque spacing). A cell with enough drivable-road segments qualifies as a
-  candidate, and is flagged as a "gap" based on its actual distance to the
-  nearest place of worship (via a `shapely` STRtree nearest-neighbor query),
-  not just whether one exists somewhere in the same cell. Cells within
-  walking distance (750 m) of a mosque are excluded; gap intensity scales
-  with both road density and how far the nearest mosque actually is
+  mosque spacing). A cell qualifies as a candidate when it contains at least
+  2 distinct drivable ways (so a single road passing through empty land
+  doesn't count as inhabited). A candidate cell is then flagged as a "gap"
+  based on its actual distance to the nearest place of worship (via a
+  `shapely` STRtree nearest-neighbor query), not just whether one exists
+  somewhere in the same cell. Cells within walking distance (750 m) of a
+  mosque are excluded; gap intensity scales with both how far the nearest
+  mosque actually is and the cell's total drivable road **length** (summed
+  per cell, with through-traffic classes like motorway/trunk/primary
+  downweighted). Length is used instead of a raw way count for this
+  intensity score because OSM fragments ways into many short segments
+  wherever a tag changes (speed limit, lanes, name), which otherwise
+  inflates apparent density in cities without indicating more residents
   (`calculate_gaps.py`).
 
 ## Running the front-end

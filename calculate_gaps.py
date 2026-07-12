@@ -12,6 +12,25 @@ from shapely.strtree import STRtree
 # Resolve all paths relative to this script so it runs on any machine.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Equirectangular scaling around KSA's ~24 deg N latitude, sufficient for
+# local length/distance calculations (not a true projection).
+REF_LAT_RAD = math.radians(24.0)
+M_PER_DEG_LAT = 110_574.0
+M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
+
+# Through-traffic road classes are downweighted: OSM fragments them into many
+# short tagged segments (speed/lane/name changes), which inflates apparent
+# density in cities without indicating where people actually live.
+HIGHWAY_WEIGHTS = {
+    'motorway': 0.2,
+    'motorway_link': 0.2,
+    'trunk': 0.2,
+    'trunk_link': 0.2,
+    'primary': 0.3,
+    'primary_link': 0.3,
+}
+DEFAULT_HIGHWAY_WEIGHT = 1.0
+
 def find_pbf(base_dir):
     matches = glob.glob(os.path.join(base_dir, "*.osm.pbf"))
     if not matches:
@@ -24,15 +43,16 @@ class DrivableRoadExtractor(osmium.SimpleHandler):
     def __init__(self, boundary_poly):
         super().__init__()
         self.boundary_poly = boundary_poly
-        self.points = []
+        # (centroid_lon, centroid_lat, highway-weighted length in meters)
+        self.roads = []
 
     def way(self, w):
         if 'highway' in w.tags:
             h_type = w.tags['highway']
             # Exclude non-drivable pedestrian, construction, and service paths
             if h_type not in (
-                'footway', 'path', 'steps', 'cycleway', 'pedestrian', 
-                'bridleway', 'corridor', 'platform', 'elevator', 
+                'footway', 'path', 'steps', 'cycleway', 'pedestrian',
+                'bridleway', 'corridor', 'platform', 'elevator',
                 'proposed', 'construction', 'abandoned', 'escape', 'sidewalk'
             ):
                 try:
@@ -41,13 +61,19 @@ class DrivableRoadExtractor(osmium.SimpleHandler):
                     for node in w.nodes:
                         lats.append(node.lat)
                         lons.append(node.lon)
-                    
-                    if lats and lons:
+
+                    if len(lats) >= 2:
                         centroid_lat = sum(lats) / len(lats)
                         centroid_lon = sum(lons) / len(lons)
                         pt = Point(centroid_lon, centroid_lat)
                         if self.boundary_poly.contains(pt):
-                            self.points.append((centroid_lon, centroid_lat))
+                            length_m = 0.0
+                            for i in range(len(lats) - 1):
+                                dx = (lons[i + 1] - lons[i]) * M_PER_DEG_LON
+                                dy = (lats[i + 1] - lats[i]) * M_PER_DEG_LAT
+                                length_m += math.hypot(dx, dy)
+                            weight = HIGHWAY_WEIGHTS.get(h_type, DEFAULT_HIGHWAY_WEIGHT)
+                            self.roads.append((centroid_lon, centroid_lat, length_m * weight))
                 except osmium.InvalidLocationError:
                     pass
 
@@ -77,27 +103,28 @@ def main():
         print(f"Error loading places of worship: {e}")
         sys.exit(1)
 
-    # 3. Extract road centroids from PBF
+    # 3. Extract weighted road length from PBF
     print("Scanning PBF for all drivable road networks...")
     start_time = time.time()
     extractor = DrivableRoadExtractor(boundary_poly)
     extractor.apply_file(pbf_path, locations=True)
-    print(f"Extracted {len(extractor.points)} road segments inside Saudi Arabia in {time.time() - start_time:.2f} seconds.")
+    print(f"Extracted {len(extractor.roads)} road ways inside Saudi Arabia in {time.time() - start_time:.2f} seconds.")
 
     # 4. Map roads to a 2D coordinate grid
     # Grid size in degrees (~0.004 deg is approx 440 m, close to typical
     # neighborhood mosque spacing) so a cell no longer spans both
     # "next to a mosque" and "far from one".
     GRID_SIZE = 0.004
+    # Candidacy still requires >=2 distinct ways in a cell (not just one road
+    # passing through empty land) - this stays a *way count*, unaffected by
+    # the length-based scoring change below, so rural/desert candidacy is
+    # unchanged from before. Weighted road length is only used afterwards, to
+    # score *how* underserved a candidate cell is without being inflated by
+    # OSM way-splitting (tag changes fragment ways into many short segments,
+    # especially in cities).
     MIN_ROADS_PER_CELL = 2
     MIN_GAP_DISTANCE_M = 750   # walkable distance; below this, not a gap
     MAX_GAP_SCORE_DISTANCE_M = 3000
-
-    # Equirectangular scaling around KSA's ~24 deg N latitude, sufficient for
-    # local nearest-neighbor distance (not a true projection).
-    REF_LAT_RAD = math.radians(24.0)
-    M_PER_DEG_LAT = 110_574.0
-    M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
 
     print("Indexing places of worship for nearest-distance queries...")
     worship_tree = STRtree([
@@ -108,35 +135,35 @@ def main():
 
     print("Mapping roads to grid...")
     grid = {}
-    for lon, lat in extractor.points:
+    for lon, lat, weighted_length_m in extractor.roads:
         grid_x = int(lon / GRID_SIZE)
         grid_y = int(lat / GRID_SIZE)
         key = (grid_x, grid_y)
 
-        cell = grid.setdefault(key, {"res_count": 0, "sum_lon": 0.0, "sum_lat": 0.0})
-        cell["res_count"] += 1
+        cell = grid.setdefault(key, {"road_length_m": 0.0, "sum_lon": 0.0, "sum_lat": 0.0, "n": 0})
+        cell["road_length_m"] += weighted_length_m
         cell["sum_lon"] += lon
         cell["sum_lat"] += lat
+        cell["n"] += 1
 
     # 5. Identify coverage gaps by actual distance to the nearest place of worship
     print("Computing coverage gaps...")
     candidate_keys = []
     candidate_points = []      # (lon, lat) in degrees, for output/containment
     candidate_points_m = []    # projected meters, for nearest-distance query
-    candidate_res = []
+    candidate_lengths = []
 
     for key, cell in grid.items():
-        res_count = cell["res_count"]
-        if res_count < MIN_ROADS_PER_CELL:
+        if cell["n"] < MIN_ROADS_PER_CELL:
             continue
 
-        rep_lon = cell["sum_lon"] / res_count
-        rep_lat = cell["sum_lat"] / res_count
+        rep_lon = cell["sum_lon"] / cell["n"]
+        rep_lat = cell["sum_lat"] / cell["n"]
 
         candidate_keys.append(key)
         candidate_points.append((rep_lon, rep_lat))
         candidate_points_m.append(Point(rep_lon * M_PER_DEG_LON, rep_lat * M_PER_DEG_LAT))
-        candidate_res.append(res_count)
+        candidate_lengths.append(cell["road_length_m"])
 
     gap_features = []
     if candidate_points_m:
@@ -156,20 +183,21 @@ def main():
             if distance_m < MIN_GAP_DISTANCE_M:
                 continue  # close enough to a mosque -> not a gap
 
-            res_count = candidate_res[i]
+            road_length_m = candidate_lengths[i]
             rep_lon, rep_lat = candidate_points[i]
 
-            # Gap intensity blends road density (as before) with how far the
-            # nearest mosque actually is, so a gap right next to a mosque in
-            # the same coarse area no longer masks a genuinely underserved spot.
+            # Gap intensity blends road-length density (as before, but now
+            # scale-invariant to OSM way-splitting) with how far the nearest
+            # mosque actually is, so a gap right next to a mosque in the same
+            # coarse area no longer masks a genuinely underserved spot.
             distance_factor = min(distance_m, MAX_GAP_SCORE_DISTANCE_M) / MIN_GAP_DISTANCE_M
-            gap_score = (1.0 + math.log(res_count)) * distance_factor
+            gap_score = (1.0 + math.log(max(road_length_m, 1.0))) * distance_factor
 
             gap_features.append({
                 "type": "Feature",
                 "properties": {
                     "grid_id": f"{key[0]}_{key[1]}",
-                    "roads_count": res_count,
+                    "road_length_m": round(road_length_m, 1),
                     "gap_score": round(gap_score, 3)
                 },
                 "geometry": {
@@ -185,10 +213,10 @@ def main():
         "type": "FeatureCollection",
         "features": gap_features
     }
-    
+
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(geojson_collection, f, indent=2, ensure_ascii=False)
-        
+
     print(f"Coverage gaps written to {output_path}")
 
 if __name__ == "__main__":

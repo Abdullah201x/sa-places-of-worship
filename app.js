@@ -480,6 +480,151 @@ function toggleLayersByZoom() {
   }
 }
 
+// === Coverage Gap Gradient Layer ===
+// Renders coverage-gap scores as a continuous, zoom-independent gradient by
+// bilinearly interpolating gap_score across the underlying ~440m analysis
+// grid (calculate_gaps.py's GRID_SIZE), instead of leaflet.heat's
+// fixed-pixel-radius blobs. Those blobs stop overlapping - and read as
+// scattered dots rather than a smooth field - once the grid spacing exceeds
+// the blob radius on screen, which is exactly what happens when zoomed into
+// dense cities to inspect detail.
+const GAP_GRID_SIZE_DEG = 0.004;
+const GAP_GRADIENT_STOPS = [
+  { stop: 0.0, color: [63, 43, 150] },   // Deep Indigo
+  { stop: 0.5, color: [168, 192, 255] }, // Soft Lilac
+  { stop: 0.8, color: [236, 0, 140] },   // Neon Magenta
+  { stop: 1.0, color: [252, 103, 103] }  // Flame Orange/Red
+];
+
+function gapScoreToColor(t) {
+  t = Math.max(0, Math.min(1, t));
+  for (let i = 1; i < GAP_GRADIENT_STOPS.length; i++) {
+    const a = GAP_GRADIENT_STOPS[i - 1];
+    const b = GAP_GRADIENT_STOPS[i];
+    if (t <= b.stop) {
+      const localT = (t - a.stop) / (b.stop - a.stop || 1);
+      return [
+        a.color[0] + (b.color[0] - a.color[0]) * localT,
+        a.color[1] + (b.color[1] - a.color[1]) * localT,
+        a.color[2] + (b.color[2] - a.color[2]) * localT
+      ];
+    }
+  }
+  return GAP_GRADIENT_STOPS[GAP_GRADIENT_STOPS.length - 1].color;
+}
+
+// Builds a sparse Map<"x,y", gap_score> from the gap grid's own cell
+// coordinates (grid_id already encodes them), so interpolation always lines
+// up with the real analysis grid regardless of zoom.
+function buildGapScoreLookup(gapFeatures) {
+  const scoreByCell = new Map();
+  let maxScore = 0;
+  gapFeatures.forEach(f => {
+    const [gx, gy] = f.properties.grid_id.split('_').map(Number);
+    const score = f.properties.gap_score;
+    scoreByCell.set(gx + ',' + gy, score);
+    if (score > maxScore) maxScore = score;
+  });
+  return { scoreByCell, maxScore };
+}
+
+// Dilates + box-averages the raw lookup over a (2r+1)x(2r+1) cell
+// neighborhood, used to drive the "smoothing" slider. Computed once per
+// filter/slider change rather than per pixel, so tile rendering stays fast.
+// Returns its own max so color contrast doesn't wash out under heavy
+// smoothing (averaging with many zero neighbors shrinks every score, so
+// normalizing against the *pre-smoothing* max would make the whole layer
+// fade to near-invisible).
+function buildSmoothedLookup(rawMap, rawMaxScore, radiusCells) {
+  if (radiusCells <= 0) return { scoreByCell: rawMap, maxScore: rawMaxScore };
+
+  const offsets = [];
+  for (let dx = -radiusCells; dx <= radiusCells; dx++) {
+    for (let dy = -radiusCells; dy <= radiusCells; dy++) {
+      offsets.push([dx, dy]);
+    }
+  }
+
+  const visited = new Set();
+  rawMap.forEach((_, key) => {
+    const [gx, gy] = key.split(',').map(Number);
+    offsets.forEach(([dx, dy]) => visited.add((gx + dx) + ',' + (gy + dy)));
+  });
+
+  const smoothed = new Map();
+  let maxScore = 0;
+  visited.forEach(key => {
+    const [gx, gy] = key.split(',').map(Number);
+    let sum = 0;
+    offsets.forEach(([dx, dy]) => {
+      sum += rawMap.get((gx + dx) + ',' + (gy + dy)) || 0;
+    });
+    const avg = sum / offsets.length;
+    smoothed.set(key, avg);
+    if (avg > maxScore) maxScore = avg;
+  });
+  return { scoreByCell: smoothed, maxScore };
+}
+
+const GapGradientLayer = L.GridLayer.extend({
+  initialize: function (scoreByCell, maxScore, options) {
+    L.GridLayer.prototype.initialize.call(this, options);
+    this._scoreByCell = scoreByCell;
+    this._maxScore = maxScore || 1;
+  },
+
+  _cellScore: function (gx, gy) {
+    const v = this._scoreByCell.get(gx + ',' + gy);
+    return v === undefined ? 0 : v;
+  },
+
+  // Bilinear interpolation between the 4 grid cells surrounding (lon, lat),
+  // so color is continuous across the real analysis grid at any zoom.
+  _interpolate: function (lon, lat) {
+    const fx = lon / GAP_GRID_SIZE_DEG;
+    const fy = lat / GAP_GRID_SIZE_DEG;
+    const x0 = Math.floor(fx), y0 = Math.floor(fy);
+    const tx = fx - x0, ty = fy - y0;
+
+    const s00 = this._cellScore(x0, y0);
+    const s10 = this._cellScore(x0 + 1, y0);
+    const s01 = this._cellScore(x0, y0 + 1);
+    const s11 = this._cellScore(x0 + 1, y0 + 1);
+
+    const top = s00 + (s10 - s00) * tx;
+    const bottom = s01 + (s11 - s01) * tx;
+    return top + (bottom - top) * ty;
+  },
+
+  createTile: function (coords) {
+    const tileSize = this.getTileSize();
+    const canvas = L.DomUtil.create('canvas', 'leaflet-tile');
+    canvas.width = tileSize.x;
+    canvas.height = tileSize.y;
+    const ctx = canvas.getContext('2d');
+    const step = 4; // sample every 4px and fill blocks, for performance
+
+    for (let py = 0; py < tileSize.y; py += step) {
+      for (let px = 0; px < tileSize.x; px += step) {
+        const tilePoint = coords.scaleBy(tileSize).add([px, py]);
+        const latlng = this._map.unproject(tilePoint, coords.z);
+        const score = this._interpolate(latlng.lng, latlng.lat);
+
+        if (score <= 0.001) continue;
+
+        const t = Math.min(score / this._maxScore, 1);
+        const [r, g, b] = gapScoreToColor(t);
+        const alpha = 0.15 + t * 0.65; // keep low scores subtle, peak gaps vivid
+
+        ctx.fillStyle = `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${alpha})`;
+        ctx.fillRect(px, py, step, step);
+      }
+    }
+
+    return canvas;
+  }
+});
+
 // Re-generate Heatmap and Marker Clusters based on selected mode
 function updateMapLayers() {
   // 1. Remove previous heatmap & clusters
@@ -580,32 +725,18 @@ function updateMapLayers() {
     toggleLayersByZoom();
 
   } else {
-    // === Coverage Gaps Mode (Negative Heatmap) ===
-    const gapPoints = [];
+    // === Coverage Gaps Mode (Continuous Gradient) ===
+    // Interpolated directly from the analysis grid rather than fed through
+    // leaflet.heat, so the field stays smooth at any zoom instead of
+    // resolving into scattered dots once grid spacing exceeds a fixed pixel
+    // blob radius (the issue in dense cities).
+    const { scoreByCell, maxScore } = buildGapScoreLookup(filteredGaps);
 
-    filteredGaps.forEach(f => {
-      const coords = f.geometry.coordinates;
-      const lon = coords[0];
-      const lat = coords[1];
-      const score = f.properties.gap_score;
-      
-      // Feed coordinates and the calculated gap score (intensity)
-      // Dividing by 4.0 normalizes the intensity spread of log counts
-      gapPoints.push([lat, lon, score / 4.0]);
-    });
+    // Reuse the blur/"smoothing" slider (5-40) as a 0-3 grid-cell smoothing radius.
+    const smoothingRadius = Math.round((blurVal - 5) / 35 * 3);
+    const smoothed = buildSmoothedLookup(scoreByCell, maxScore, smoothingRadius);
 
-    // Render high-contrast negative heatmap (magenta-violet-orange-red warning colors)
-    heatmapLayer = L.heatLayer(gapPoints, {
-      radius: radiusVal + 5, // Slightly larger spread for gaps to reveal general underserved corridors
-      blur: blurVal,
-      maxZoom: 14,
-      gradient: {
-        0.2: '#3f2b96',  // Deep Indigo
-        0.5: '#a8c0ff',  // Soft Lilac
-        0.8: '#ec008c',  // Neon Magenta (High gap)
-        1.0: '#fc6767'   // Flame Orange/Red (Extreme coverage gap)
-      }
-    }).addTo(map);
+    heatmapLayer = new GapGradientLayer(smoothed.scoreByCell, smoothed.maxScore, { maxZoom: 19 }).addTo(map);
 
     // Disable marker clusters in gap mode since points are virtual grid cells
     toggleLayersByZoom();
@@ -713,6 +844,11 @@ function updateDashboardUI() {
   const detailsPanel = document.getElementById('details-panel');
   const gapInfoBox = document.getElementById('gap-info-box');
   const gapJosmBox = document.getElementById('gap-josm-box');
+  const radiusSliderContainer = document.getElementById('radius-slider-container');
+
+  // The gap gradient interpolates from the analysis grid directly and has
+  // no blob radius, unlike the POI/Improve leaflet.heat layers.
+  radiusSliderContainer.style.display = (currentMode === 'gap') ? 'none' : 'block';
 
   if (currentMode === 'poi') {
     // Restore POI Mode controls
@@ -978,25 +1114,30 @@ function setupEventListeners() {
     debouncedDateFilter();
   });
 
-  // 5. Heatmap Radius Control
+  // 5. Heatmap Radius Control (POI/Improve modes only - the gap gradient
+  // interpolates from the real analysis grid and has no blob radius)
   const radiusSlider = document.getElementById('slider-radius');
   const radiusVal = document.getElementById('radius-val');
   radiusSlider.addEventListener('input', (e) => {
     const val = e.target.value;
     radiusVal.innerText = `${val}px`;
-    if (heatmapLayer) {
+    if (heatmapLayer && (currentMode === 'poi' || currentMode === 'improve')) {
       heatmapLayer.setOptions({ radius: parseInt(val, 10) });
     }
   });
 
-  // 6. Heatmap Blur Control
+  // 6. Heatmap Blur / Smoothing Control
   const blurSlider = document.getElementById('slider-blur');
   const blurVal = document.getElementById('blur-val');
+  const debouncedGapRebuild = debounce(updateMapLayers, 120);
   blurSlider.addEventListener('input', (e) => {
     const val = e.target.value;
     blurVal.innerText = `${val}px`;
-    if (heatmapLayer) {
-      heatmapLayer.setOptions({ blur: parseInt(val, 10) });
+    if (currentMode === 'poi' || currentMode === 'improve') {
+      if (heatmapLayer) heatmapLayer.setOptions({ blur: parseInt(val, 10) });
+    } else {
+      // Gap mode: rebuild the smoothed grid lookup at the new radius.
+      debouncedGapRebuild();
     }
   });
 
