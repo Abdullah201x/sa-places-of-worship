@@ -97,16 +97,21 @@ const ESRI_TILEMAP_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/W
 const ESRI_ASSUMED_MIN_ZOOM = 13; // always-available global mosaic level; skip probing below this
 const ESRI_MAX_PROBE_ZOOM = 21;   // Esri rarely publishes real imagery deeper than this
 
+// Cache for max zoom levels. Keys are zoom-13 tile coordinates (approx. 4.4km x 4.4km grid cells).
+const esriMaxZoomCache = new Map();
+
 async function esriTilesAvailable(zoom, centerLatLng) {
   const point = map.project(centerLatLng, zoom);
   const tileSize = 256;
   const x = Math.floor(point.x / tileSize);
   const y = Math.floor(point.y / tileSize);
   try {
-    const res = await fetch(`${ESRI_TILEMAP_URL}/${zoom}/${y}/${x}/4/4`);
+    // Request a 1x1 grid instead of 4x4 for the exact tile containing the center point.
+    // This is more accurate, less strict on boundary edges, and fetches less data.
+    const res = await fetch(`${ESRI_TILEMAP_URL}/${zoom}/${y}/${x}/1/1`);
     if (!res.ok) return false;
     const json = await res.json();
-    return Array.isArray(json.data) && json.data.every(v => v === 1);
+    return Array.isArray(json.data) && json.data[0] === 1;
   } catch (e) {
     return false;
   }
@@ -115,6 +120,16 @@ async function esriTilesAvailable(zoom, centerLatLng) {
 // Binary search between the always-available floor and the probe ceiling for the deepest
 // zoom with real imagery at the given point.
 async function findEsriMaxZoom(centerLatLng) {
+  // Determine regional cache key at zoom level 13 to avoid redundant checks when panning locally
+  const point13 = map.project(centerLatLng, 13);
+  const x13 = Math.floor(point13.x / 256);
+  const y13 = Math.floor(point13.y / 256);
+  const cacheKey = `${x13}_${y13}`;
+
+  if (esriMaxZoomCache.has(cacheKey)) {
+    return esriMaxZoomCache.get(cacheKey);
+  }
+
   let lo = ESRI_ASSUMED_MIN_ZOOM;
   let hi = ESRI_MAX_PROBE_ZOOM;
   let best = lo;
@@ -128,6 +143,8 @@ async function findEsriMaxZoom(centerLatLng) {
       hi = mid - 1;
     }
   }
+
+  esriMaxZoomCache.set(cacheKey, best);
   return best;
 }
 
