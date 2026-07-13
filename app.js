@@ -243,6 +243,15 @@ function getQualityIssues(props) {
       title_en: 'Wheelchair accessibility info is missing'
     });
   }
+
+  // 6. building=yes for a mosque (should be building=mosque)
+  if (props.religion === 'muslim' && props.building === 'yes') {
+    issues.push({
+      id: 'building_yes',
+      title_ar: 'مبنى مسجد مصنف كـ building=yes بدلاً من building=mosque',
+      title_en: 'Mosque building tagged as building=yes instead of building=mosque'
+    });
+  }
   
   return issues;
 }
