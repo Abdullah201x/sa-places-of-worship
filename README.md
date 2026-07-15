@@ -15,7 +15,6 @@ processing happens ahead of time in Python from an OpenStreetMap `.pbf` extract.
 | [extract_places.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_places.py) | Extracts all `amenity=place_of_worship` features inside the boundary. |
 | [calculate_gaps.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_gaps.py) | Grids the country and flags road-populated cells with no worship place. |
 | [index.html](file:///c:/Users/abdul/Desktop/GCC20260707/index.html) / [app.js](file:///c:/Users/abdul/Desktop/GCC20260707/app.js) / [index.css](file:///c:/Users/abdul/Desktop/GCC20260707/index.css) | The Leaflet dashboard front-end. |
-| [comparison_results.md](file:///c:/Users/abdul/Desktop/GCC20260707/comparison_results.md) | Comparison report for dataset updates. |
 | `*.geojson` | Generated data consumed by the front-end. |
 
 ## Prerequisites
@@ -75,11 +74,10 @@ Then open <http://localhost:8000/> in a browser.
 
 ## Dataset Updates & Statistics
 
-The database has been updated to the latest OpenStreetMap data:
-- **Total Places of Worship:** 12,796 (an increase of +6 additions from 12,790).
-- **Active Coverage Gaps:** 60,835 (resolved 6 gaps from the previous dataset).
+The database is updated with the latest OpenStreetMap data:
+- **Total Places of Worship:** 12,974
+- **Active Coverage Gaps:** 60,417
 
-Detailed information about the changes (including specific coordinates, names, and OSM IDs of added/modified places of worship and gap grid differences) can be found in [comparison_results.md](file:///c:/Users/abdul/Desktop/GCC20260707/comparison_results.md).
 
 ## Front-end features
 
