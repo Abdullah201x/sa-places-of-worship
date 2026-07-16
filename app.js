@@ -14,6 +14,7 @@ let isOsmAnonymized = sessionStorage.getItem('osm_auth_skipped') === 'true';
 let OSM_AUTH_URL = '';
 let OSM_TOKEN_URL = '';
 let OSM_USER_DETAILS_URL = '';
+let OSM_API_BASE = '';
 
 function updateOsmUrls() {
   const isDev = OSM_ENVIRONMENT === 'dev';
@@ -22,8 +23,14 @@ function updateOsmUrls() {
   OSM_AUTH_URL = `${base}/oauth2/authorize`;
   OSM_TOKEN_URL = `${base}/oauth2/token`;
   OSM_USER_DETAILS_URL = `${apiBase}/api/0.6/user/details.json`;
+  OSM_API_BASE = apiBase;
 }
 updateOsmUrls();
+
+// OSM Notes State
+let addNoteMode = false;
+let noteMarkersLayer = null;
+let pendingNoteLatLng = null;
 
 // Temporary storage for loaded data if auth is pending
 let pendingPoiData = null;
@@ -500,6 +507,13 @@ function initMap() {
     toggleLayersByZoom(); // layer swap must stay immediate
     updateIdEditorAreaLink();
   });
+
+  // OSM Notes: layer for existing + newly-created note markers, click-to-place
+  // handling in Add Note mode, and refetching nearby notes as the view moves.
+  noteMarkersLayer = L.layerGroup().addTo(map);
+  map.on('click', handleMapClickForNotes);
+  const debouncedLoadNearbyNotes = debounce(loadNearbyNotes, 400);
+  map.on('moveend', debouncedLoadNearbyNotes);
 
   // Update Qibla compass dynamically as the map moves
   map.on('move', updateQiblaCompass);
@@ -987,6 +1001,17 @@ function showDetails(props, lat, lon) {
     });
   }
 
+  // OSM Note shortcut: always available (signed in or guest), since Notes
+  // are unrelated to the GDPR gate on contributor metadata above.
+  const addNoteBtn = document.getElementById('btn-add-note-here');
+  if (addNoteBtn) {
+    const newAddNoteBtn = addNoteBtn.cloneNode(true);
+    addNoteBtn.parentNode.replaceChild(newAddNoteBtn, addNoteBtn);
+    newAddNoteBtn.addEventListener('click', () => {
+      openNoteComposer(lat, lon);
+    });
+  }
+
   document.getElementById('details-edited-at').innerText = props.edited_at
     ? new Date(props.edited_at).toLocaleString('ar-SA')
     : '-';
@@ -1340,6 +1365,24 @@ function setupEventListeners() {
     });
   }
 
+  // 7b. Add OSM Note Mode Toggle + Composer
+  const addNoteToggle = document.getElementById('add-note-mode-toggle');
+  if (addNoteToggle) {
+    addNoteToggle.addEventListener('change', (e) => {
+      setAddNoteMode(e.target.checked);
+    });
+  }
+
+  const noteSubmitBtn = document.getElementById('btn-submit-note');
+  if (noteSubmitBtn) {
+    noteSubmitBtn.addEventListener('click', submitPendingOsmNote);
+  }
+
+  const noteCancelBtn = document.getElementById('btn-cancel-note');
+  if (noteCancelBtn) {
+    noteCancelBtn.addEventListener('click', closeNoteComposer);
+  }
+
   // 8. OSM OAuth 2.0 Auth Controls
   const loginBtn = document.getElementById('btn-osm-login');
   if (loginBtn) {
@@ -1444,6 +1487,159 @@ function setupEventListeners() {
 }
 
 // ==========================================
+// OpenStreetMap Notes (create + view nearby)
+// ==========================================
+
+// Enables/disables click-to-place Add Note mode: toggles the map cursor and
+// (re)loads existing nearby notes so users can see what's already reported
+// before filing a duplicate.
+function setAddNoteMode(enabled) {
+  addNoteMode = enabled;
+  const mapEl = document.getElementById('map');
+  if (mapEl) mapEl.classList.toggle('note-mode-active', enabled);
+
+  if (enabled) {
+    loadNearbyNotes();
+  } else if (noteMarkersLayer) {
+    noteMarkersLayer.clearLayers();
+  }
+}
+
+function handleMapClickForNotes(e) {
+  if (!addNoteMode) return;
+  openNoteComposer(e.latlng.lat, e.latlng.lng);
+}
+
+// Opens the note composer overlay pre-filled with the given coordinates.
+// Used both by map-click placement (Add Note mode) and the "report an issue
+// here" shortcut on a POI's detail panel.
+function openNoteComposer(lat, lon) {
+  const overlay = document.getElementById('note-composer-overlay');
+  const coordsEl = document.getElementById('note-composer-coords');
+  const attributionEl = document.getElementById('note-composer-attribution');
+  const textInput = document.getElementById('note-text-input');
+  if (!overlay || !textInput) return;
+
+  pendingNoteLatLng = { lat, lon };
+  coordsEl.innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+  textInput.value = '';
+
+  const token = localStorage.getItem('osm_access_token');
+  const displayName = localStorage.getItem('osm_user_display_name');
+  attributionEl.innerText = (token && displayName)
+    ? `سيتم نشر الملاحظة باسم: ${displayName}`
+    : 'سيتم نشر الملاحظة كزائر مجهول (بدون تسجيل دخول).';
+
+  overlay.classList.remove('hidden');
+  textInput.focus();
+}
+
+function closeNoteComposer() {
+  const overlay = document.getElementById('note-composer-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  pendingNoteLatLng = null;
+}
+
+// Submits the pending note to the OSM Notes API. Anonymous submission needs
+// no Authorization header at all (OSM Notes natively support anonymous
+// reporters); an attributed note is only attempted if the stored token's
+// granted scope actually includes write_notes, since tokens issued before
+// this feature existed won't have it.
+async function submitPendingOsmNote() {
+  const textInput = document.getElementById('note-text-input');
+  const text = textInput ? textInput.value.trim() : '';
+
+  if (!pendingNoteLatLng) return;
+  if (!text) {
+    showToast('يرجى كتابة نص الملاحظة قبل الإرسال.', 'error');
+    return;
+  }
+
+  const { lat, lon } = pendingNoteLatLng;
+  const submitBtn = document.getElementById('btn-submit-note');
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
+    const token = localStorage.getItem('osm_access_token');
+    const grantedScope = localStorage.getItem('osm_granted_scope') || '';
+    const headers = {};
+    if (token && grantedScope.split(' ').includes('write_notes')) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const url = `${OSM_API_BASE}/api/0.6/notes.json?lat=${lat}&lon=${lon}&text=${encodeURIComponent(text)}`;
+    const response = await fetch(url, { method: 'POST', headers });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || `HTTP ${response.status}`);
+    }
+
+    const noteFeature = await response.json();
+    renderNoteMarker(noteFeature);
+
+    const noteId = noteFeature.properties ? noteFeature.properties.id : undefined;
+    showToast(`تم إرسال الملاحظة بنجاح! <a href="https://www.openstreetmap.org/note/${noteId}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">عرض الملاحظة</a>`);
+    closeNoteComposer();
+  } catch (err) {
+    console.error('Failed to submit OSM note:', err);
+    showToast('فشل في إرسال الملاحظة إلى OpenStreetMap: ' + err.message, 'error');
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+// Renders a single note (GeoJSON Feature from the notes API) as a read-only
+// marker with a popup showing its first comment and a link to the note on OSM.
+function renderNoteMarker(noteFeature) {
+  if (!noteMarkersLayer || !noteFeature || !noteFeature.geometry) return;
+
+  const [lon, lat] = noteFeature.geometry.coordinates;
+  const props = noteFeature.properties || {};
+  const isClosed = props.status === 'closed';
+  const commentText = (props.comments && props.comments.length) ? props.comments[0].text : '';
+
+  const icon = L.divIcon({
+    html: '<div class="note-marker-inner">📝</div>',
+    className: `note-marker ${isClosed ? 'closed' : ''}`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 22]
+  });
+
+  const marker = L.marker([lat, lon], { icon });
+  const noteUrl = `https://www.openstreetmap.org/note/${props.id}`;
+  marker.bindPopup(`
+    <div style="font-family: var(--font-body); text-align: right; padding: 2px; max-width: 220px;">
+      <p style="margin: 0 0 6px 0; font-size: 12px; color: #333; white-space: pre-wrap;">${escapeHtml(commentText)}</p>
+      <a href="${noteUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 11px;">فتح الملاحظة على OSM</a>
+    </div>
+  `, { closeButton: false });
+
+  noteMarkersLayer.addLayer(marker);
+}
+
+// Fetches open (and recently-closed) notes within the current map view while
+// Add Note mode is active, so users can see what's already reported instead
+// of filing duplicates.
+async function loadNearbyNotes() {
+  if (!addNoteMode || !map || !noteMarkersLayer) return;
+
+  const bounds = map.getBounds();
+  const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+
+  try {
+    const response = await fetch(`${OSM_API_BASE}/api/0.6/notes.json?bbox=${bbox}&limit=100&closed=7`);
+    if (!response.ok) return;
+
+    const data = await response.json();
+    noteMarkersLayer.clearLayers();
+    (data.features || []).forEach(renderNoteMarker);
+  } catch (err) {
+    console.error('Failed to load nearby OSM notes:', err);
+  }
+}
+
+// ==========================================
 // OpenStreetMap OAuth 2.0 PKCE Helper Code
 // ==========================================
 
@@ -1510,7 +1706,7 @@ async function redirectToOSM() {
   const url = `${OSM_AUTH_URL}?response_type=code` +
               `&client_id=${OSM_CLIENT_ID}` +
               `&redirect_uri=${encodeURIComponent(OSM_REDIRECT_URI)}` +
-              `&scope=read_prefs` +
+              `&scope=${encodeURIComponent('read_prefs write_notes')}` +
               `&code_challenge=${codeChallenge}` +
               `&code_challenge_method=S256` +
               `&state=${state}`;
@@ -1574,6 +1770,9 @@ async function handleOAuthCallback() {
       const data = await response.json();
       if (data.access_token) {
         localStorage.setItem('osm_access_token', data.access_token);
+        if (data.scope) {
+          localStorage.setItem('osm_granted_scope', data.scope);
+        }
         showToast('تم تسجيل الدخول بنجاح عبر OpenStreetMap!');
       }
     } catch (err) {
@@ -1662,6 +1861,7 @@ function updateUserWidgetUI() {
 function logoutOSM() {
   localStorage.removeItem('osm_access_token');
   localStorage.removeItem('osm_user_display_name');
+  localStorage.removeItem('osm_granted_scope');
   sessionStorage.removeItem('osm_auth_skipped');
   showToast('تم تسجيل الخروج بنجاح.');
   window.location.reload();

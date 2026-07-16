@@ -108,4 +108,5 @@ The database is updated with the latest OpenStreetMap data:
   - Direct integration with **iD Editor (Web)** to edit the current map view area.
   - Direct integration with **JOSM** via remote control port (8111) to load and zoom to specific nodes/ways for immediate tagging fixes.
 - **مؤشر اتجاه القبلة (Qibla Compass):** An overlay tool displaying a Qibla compass pointer in the center of the map to verify mosque orientation.
+- **ملاحظات OSM (OSM Notes):** Add [OpenStreetMap Notes](https://wiki.openstreetmap.org/wiki/Notes) directly from the map — either by toggling Add Note mode and clicking a location, or via the "Add note here" shortcut on a place's detail panel. Works both for signed-in OSM users (attributed, requires the `write_notes` OAuth scope) and anonymous visitors with no OSM account (posted anonymously, as supported natively by the Notes API). Existing open notes in view are shown while Add Note mode is active to avoid duplicates.
 - Adjustable heatmap radius/blur, live in-viewport counts.

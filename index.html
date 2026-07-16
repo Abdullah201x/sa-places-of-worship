@@ -104,6 +104,19 @@
         </div>
       </div>
 
+      <!-- Add OSM Note Mode Toggle -->
+      <div class="control-group" id="note-mode-section">
+        <h2 class="section-title">إضافة ملاحظة OSM 📝</h2>
+        <p class="section-hint">فعّل هذا الوضع ثم اضغط في أي مكان على الخريطة لإضافة ملاحظة OSM. متاح للجميع، بمن فيهم الزوار بدون حساب OSM.</p>
+        <div class="switch-control-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="add-note-mode-toggle">
+            <span class="slider-switch round"></span>
+          </label>
+          <span class="switch-label">وضع إضافة ملاحظة (اضغط على الخريطة)</span>
+        </div>
+      </div>
+
       <!-- Search Section -->
       <div class="control-group" id="search-section">
         <h2 class="section-title">البحث عن موقع</h2>
@@ -188,7 +201,10 @@
         <div class="details-card">
           <div class="details-title-ar" id="details-name-ar">اسم المسجد</div>
           <div class="details-title-en" id="details-name-en">Mosque Name</div>
-          
+
+          <!-- OSM Note shortcut: always visible, works for guests too -->
+          <button id="btn-add-note-here" class="mapper-btn" style="margin-bottom: 14px;">📝 إضافة ملاحظة OSM هنا</button>
+
           <div class="details-row">
             <span class="details-label">الديانة</span>
             <span class="details-val accent" id="details-religion">مسلم</span>
@@ -416,8 +432,9 @@
                 <div class="guide-step">
                   <span class="step-num">4</span>
                   <div class="step-text">
-                    في قسم الصلاحيات (Scopes)، حدد فقط صلاحية:
-                    <br><strong>☑ Read user preferences (قراءة تفضيلات المستخدم)</strong>.
+                    في قسم الصلاحيات (Scopes)، حدد الصلاحيتين التاليتين:
+                    <br><strong>☑ Read user preferences (قراءة تفضيلات المستخدم)</strong>
+                    <br><strong>☑ Create notes (إنشاء ملاحظات - write_notes)</strong>
                   </div>
                 </div>
                 <div class="guide-step">
@@ -432,6 +449,45 @@
         
         <div class="auth-footer">
           <span>مصدر البيانات: Geofabrik / OpenStreetMap contributors</span>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- OSM Note Composer Overlay -->
+    <div id="note-composer-overlay" class="auth-overlay hidden">
+      <div class="auth-card">
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">📝</div>
+          <h2>إضافة ملاحظة OSM</h2>
+          <p>اكتب وصفاً واضحاً للمشكلة أو الاقتراح في هذا الموقع. تُنشر الملاحظات على خارطة OpenStreetMap العامة ويمكن لأي مساهم متابعتها.</p>
+        </div>
+
+        <div class="auth-body">
+          <div class="client-id-config" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 14px; border-radius: 12px; gap: 6px;">
+            <span style="font-family: var(--font-body); font-size: 11px; color: var(--color-text-muted);">الإحداثيات:</span>
+            <div id="note-composer-coords" style="font-family: monospace; font-size: 13px; color: var(--color-primary); direction: ltr; text-align: center;">-</div>
+          </div>
+
+          <div class="client-id-config">
+            <label for="note-text-input">نص الملاحظة:</label>
+            <textarea id="note-text-input" class="auth-input" rows="4" style="text-align: right; resize: vertical; font-family: var(--font-body);" placeholder="مثال: هذا المسجد أُغلق نهائياً / الاسم غير صحيح / يوجد مسجد جديد هنا..."></textarea>
+          </div>
+
+          <p id="note-composer-attribution" class="input-help" style="text-align: center;">-</p>
+
+          <button id="btn-submit-note" class="auth-submit-btn">
+            <span>إرسال الملاحظة إلى OpenStreetMap</span>
+          </button>
+
+          <button id="btn-cancel-note" class="auth-skip-btn">
+            <span>إلغاء</span>
+          </button>
+        </div>
+
+        <div class="auth-footer">
+          <span>الملاحظات علنية وتُدار بواسطة مجتمع OpenStreetMap</span>
         </div>
       </div>
     </div>
