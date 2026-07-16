@@ -14,6 +14,7 @@ processing happens ahead of time in Python from an OpenStreetMap `.pbf` extract.
 | [extract_sa_boundary.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_sa_boundary.py) | Builds the Saudi Arabia boundary polygon from OSM. |
 | [extract_places.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_places.py) | Extracts all `amenity=place_of_worship` features inside the boundary. |
 | [calculate_gaps.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_gaps.py) | Grids the country and flags road-populated cells with no worship place. |
+| [calculate_mosque_sizes.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_mosque_sizes.py) | Independent, separately-scheduled script (e.g. weekly) that flags mosque building footprints that are unusually small/large. |
 | [index.html](file:///c:/Users/abdul/Desktop/GCC20260707/index.html) / [app.js](file:///c:/Users/abdul/Desktop/GCC20260707/app.js) / [index.css](file:///c:/Users/abdul/Desktop/GCC20260707/index.css) | The Leaflet dashboard front-end. |
 | `*.geojson` | Generated data consumed by the front-end. |
 
@@ -40,6 +41,16 @@ paths are resolved relative to the script location, so no arguments are needed:
 python extract_sa_boundary.py     # -> sa_boundary.geojson
 python extract_places.py          # -> places_of_worship_sa.geojson
 python calculate_gaps.py          # -> worship_gaps_sa.geojson
+```
+
+Separately, `calculate_mosque_sizes.py` re-scans the `.pbf` for mosque building
+footprints and flags size outliers. It's independent of the pipeline above —
+it doesn't read or write any of its output files — so it can be run on its
+own cadence (e.g. weekly via cron), since building footprints change far less
+often than day-to-day tagging:
+
+```bash
+python calculate_mosque_sizes.py   # -> mosque_sizes.json
 ```
 
 Notes:
@@ -89,8 +100,9 @@ The database is updated with the latest OpenStreetMap data:
   2. **Generic Name**: Empty name or default placeholder (e.g., "مسجد" or "Mosque").
   3. **Missing English Translation**: Missing `name:en` or identical to Arabic.
   4. **Missing Denomination**: Muslim mosques with unspecified sect/denomination.
-  5. **Missing Wheelchair accessibility**: Accessibility tags are unknown or missing.
-  6. **Generic Building Tag (`building=yes`)**: Mosque building tagged as `building=yes` instead of `building=mosque`.
+  5. **Unusual Building Size**: Mosque building footprint is unusually small or large (computed weekly by `calculate_mosque_sizes.py`), suggesting a mis-mapped outline.
+  6. **Stale Data**: Still at `version=1` and not edited in 5+ years — never revisited since first mapped.
+  7. **Generic Building Tag (`building=yes`)**: Mosque building tagged as `building=yes` instead of `building=mosque`.
 - **محرر OSM المدمج (OSM Editor Integration):**
   - Integrated OpenStreetMap authentication via OAuth 2.0 (supports production and development environment logins) to verify user accounts.
   - Direct integration with **iD Editor (Web)** to edit the current map view area.

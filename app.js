@@ -30,6 +30,7 @@ updateOsmUrls();
 let pendingPoiData = null;
 let pendingGapData = null;
 let pendingBoundaryData = null;
+let pendingSizeData = null;
 
 // Datasets
 let allPlaces = [];
@@ -235,16 +236,31 @@ function getQualityIssues(props) {
     });
   }
   
-  // 5. Missing wheelchair accessibility tag
-  if (!props.wheelchair || props.wheelchair === 'unknown') {
+  // 5. Building footprint size looks like an outlier (too small/too large)
+  if (props.size_flag === 'too_small' || props.size_flag === 'too_large') {
+    const isTooSmall = props.size_flag === 'too_small';
     issues.push({
-      id: 'missing_wheelchair',
-      title_ar: 'معلومات الوصول للكراسي المتحركة مفقودة (wheelchair=*)',
-      title_en: 'Wheelchair accessibility info is missing'
+      id: 'size_outlier',
+      title_ar: isTooSmall
+        ? 'مبنى المسجد أصغر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى'
+        : 'مبنى المسجد أكبر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى',
+      title_en: isTooSmall
+        ? 'Mosque building footprint looks too small — verify the building outline'
+        : 'Mosque building footprint looks too large — verify the building outline'
     });
   }
 
-  // 6. building=yes for a mosque (should be building=mosque)
+  // 6. Never revisited since first mapped (still version 1, and old)
+  const FIVE_YEARS_MS = 5 * 365 * 24 * 60 * 60 * 1000;
+  if (props.version === 1 && props.edited_at && (Date.now() - new Date(props.edited_at).getTime()) > FIVE_YEARS_MS) {
+    issues.push({
+      id: 'stale_data',
+      title_ar: 'لم يتم تعديل هذا العنصر منذ إضافته لأول مرة (بيانات قديمة)',
+      title_en: 'This entry has never been revisited since it was first mapped'
+    });
+  }
+
+  // 7. building=yes for a mosque (should be building=mosque)
   if (props.religion === 'muslim' && props.building === 'yes') {
     issues.push({
       id: 'building_yes',
@@ -252,7 +268,7 @@ function getQualityIssues(props) {
       title_en: 'Mosque building tagged as building=yes instead of building=mosque'
     });
   }
-  
+
   return issues;
 }
 
@@ -477,9 +493,12 @@ function loadData() {
     fetch(`sa_boundary.geojson${cacheBuster}`).then(r => {
       if (!r.ok) throw new Error('Failed to load Saudi boundary');
       return r.json();
-    })
+    }),
+    // Best-effort: computed on its own schedule (e.g. weekly) by
+    // calculate_mosque_sizes.py, may not exist yet or may be mid-refresh.
+    fetch(`mosque_sizes.json${cacheBuster}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
   ])
-  .then(([poiData, gapData, boundaryData]) => {
+  .then(([poiData, gapData, boundaryData, sizeData]) => {
     // Detect if this is an internal OSM extract containing contributor metadata
     const isInternalExtract = poiData.features.some(f => f.properties && (f.properties.last_edited_by || f.properties.user_id));
     
@@ -488,11 +507,12 @@ function loadData() {
       pendingPoiData = poiData;
       pendingGapData = gapData;
       pendingBoundaryData = boundaryData;
-      
+      pendingSizeData = sizeData;
+
       checkAuthStatus().then(isAuthenticated => {
         if (isAuthenticated || isOsmAnonymized) {
           // User is authorized or skipped, initialize dashboard
-          initializeDashboard(poiData, gapData, boundaryData);
+          initializeDashboard(poiData, gapData, boundaryData, sizeData);
         } else {
           // User is not authorized, show login overlay
           hideLoadingOverlay();
@@ -504,7 +524,7 @@ function loadData() {
       });
     } else {
       // Standard/anonymized dataset, no authentication required
-      initializeDashboard(poiData, gapData, boundaryData);
+      initializeDashboard(poiData, gapData, boundaryData, sizeData);
     }
   })
   .catch(error => {
@@ -513,8 +533,19 @@ function loadData() {
   });
 }
 
-function initializeDashboard(poiData, gapData, boundaryData) {
+function initializeDashboard(poiData, gapData, boundaryData, sizeData) {
   allPlaces = poiData.features;
+  // Merge in weekly-computed building-size outliers (calculate_mosque_sizes.py),
+  // keyed by osm_id; features with no entry simply have no size data.
+  if (sizeData) {
+    allPlaces.forEach(f => {
+      const sizeInfo = sizeData[f.properties.osm_id];
+      if (sizeInfo) {
+        f.properties.size_area_m2 = sizeInfo.area_m2;
+        f.properties.size_flag = sizeInfo.size_flag;
+      }
+    });
+  }
   filteredPlaces = [...allPlaces];
 
   allGaps = gapData.features;
@@ -1319,7 +1350,7 @@ function setupEventListeners() {
       
       // Initialize dashboard using pending data
       if (pendingPoiData && pendingGapData && pendingBoundaryData) {
-        initializeDashboard(pendingPoiData, pendingGapData, pendingBoundaryData);
+        initializeDashboard(pendingPoiData, pendingGapData, pendingBoundaryData, pendingSizeData);
       } else {
         // Fallback: reload page to fetch correctly
         window.location.reload();
