@@ -241892,6 +241892,166 @@
     {
       "type": "Feature",
       "properties": {
+        "osm_id": 14016150072,
+        "geom_type": "Point",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "sunni",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "Al jubail",
+        "last_edited_by": "PurrfectRayan",
+        "user_id": 24309318,
+        "changeset_id": 185751661,
+        "version": 1,
+        "edited_at": "2026-07-15T00:18:29+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.6728585,
+          26.9564358
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 14016207587,
+        "geom_type": "Point",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "sunni",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "Al Jubail",
+        "last_edited_by": "PurrfectRayan",
+        "user_id": 24309318,
+        "changeset_id": 185751929,
+        "version": 1,
+        "edited_at": "2026-07-15T00:26:27+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.670792,
+          26.9589359
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 14016229776,
+        "geom_type": "Point",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "sunni",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "Al Jubail",
+        "last_edited_by": "PurrfectRayan",
+        "user_id": 24309318,
+        "changeset_id": 185751994,
+        "version": 1,
+        "edited_at": "2026-07-15T00:28:14+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.6650923,
+          26.9556127
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 14016236496,
+        "geom_type": "Point",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "sunni",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "Al Jubail",
+        "last_edited_by": "PurrfectRayan",
+        "user_id": 24309318,
+        "changeset_id": 185752045,
+        "version": 1,
+        "edited_at": "2026-07-15T00:29:33+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.6648723,
+          26.9592563
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 14017788501,
+        "geom_type": "Point",
+        "name": "مسجد / علي المنصور ( رحمه الله)",
+        "name_en": "مسجد / علي المنصور ( رحمه الله)",
+        "name_original": "مسجد / علي المنصور ( رحمه الله)",
+        "name_en_original": "",
+        "religion": "unknown",
+        "denomination": "unknown",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "ASD263asd",
+        "user_id": 23801212,
+        "changeset_id": 185787471,
+        "version": 1,
+        "edited_at": "2026-07-15T14:23:13+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          41.6745364,
+          26.7985865
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "osm_id": 40589083,
         "geom_type": "Polygon",
         "name": "جامع الإمام تركي بن عبد الله",
