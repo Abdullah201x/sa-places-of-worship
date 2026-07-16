@@ -5,6 +5,7 @@ import json
 import sys
 import time
 from shapely.geometry import shape, Point
+from shapely.prepared import prep
 
 # Resolve all paths relative to this script so it runs on any machine.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,40 +19,47 @@ def find_pbf(base_dir):
     return matches[0]
 
 class PlacesOfWorshipExtractor(osmium.SimpleHandler):
-    def __init__(self, boundary_poly):
+    def __init__(self, boundary_prep, bounds):
         super().__init__()
-        self.boundary_poly = boundary_poly
+        self.boundary_prep = boundary_prep
+        self.minx, self.miny, self.maxx, self.maxy = bounds
         self.features = []
 
     def node(self, n):
-        if ('amenity' in n.tags and n.tags['amenity'] in ('place_of_worship', 'mosque')) or \
-           ('building' in n.tags and n.tags['building'] == 'mosque'):
+        tags = n.tags
+        if not tags:
+            return
+        amenity = tags.get('amenity')
+        if amenity == 'place_of_worship' or amenity == 'mosque' or tags.get('building') == 'mosque':
             # Check coordinates
             try:
                 lon, lat = n.location.lon, n.location.lat
-                pt = Point(lon, lat)
-                if self.boundary_poly.contains(pt):
-                    self.features.append(self._create_feature(n.id, lat, lon, n.tags, "Point", n))
+                if self.minx <= lon <= self.maxx and self.miny <= lat <= self.maxy:
+                    pt = Point(lon, lat)
+                    if self.boundary_prep.contains(pt):
+                        self.features.append(self._create_feature(n.id, lat, lon, tags, "Point", n))
             except osmium.InvalidLocationError:
                 pass
 
     def way(self, w):
-        if ('amenity' in w.tags and w.tags['amenity'] in ('place_of_worship', 'mosque')) or \
-           ('building' in w.tags and w.tags['building'] == 'mosque'):
+        tags = w.tags
+        if not tags:
+            return
+        amenity = tags.get('amenity')
+        if amenity == 'place_of_worship' or amenity == 'mosque' or tags.get('building') == 'mosque':
             # Calculate centroid
             try:
-                lats = []
-                lons = []
-                for node in w.nodes:
-                    lats.append(node.lat)
-                    lons.append(node.lon)
-
-                if lats and lons:
-                    centroid_lat = sum(lats) / len(lats)
-                    centroid_lon = sum(lons) / len(lons)
-                    pt = Point(centroid_lon, centroid_lat)
-                    if self.boundary_poly.contains(pt):
-                        self.features.append(self._create_feature(w.id, centroid_lat, centroid_lon, w.tags, "Polygon", w))
+                nodes = w.nodes
+                n_nodes = len(nodes)
+                if n_nodes > 0:
+                    sum_lat = sum(node.lat for node in nodes)
+                    sum_lon = sum(node.lon for node in nodes)
+                    centroid_lat = sum_lat / n_nodes
+                    centroid_lon = sum_lon / n_nodes
+                    if self.minx <= centroid_lon <= self.maxx and self.miny <= centroid_lat <= self.maxy:
+                        pt = Point(centroid_lon, centroid_lat)
+                        if self.boundary_prep.contains(pt):
+                            self.features.append(self._create_feature(w.id, centroid_lat, centroid_lon, tags, "Polygon", w))
             except osmium.InvalidLocationError:
                 pass
 
@@ -118,10 +126,13 @@ def main():
         print(f"Error loading boundary: {e}")
         sys.exit(1)
 
+    boundary_prep = prep(boundary_poly)
+    bounds = boundary_poly.bounds
+
     print("Scanning PBF and extracting places of worship inside Saudi Arabia...")
     start_time = time.time()
     
-    extractor = PlacesOfWorshipExtractor(boundary_poly)
+    extractor = PlacesOfWorshipExtractor(boundary_prep, bounds)
     extractor.apply_file(pbf_path, locations=True)
     
     duration = time.time() - start_time

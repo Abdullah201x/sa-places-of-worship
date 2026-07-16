@@ -8,6 +8,7 @@ import math
 import shapely
 from shapely.geometry import shape, Point
 from shapely.strtree import STRtree
+from shapely.prepared import prep
 
 # Resolve all paths relative to this script so it runs on any machine.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -40,15 +41,17 @@ def find_pbf(base_dir):
     return matches[0]
 
 class DrivableRoadExtractor(osmium.SimpleHandler):
-    def __init__(self, boundary_poly):
+    def __init__(self, boundary_prep, bounds):
         super().__init__()
-        self.boundary_poly = boundary_poly
+        self.boundary_prep = boundary_prep
+        self.minx, self.miny, self.maxx, self.maxy = bounds
         # (centroid_lon, centroid_lat, highway-weighted length in meters)
         self.roads = []
 
     def way(self, w):
-        if 'highway' in w.tags:
-            h_type = w.tags['highway']
+        tags = w.tags
+        if 'highway' in tags:
+            h_type = tags['highway']
             # Exclude non-drivable pedestrian, construction, and service paths
             if h_type not in (
                 'footway', 'path', 'steps', 'cycleway', 'pedestrian',
@@ -56,24 +59,28 @@ class DrivableRoadExtractor(osmium.SimpleHandler):
                 'proposed', 'construction', 'abandoned', 'escape', 'sidewalk'
             ):
                 try:
-                    lats = []
-                    lons = []
-                    for node in w.nodes:
-                        lats.append(node.lat)
-                        lons.append(node.lon)
-
-                    if len(lats) >= 2:
-                        centroid_lat = sum(lats) / len(lats)
-                        centroid_lon = sum(lons) / len(lons)
-                        pt = Point(centroid_lon, centroid_lat)
-                        if self.boundary_poly.contains(pt):
-                            length_m = 0.0
-                            for i in range(len(lats) - 1):
-                                dx = (lons[i + 1] - lons[i]) * M_PER_DEG_LON
-                                dy = (lats[i + 1] - lats[i]) * M_PER_DEG_LAT
-                                length_m += math.hypot(dx, dy)
-                            weight = HIGHWAY_WEIGHTS.get(h_type, DEFAULT_HIGHWAY_WEIGHT)
-                            self.roads.append((centroid_lon, centroid_lat, length_m * weight))
+                    # Single traversal coordinate retrieval to avoid repeated C++ wrapper overhead
+                    coords = [(node.lon, node.lat) for node in w.nodes]
+                    n_nodes = len(coords)
+                    if n_nodes >= 2:
+                        sum_lon = 0.0
+                        sum_lat = 0.0
+                        for lon, lat in coords:
+                            sum_lon += lon
+                            sum_lat += lat
+                        centroid_lon = sum_lon / n_nodes
+                        centroid_lat = sum_lat / n_nodes
+                        
+                        if self.minx <= centroid_lon <= self.maxx and self.miny <= centroid_lat <= self.maxy:
+                            pt = Point(centroid_lon, centroid_lat)
+                            if self.boundary_prep.contains(pt):
+                                length_m = 0.0
+                                for i in range(n_nodes - 1):
+                                    dx = (coords[i+1][0] - coords[i][0]) * M_PER_DEG_LON
+                                    dy = (coords[i+1][1] - coords[i][1]) * M_PER_DEG_LAT
+                                    length_m += math.hypot(dx, dy)
+                                weight = HIGHWAY_WEIGHTS.get(h_type, DEFAULT_HIGHWAY_WEIGHT)
+                                self.roads.append((centroid_lon, centroid_lat, length_m * weight))
                 except osmium.InvalidLocationError:
                     pass
 
@@ -89,6 +96,8 @@ def main():
         with open(boundary_path, "r", encoding="utf-8") as f:
             boundary_data = json.load(f)
         boundary_poly = shape(boundary_data["geometry"])
+        boundary_prep = prep(boundary_poly)
+        bounds = boundary_poly.bounds
     except Exception as e:
         print(f"Error loading boundary: {e}")
         sys.exit(1)
@@ -106,7 +115,7 @@ def main():
     # 3. Extract weighted road length from PBF
     print("Scanning PBF for all drivable road networks...")
     start_time = time.time()
-    extractor = DrivableRoadExtractor(boundary_poly)
+    extractor = DrivableRoadExtractor(boundary_prep, bounds)
     extractor.apply_file(pbf_path, locations=True)
     print(f"Extracted {len(extractor.roads)} road ways inside Saudi Arabia in {time.time() - start_time:.2f} seconds.")
 
@@ -140,11 +149,19 @@ def main():
         grid_y = int(lat / GRID_SIZE)
         key = (grid_x, grid_y)
 
-        cell = grid.setdefault(key, {"road_length_m": 0.0, "sum_lon": 0.0, "sum_lat": 0.0, "n": 0})
-        cell["road_length_m"] += weighted_length_m
-        cell["sum_lon"] += lon
-        cell["sum_lat"] += lat
-        cell["n"] += 1
+        if key in grid:
+            cell = grid[key]
+            cell["road_length_m"] += weighted_length_m
+            cell["sum_lon"] += lon
+            cell["sum_lat"] += lat
+            cell["n"] += 1
+        else:
+            grid[key] = {
+                "road_length_m": weighted_length_m,
+                "sum_lon": lon,
+                "sum_lat": lat,
+                "n": 1
+            }
 
     # 5. Identify coverage gaps by actual distance to the nearest place of worship
     print("Computing coverage gaps...")
@@ -167,13 +184,15 @@ def main():
 
     gap_features = []
     if candidate_points_m:
-        shapely.prepare(boundary_poly)
         _, distances = worship_tree.query_nearest(
             candidate_points_m, return_distance=True, all_matches=False
         )
-        inside_mask = shapely.contains(
-            boundary_poly, [Point(lo, la) for lo, la in candidate_points]
-        )
+        
+        minx, miny, maxx, maxy = bounds
+        inside_mask = [
+            minx <= lo <= maxx and miny <= la <= maxy and boundary_prep.contains(Point(lo, la))
+            for lo, la in candidate_points
+        ]
 
         for i, key in enumerate(candidate_keys):
             if not inside_mask[i]:
