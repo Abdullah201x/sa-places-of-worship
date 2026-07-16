@@ -1147,6 +1147,11 @@ h1 {
   margin: 0;
 }
 
+/* Note Composer: preset field groups (only one shown at a time) */
+.note-preset-group.hidden {
+  display: none;
+}
+
 .auth-submit-btn {
   display: flex;
   align-items: center;

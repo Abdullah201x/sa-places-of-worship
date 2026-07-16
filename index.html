@@ -471,8 +471,42 @@
           </div>
 
           <div class="client-id-config">
+            <label>نوع الملاحظة:</label>
+            <div class="chips-container" id="note-preset-chips" role="group" aria-label="نوع الملاحظة">
+              <button type="button" class="chip active" data-preset="freetext">نص حر</button>
+              <button type="button" class="chip" data-preset="worship">يوجد هنا مكان عبادة</button>
+              <button type="button" class="chip" data-preset="fixme">مشكلة (Fixme)</button>
+              <button type="button" class="chip" data-preset="gone">المكان غير موجود</button>
+            </div>
+          </div>
+
+          <div id="note-preset-freetext" class="client-id-config note-preset-group">
             <label for="note-text-input">نص الملاحظة:</label>
             <textarea id="note-text-input" class="auth-input" rows="4" style="text-align: right; resize: vertical; font-family: var(--font-body);" placeholder="مثال: هذا المسجد أُغلق نهائياً / الاسم غير صحيح / يوجد مسجد جديد هنا..."></textarea>
+          </div>
+
+          <div id="note-preset-worship" class="client-id-config note-preset-group hidden">
+            <label for="note-worship-name">اسم المكان (اختياري):</label>
+            <input type="text" id="note-worship-name" class="auth-input" style="text-align: right;" placeholder="مثال: مسجد الرحمة">
+            <label for="note-worship-religion" style="margin-top: 8px;">الديانة / المذهب (اختياري):</label>
+            <select id="note-worship-religion" class="auth-input" style="text-align: right; text-align-last: right; cursor: pointer;">
+              <option value="" style="background: #12141d; color: #fff;">-- غير محدد --</option>
+              <option value="مسلم" style="background: #12141d; color: #fff;">مسلم (مسجد)</option>
+              <option value="مصلى" style="background: #12141d; color: #fff;">مصلى</option>
+              <option value="أخرى" style="background: #12141d; color: #fff;">أخرى</option>
+            </select>
+          </div>
+
+          <div id="note-preset-fixme" class="client-id-config note-preset-group hidden">
+            <label for="note-fixme-text">وصف المشكلة (fixme):</label>
+            <input type="text" id="note-fixme-text" class="auth-input" style="text-align: right;" placeholder="مثال: الطريق مغلق">
+          </div>
+
+          <div id="note-preset-gone" class="client-id-config note-preset-group hidden">
+            <label for="note-gone-name">اسم المعلم (POI name):</label>
+            <input type="text" id="note-gone-name" class="auth-input" style="text-align: right;" placeholder="مثال: مسجد النور">
+            <label for="note-gone-types" style="margin-top: 8px;">نوع المعلم (POI types):</label>
+            <input type="text" id="note-gone-types" class="auth-input" style="text-align: right;" placeholder="مثال: amenity-place_of_worship">
           </div>
 
           <p id="note-composer-attribution" class="input-help" style="text-align: center;">-</p>

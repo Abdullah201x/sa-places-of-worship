@@ -31,6 +31,12 @@ updateOsmUrls();
 let addNoteMode = false;
 let noteMarkersLayer = null;
 let pendingNoteLatLng = null;
+let activeNotePreset = 'freetext';
+
+// Appended to every submitted note (preset or free text) so mappers processing
+// it know which site it came from - the same convention StreetComplete/MAPS.ME
+// use ("via StreetComplete", "#mapsme"), which also promotes the site itself.
+const NOTE_SIGNATURE = 'via خارطة أماكن العبادة (https://abdullah201x.github.io/sa-places-of-worship) #sa-worship-map';
 
 // Temporary storage for loaded data if auth is pending
 let pendingPoiData = null;
@@ -1383,6 +1389,12 @@ function setupEventListeners() {
     noteCancelBtn.addEventListener('click', closeNoteComposer);
   }
 
+  document.querySelectorAll('#note-preset-chips .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      setActiveNotePreset(chip.getAttribute('data-preset'));
+    });
+  });
+
   // 8. OSM OAuth 2.0 Auth Controls
   const loginBtn = document.getElementById('btn-osm-login');
   if (loginBtn) {
@@ -1510,6 +1522,26 @@ function handleMapClickForNotes(e) {
   openNoteComposer(e.latlng.lat, e.latlng.lng);
 }
 
+// Switches which preset's field group is shown in the composer and updates
+// the chip selector's active state to match.
+function setActiveNotePreset(preset) {
+  activeNotePreset = preset;
+
+  document.querySelectorAll('#note-preset-chips .chip').forEach(chip => {
+    chip.classList.toggle('active', chip.getAttribute('data-preset') === preset);
+  });
+
+  const groups = {
+    freetext: document.getElementById('note-preset-freetext'),
+    worship: document.getElementById('note-preset-worship'),
+    fixme: document.getElementById('note-preset-fixme'),
+    gone: document.getElementById('note-preset-gone')
+  };
+  Object.entries(groups).forEach(([key, el]) => {
+    if (el) el.classList.toggle('hidden', key !== preset);
+  });
+}
+
 // Opens the note composer overlay pre-filled with the given coordinates.
 // Used both by map-click placement (Add Note mode) and the "report an issue
 // here" shortcut on a POI's detail panel.
@@ -1522,7 +1554,16 @@ function openNoteComposer(lat, lon) {
 
   pendingNoteLatLng = { lat, lon };
   coordsEl.innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+
+  // Reset every preset's fields and revert to free text each time the
+  // composer opens, so leftover input from a previous note isn't resubmitted.
   textInput.value = '';
+  document.getElementById('note-worship-name').value = '';
+  document.getElementById('note-worship-religion').value = '';
+  document.getElementById('note-fixme-text').value = '';
+  document.getElementById('note-gone-name').value = '';
+  document.getElementById('note-gone-types').value = '';
+  setActiveNotePreset('freetext');
 
   const token = localStorage.getItem('osm_access_token');
   const displayName = localStorage.getItem('osm_user_display_name');
@@ -1540,20 +1581,64 @@ function closeNoteComposer() {
   pendingNoteLatLng = null;
 }
 
+// Assembles the final note body for whichever preset is active (or the free
+// text box), then appends the site's signature footer to every submission -
+// preset or free text alike - the same convention StreetComplete/MAPS.ME use.
+// Returns null (after showing a toast) if a required field for the active
+// preset is missing.
+function buildNoteText() {
+  let body = '';
+
+  if (activeNotePreset === 'worship') {
+    const name = document.getElementById('note-worship-name').value.trim();
+    const religion = document.getElementById('note-worship-religion').value.trim();
+    const lines = ['يوجد هنا مكان عبادة غير موجود على الخريطة.'];
+    if (name) lines.push(`الاسم: ${name}`);
+    if (religion) lines.push(`الديانة: ${religion}`);
+    body = lines.join('\n');
+  } else if (activeNotePreset === 'fixme') {
+    const fixme = document.getElementById('note-fixme-text').value.trim();
+    if (!fixme) {
+      showToast('يرجى وصف المشكلة قبل الإرسال.', 'error');
+      return null;
+    }
+    body = `fixme: ${fixme}`;
+  } else if (activeNotePreset === 'gone') {
+    const poiName = document.getElementById('note-gone-name').value.trim();
+    const poiTypes = document.getElementById('note-gone-types').value.trim();
+    if (!poiName) {
+      showToast('يرجى إدخال اسم المعلم قبل الإرسال.', 'error');
+      return null;
+    }
+    const lines = [
+      'المعلم غير موجود على أرض الواقع رغم ظهوره على الخريطة (قد تكون البيانات قديمة).',
+      `POI name: ${poiName}`
+    ];
+    if (poiTypes) lines.push(`POI types: ${poiTypes}`);
+    lines.push(`OSM data version: ${new Date().toISOString()}`);
+    body = lines.join('\n');
+  } else {
+    const textInput = document.getElementById('note-text-input');
+    body = textInput ? textInput.value.trim() : '';
+    if (!body) {
+      showToast('يرجى كتابة نص الملاحظة قبل الإرسال.', 'error');
+      return null;
+    }
+  }
+
+  return `${body}\n\n${NOTE_SIGNATURE}`;
+}
+
 // Submits the pending note to the OSM Notes API. Anonymous submission needs
 // no Authorization header at all (OSM Notes natively support anonymous
 // reporters); an attributed note is only attempted if the stored token's
 // granted scope actually includes write_notes, since tokens issued before
 // this feature existed won't have it.
 async function submitPendingOsmNote() {
-  const textInput = document.getElementById('note-text-input');
-  const text = textInput ? textInput.value.trim() : '';
-
   if (!pendingNoteLatLng) return;
-  if (!text) {
-    showToast('يرجى كتابة نص الملاحظة قبل الإرسال.', 'error');
-    return;
-  }
+
+  const text = buildNoteText();
+  if (!text) return;
 
   const { lat, lon } = pendingNoteLatLng;
   const submitBtn = document.getElementById('btn-submit-note');
