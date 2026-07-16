@@ -1005,6 +1005,7 @@ h1 {
   position: relative;
   width: 90%;
   max-width: 480px;
+  max-height: 90vh;
   background: rgba(18, 20, 29, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
@@ -1013,7 +1014,8 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   direction: rtl;
 }
 
@@ -1434,4 +1436,89 @@ h1 {
 
 .guide-sublist li {
   margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   Sidebar Collapse/Expand Toggle
+   ========================================================================== */
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 20px;
+  right: 440px; /* just outside the expanded sidebar's left edge (420px width + 20px margin) */
+  z-index: 11; /* above #sidebar (10), below loading/auth overlays (1000/9999) */
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  color: var(--color-text);
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-toggle-btn:hover {
+  border-color: rgba(0, 242, 254, 0.25);
+  color: var(--color-primary);
+}
+
+.sidebar-toggle-btn svg {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#app-container.sidebar-collapsed .sidebar-toggle-btn {
+  right: 20px;
+}
+
+#app-container.sidebar-collapsed .sidebar-toggle-btn svg {
+  transform: rotate(180deg);
+}
+
+#app-container.sidebar-collapsed #sidebar {
+  transform: translateX(120%);
+}
+
+/* ==========================================================================
+   Mobile Responsiveness
+   ========================================================================== */
+@media (max-width: 768px) {
+  #sidebar {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+    padding: 16px;
+  }
+
+  #app-container.sidebar-collapsed .sidebar-toggle-btn {
+    right: 16px;
+  }
+
+  .sidebar-toggle-btn {
+    top: 16px;
+    right: 16px;
+  }
+
+  .toast-notification {
+    left: 16px;
+    right: 16px;
+  }
+
+  .leaflet-control-zoom-in,
+  .leaflet-control-zoom-out {
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    font-size: 18px !important;
+  }
+
+  .auth-card {
+    padding: 20px;
+  }
 }

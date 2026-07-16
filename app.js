@@ -7,7 +7,6 @@ let currentBasemap = null;
 // OSM OAuth 2.0 State Variables
 let OSM_ENVIRONMENT = localStorage.getItem('osm_oauth_environment') || 'production';
 let OSM_CLIENT_ID = localStorage.getItem('osm_oauth_client_id') || '';
-let OSM_CLIENT_SECRET = localStorage.getItem('osm_oauth_client_secret') || '';
 // Automatically resolve Redirect URI based on the current window location (without parameters)
 const OSM_REDIRECT_URI = window.location.origin + window.location.pathname;
 let isOsmAnonymized = sessionStorage.getItem('osm_auth_skipped') === 'true';
@@ -387,9 +386,36 @@ function updateQiblaCompass() {
   }
 }
 
+// Applies persisted (or, on a first-ever mobile visit, defaulted-collapsed)
+// sidebar state and wires the toggle button. The auth overlay is a fixed,
+// higher-z-index full-viewport modal, so it already covers this button
+// whenever it's shown - no extra guard needed there.
+function initSidebarToggle() {
+  const container = document.getElementById('app-container');
+  const toggleBtn = document.getElementById('sidebar-toggle');
+  if (!container || !toggleBtn) return;
+
+  function setSidebarCollapsed(isCollapsed) {
+    container.classList.toggle('sidebar-collapsed', isCollapsed);
+    toggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
+    localStorage.setItem('sidebar_collapsed', String(isCollapsed));
+  }
+
+  const stored = localStorage.getItem('sidebar_collapsed');
+  const initialCollapsed = stored !== null
+    ? stored === 'true'
+    : window.matchMedia('(max-width: 768px)').matches;
+  setSidebarCollapsed(initialCollapsed);
+
+  toggleBtn.addEventListener('click', () => {
+    setSidebarCollapsed(!container.classList.contains('sidebar-collapsed'));
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
   setupEventListeners();
+  initSidebarToggle();
   // Handle OAuth callback first, then load the data
   handleOAuthCallback().then(() => {
     loadData();
@@ -1411,11 +1437,6 @@ function setupEventListeners() {
     clientIdInput.value = OSM_CLIENT_ID;
   }
 
-  const clientSecretInput = document.getElementById('osm-client-secret');
-  if (clientSecretInput && OSM_CLIENT_SECRET) {
-    clientSecretInput.value = OSM_CLIENT_SECRET;
-  }
-
   const redirectUriDisplay = document.getElementById('osm-redirect-uri-display');
   if (redirectUriDisplay) {
     redirectUriDisplay.innerText = OSM_REDIRECT_URI;
@@ -1474,13 +1495,8 @@ async function redirectToOSM() {
     return;
   }
   
-  const clientSecretInput = document.getElementById('osm-client-secret').value.trim();
-  
   OSM_CLIENT_ID = clientIdInput;
   localStorage.setItem('osm_oauth_client_id', OSM_CLIENT_ID);
-  
-  OSM_CLIENT_SECRET = clientSecretInput;
-  localStorage.setItem('osm_oauth_client_secret', OSM_CLIENT_SECRET);
 
   updateOsmUrls();
   
@@ -1511,7 +1527,6 @@ async function handleOAuthCallback() {
     // Save saved settings back to state in case page reloads
     OSM_ENVIRONMENT = localStorage.getItem('osm_oauth_environment') || 'production';
     OSM_CLIENT_ID = localStorage.getItem('osm_oauth_client_id') || '';
-    OSM_CLIENT_SECRET = localStorage.getItem('osm_oauth_client_secret') || '';
     updateOsmUrls();
     
     const cleanUrl = window.location.origin + window.location.pathname;
@@ -1542,11 +1557,7 @@ async function handleOAuthCallback() {
         redirect_uri: OSM_REDIRECT_URI,
         code_verifier: codeVerifier
       };
-      
-      if (OSM_CLIENT_SECRET) {
-        payload.client_secret = OSM_CLIENT_SECRET;
-      }
-      
+
       const response = await fetch(OSM_TOKEN_URL, {
         method: 'POST',
         headers: {
