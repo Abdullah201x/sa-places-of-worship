@@ -821,6 +821,86 @@ h1 {
   }
 }
 
+/* Size Threshold Controls (Improve Mode) */
+.threshold-controls {
+  margin-top: 14px;
+  padding: 14px;
+  background: rgba(255, 176, 58, 0.05);
+  border: 1px solid rgba(255, 176, 58, 0.15);
+  border-radius: 12px;
+}
+
+.threshold-controls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.threshold-controls-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ffb03a;
+}
+
+.threshold-controls .section-hint {
+  margin: 0 0 10px 0;
+}
+
+.threshold-reset-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 176, 58, 0.3);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #ffb03a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.threshold-reset-btn:hover {
+  background: rgba(255, 176, 58, 0.12);
+  border-color: #ffb03a;
+}
+
+.threshold-fields {
+  display: flex;
+  gap: 10px;
+}
+
+.threshold-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+.threshold-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.threshold-input:focus {
+  border-color: #ffb03a;
+  background: rgba(255, 176, 58, 0.08);
+  box-shadow: 0 0 10px rgba(255, 176, 58, 0.15);
+}
+
+.threshold-input.invalid {
+  border-color: #ff453a;
+  box-shadow: 0 0 10px rgba(255, 69, 58, 0.15);
+}
+
 /* Data Quality Mode Specific styles */
 .mode-btn.active[data-mode="improve"] {
   background: rgba(255, 176, 58, 0.12);

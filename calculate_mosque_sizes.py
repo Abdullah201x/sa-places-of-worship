@@ -20,9 +20,12 @@ REF_LAT_RAD = math.radians(24.0)
 M_PER_DEG_LAT = 110_574.0
 M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
 
-# Heuristic thresholds, not derived from the data. Tune as needed.
-MIN_REASONABLE_AREA_M2 = 20      # smaller than a small prayer room -> likely a mis-mapped footprint
-MAX_REASONABLE_AREA_M2 = 15000   # bigger than almost all neighborhood/city mosques -> likely merged buildings or an oversized outline
+# Default thresholds used only for the console summary below; the actual
+# too_small/too_large classification now happens client-side in app.js so
+# users can tune the range interactively. Every matched footprint's area is
+# written out, not just the outliers under these defaults.
+DEFAULT_MIN_AREA_M2 = 20      # smaller than a small prayer room -> likely a mis-mapped footprint
+DEFAULT_MAX_AREA_M2 = 15000   # bigger than almost all neighborhood/city mosques -> likely merged buildings or an oversized outline
 
 def find_pbf(base_dir):
     matches = glob.glob(os.path.join(base_dir, "*.osm.pbf"))
@@ -47,7 +50,11 @@ class MosqueSizeExtractor(osmium.SimpleHandler):
             return  # Eid musallas are legitimately large open areas, not size outliers
         amenity = tags.get('amenity')
         building = tags.get('building')
-        if not (amenity == 'place_of_worship' or amenity == 'mosque' or building == 'mosque' or building == 'yes'):
+        # building=yes alone matches every ordinary building in the extract (houses,
+        # shops, ...), so it only counts here when paired with an amenity tag that
+        # actually marks the way as a place of worship. building=mosque needs no such
+        # pairing since that tag value is mosque-specific on its own.
+        if not (amenity == 'place_of_worship' or amenity == 'mosque' or building == 'mosque'):
             return
         try:
             nodes = w.nodes
@@ -72,17 +79,7 @@ class MosqueSizeExtractor(osmium.SimpleHandler):
             if area_m2 <= 0:
                 return
 
-            if area_m2 < MIN_REASONABLE_AREA_M2:
-                size_flag = "too_small"
-            elif area_m2 > MAX_REASONABLE_AREA_M2:
-                size_flag = "too_large"
-            else:
-                return  # within the reasonable range, not an outlier
-
-            self.sizes[str(w.id)] = {
-                "area_m2": round(area_m2, 1),
-                "size_flag": size_flag
-            }
+            self.sizes[str(w.id)] = {"area_m2": round(area_m2, 1)}
         except osmium.InvalidLocationError:
             pass
 
@@ -112,14 +109,15 @@ def main():
     duration = time.time() - start_time
     print(f"Scan completed in {duration:.2f} seconds.")
 
-    too_small = sum(1 for v in extractor.sizes.values() if v["size_flag"] == "too_small")
-    too_large = sum(1 for v in extractor.sizes.values() if v["size_flag"] == "too_large")
-    print(f"Found {len(extractor.sizes)} size outliers ({too_small} too small, {too_large} too large).")
+    too_small = sum(1 for v in extractor.sizes.values() if v["area_m2"] < DEFAULT_MIN_AREA_M2)
+    too_large = sum(1 for v in extractor.sizes.values() if v["area_m2"] > DEFAULT_MAX_AREA_M2)
+    print(f"Computed area for {len(extractor.sizes)} footprints "
+          f"({too_small} under {DEFAULT_MIN_AREA_M2}m2, {too_large} over {DEFAULT_MAX_AREA_M2}m2 by default).")
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(extractor.sizes, f, indent=2, ensure_ascii=False)
 
-    print(f"Mosque size outliers written to {output_path}")
+    print(f"Mosque building footprint areas written to {output_path}")
 
 if __name__ == "__main__":
     main()

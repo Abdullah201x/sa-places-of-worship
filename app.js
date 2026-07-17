@@ -60,6 +60,13 @@ let currentDateTo = null;
 let DATA_MIN_DAY = 0;
 let DATA_MAX_DAY = 1;
 
+// Size-outlier thresholds (m²), user-adjustable in Improve Mode. Defaults match
+// calculate_mosque_sizes.py's DEFAULT_MIN/MAX_AREA_M2.
+const SIZE_MIN_AREA_DEFAULT = 20;
+const SIZE_MAX_AREA_DEFAULT = 15000;
+let currentSizeMinM2 = SIZE_MIN_AREA_DEFAULT;
+let currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
+
 // Map configuration
 const MAP_INITIAL_CENTER = [24.0, 45.0]; // Centered on Saudi Arabia
 const MAP_INITIAL_ZOOM = 6;
@@ -248,18 +255,22 @@ function getQualityIssues(props) {
     });
   }
   
-  // 5. Building footprint size looks like an outlier (too small/too large)
-  if (props.size_flag === 'too_small' || props.size_flag === 'too_large') {
-    const isTooSmall = props.size_flag === 'too_small';
-    issues.push({
-      id: 'size_outlier',
-      title_ar: isTooSmall
-        ? 'مبنى المسجد أصغر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى'
-        : 'مبنى المسجد أكبر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى',
-      title_en: isTooSmall
-        ? 'Mosque building footprint looks too small — verify the building outline'
-        : 'Mosque building footprint looks too large — verify the building outline'
-    });
+  // 5. Building footprint size looks like an outlier (too small/too large),
+  // judged against the user-adjustable currentSizeMinM2/currentSizeMaxM2 thresholds.
+  if (typeof props.size_area_m2 === 'number') {
+    if (props.size_area_m2 < currentSizeMinM2) {
+      issues.push({
+        id: 'size_too_small',
+        title_ar: 'مبنى المسجد أصغر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى',
+        title_en: 'Mosque building footprint looks too small — verify the building outline'
+      });
+    } else if (props.size_area_m2 > currentSizeMaxM2) {
+      issues.push({
+        id: 'size_too_large',
+        title_ar: 'مبنى المسجد أكبر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى',
+        title_en: 'Mosque building footprint looks too large — verify the building outline'
+      });
+    }
   }
 
   // 6. Never revisited since first mapped (still version 1, and old)
@@ -581,14 +592,15 @@ function loadData() {
 
 function initializeDashboard(poiData, gapData, boundaryData, sizeData) {
   allPlaces = poiData.features;
-  // Merge in weekly-computed building-size outliers (calculate_mosque_sizes.py),
-  // keyed by osm_id; features with no entry simply have no size data.
+  // Merge in weekly-computed building footprint areas (calculate_mosque_sizes.py),
+  // keyed by osm_id; features with no entry simply have no size data. The
+  // too_small/too_large classification itself is computed dynamically in
+  // getQualityIssues() against the user-adjustable currentSizeMinM2/MaxM2.
   if (sizeData) {
     allPlaces.forEach(f => {
       const sizeInfo = sizeData[f.properties.osm_id];
       if (sizeInfo) {
         f.properties.size_area_m2 = sizeInfo.area_m2;
-        f.properties.size_flag = sizeInfo.size_flag;
       }
     });
   }
@@ -1289,6 +1301,40 @@ function setupEventListeners() {
       currentImprovementFilter = chip.getAttribute('data-improve');
       filterData();
     });
+  });
+
+  // Size Threshold Inputs (Improvement Mode Only) — user-adjustable too_small/too_large cutoffs
+  const sizeMinInput = document.getElementById('size-min-input');
+  const sizeMaxInput = document.getElementById('size-max-input');
+  const resetSizeBtn = document.getElementById('btn-reset-size-thresholds');
+  const debouncedSizeFilter = debounce(filterData, 250);
+
+  function applySizeThresholdsFromInputs() {
+    const minVal = parseFloat(sizeMinInput.value);
+    const maxVal = parseFloat(sizeMaxInput.value);
+    const validMin = !isNaN(minVal) && minVal >= 0;
+    const validMax = !isNaN(maxVal) && maxVal >= 0;
+
+    sizeMinInput.classList.toggle('invalid', !validMin);
+    sizeMaxInput.classList.toggle('invalid', !validMax);
+
+    if (validMin) currentSizeMinM2 = minVal;
+    if (validMax) currentSizeMaxM2 = maxVal;
+
+    debouncedSizeFilter();
+  }
+
+  sizeMinInput.addEventListener('input', applySizeThresholdsFromInputs);
+  sizeMaxInput.addEventListener('input', applySizeThresholdsFromInputs);
+
+  resetSizeBtn.addEventListener('click', () => {
+    sizeMinInput.value = SIZE_MIN_AREA_DEFAULT;
+    sizeMaxInput.value = SIZE_MAX_AREA_DEFAULT;
+    sizeMinInput.classList.remove('invalid');
+    sizeMaxInput.classList.remove('invalid');
+    currentSizeMinM2 = SIZE_MIN_AREA_DEFAULT;
+    currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
+    filterData();
   });
 
   // 3. Search Box keypress (POI Mode Only)
