@@ -103,6 +103,7 @@ The database is updated with the latest OpenStreetMap data:
   5. **Unusual Building Size**: Mosque building footprint is unusually small or large (computed weekly by `calculate_mosque_sizes.py`), suggesting a mis-mapped outline.
   6. **Stale Data**: Still at `version=1` and not edited in 5+ years — never revisited since first mapped.
   7. **Generic Building Tag (`building=yes`)**: Mosque building tagged as `building=yes` instead of `building=mosque`.
+  8. **Mapped as a Node**: Place of worship represented as a single point (`geom_type=Point`) rather than an area/way — ideally a mosque's footprint is traced as a building outline so its true size and shape appear on the map.
 - **محرر OSM المدمج (OSM Editor Integration):**
   - Integrated OpenStreetMap authentication via OAuth 2.0 (supports production and development environment logins) to verify user accounts.
   - Direct integration with **iD Editor (Web)** to edit the current map view area.

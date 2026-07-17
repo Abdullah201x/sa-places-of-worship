@@ -292,6 +292,17 @@ function getQualityIssues(props) {
     });
   }
 
+  // 8. Mapped as a single node instead of a building outline (area/way).
+  // Ideally a mosque's footprint should be traced as an area so its true
+  // size and shape show up on the map, rather than a single point.
+  if (props.geom_type === 'Point') {
+    issues.push({
+      id: 'mapped_as_node',
+      title_ar: 'مرسوم كنقطة وليس كمساحة (مبنى) — يفضّل رسم حدود المبنى',
+      title_en: 'Mapped as a single node instead of an area — ideally traced as a building outline'
+    });
+  }
+
   return issues;
 }
 
