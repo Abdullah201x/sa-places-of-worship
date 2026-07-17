@@ -86,8 +86,8 @@ Then open <http://localhost:8000/> in a browser.
 ## Dataset Updates & Statistics
 
 The database is updated with the latest OpenStreetMap data:
-- **Total Places of Worship:** 12,979
-- **Active Coverage Gaps:** 60,394
+- **Total Places of Worship:** 12,972
+- **Active Coverage Gaps:** 60,378
 
 
 ## Front-end features
