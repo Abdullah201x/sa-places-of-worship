@@ -5,7 +5,7 @@ import json
 import sys
 import time
 import math
-import shapely
+import  shapely
 from shapely.geometry import shape, Point
 from shapely.strtree import STRtree
 from shapely.prepared import prep
@@ -70,7 +70,7 @@ class DrivableRoadExtractor(osmium.SimpleHandler):
                             sum_lat += lat
                         centroid_lon = sum_lon / n_nodes
                         centroid_lat = sum_lat / n_nodes
-                        
+
                         if self.minx <= centroid_lon <= self.maxx and self.miny <= centroid_lat <= self.maxy:
                             pt = Point(centroid_lon, centroid_lat)
                             if self.boundary_prep.contains(pt):
@@ -187,7 +187,7 @@ def main():
         _, distances = worship_tree.query_nearest(
             candidate_points_m, return_distance=True, all_matches=False
         )
-        
+
         minx, miny, maxx, maxy = bounds
         inside_mask = [
             minx <= lo <= maxx and miny <= la <= maxy and boundary_prep.contains(Point(lo, la))
