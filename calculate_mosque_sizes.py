@@ -43,8 +43,11 @@ class MosqueSizeExtractor(osmium.SimpleHandler):
         tags = w.tags
         if not tags:
             return
+        if tags.get('place_of_worship') == 'musalla':
+            return  # Eid musallas are legitimately large open areas, not size outliers
         amenity = tags.get('amenity')
-        if not (amenity == 'place_of_worship' or amenity == 'mosque' or tags.get('building') == 'mosque'):
+        building = tags.get('building')
+        if not (amenity == 'place_of_worship' or amenity == 'mosque' or building == 'mosque' or building == 'yes'):
             return
         try:
             nodes = w.nodes
