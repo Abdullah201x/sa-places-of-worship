@@ -47172,38 +47172,6 @@
     {
       "type": "Feature",
       "properties": {
-        "osm_id": 4229607695,
-        "geom_type": "Point",
-        "name": "جامع الإمام الحسين بن علي بن أبي طالب رضي الله عنه",
-        "name_en": "جامع الإمام الحسين بن علي بن أبي طالب رضي الله عنه",
-        "name_original": "جامع الإمام الحسين بن علي بن أبي طالب رضي الله عنه",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "shia",
-        "building": "mosque",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Abdullah Abdulrhman",
-        "user_id": 10478308,
-        "changeset_id": 84122567,
-        "version": 3,
-        "edited_at": "2020-04-25T21:40:28+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.072174,
-          26.4471141
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "osm_id": 4235361198,
         "geom_type": "Point",
         "name": "جامع عودة العودة بشبرا",
@@ -123716,38 +123684,6 @@
     {
       "type": "Feature",
       "properties": {
-        "osm_id": 5357725121,
-        "geom_type": "Point",
-        "name": "مسجد القدس",
-        "name_en": "Masjed alquds",
-        "name_original": "مسجد القدس",
-        "name_en_original": "Masjed alquds",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "ِA-F",
-        "user_id": 10273571,
-        "changeset_id": 84857482,
-        "version": 2,
-        "edited_at": "2020-05-07T23:59:23+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0725005,
-          26.4545563
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "osm_id": 5369854706,
         "geom_type": "Point",
         "name": "Mosque",
@@ -124094,70 +124030,6 @@
         "coordinates": [
           42.4221241,
           27.1778913
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "osm_id": 5372465324,
-        "geom_type": "Point",
-        "name": "مسجدالشيخ محمدسليمان الشيحة",
-        "name_en": "مسجدالشيخ محمدسليمان الشيحة",
-        "name_original": "مسجدالشيخ محمدسليمان الشيحة",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "ِA-F",
-        "user_id": 10273571,
-        "changeset_id": 84857482,
-        "version": 2,
-        "edited_at": "2020-05-07T23:59:23+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0134643,
-          26.4243213
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "osm_id": 5372491521,
-        "geom_type": "Point",
-        "name": "جامع الشيخ العسكر",
-        "name_en": "جامع الشيخ العسكر",
-        "name_original": "جامع الشيخ العسكر",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "ِA-F",
-        "user_id": 10273571,
-        "changeset_id": 84857482,
-        "version": 2,
-        "edited_at": "2020-05-07T23:59:23+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0147057,
-          26.4226146
         ]
       }
     },
@@ -158372,38 +158244,6 @@
     {
       "type": "Feature",
       "properties": {
-        "osm_id": 7216668085,
-        "geom_type": "Point",
-        "name": "Esam Bulbul Mosque",
-        "name_en": "Esam Bulbul Mosque",
-        "name_original": "",
-        "name_en_original": "Esam Bulbul Mosque",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "ِA-F",
-        "user_id": 10273571,
-        "changeset_id": 84857487,
-        "version": 2,
-        "edited_at": "2020-05-07T23:59:33+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.080357,
-          26.4619175
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "osm_id": 7216786484,
         "geom_type": "Point",
         "name": "مسجد الشنانة",
@@ -164644,134 +164484,6 @@
     {
       "type": "Feature",
       "properties": {
-        "osm_id": 7903116285,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 90827361,
-        "version": 1,
-        "edited_at": "2020-09-13T18:09:46+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0136072,
-          26.4265258
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "osm_id": 7903116339,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 90827361,
-        "version": 1,
-        "edited_at": "2020-09-13T18:09:46+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0316736,
-          26.4270892
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "osm_id": 7903116471,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 90827361,
-        "version": 1,
-        "edited_at": "2020-09-13T18:09:46+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0407952,
-          26.4328676
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "osm_id": 7903116472,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 90827361,
-        "version": 1,
-        "edited_at": "2020-09-13T18:09:46+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0372863,
-          26.4354649
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "osm_id": 7903650591,
         "geom_type": "Point",
         "name": "Mosque",
@@ -164868,102 +164580,6 @@
     {
       "type": "Feature",
       "properties": {
-        "osm_id": 7903650676,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 90834845,
-        "version": 1,
-        "edited_at": "2020-09-14T01:09:02+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0910471,
-          26.4704405
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "osm_id": 7903650677,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 90834845,
-        "version": 1,
-        "edited_at": "2020-09-14T01:09:02+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0884642,
-          26.4727997
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "osm_id": 7903685330,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 90835951,
-        "version": 1,
-        "edited_at": "2020-09-14T02:26:35+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0863514,
-          26.4651938
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "osm_id": 7903685335,
         "geom_type": "Point",
         "name": "Mosque",
@@ -165028,38 +164644,6 @@
     {
       "type": "Feature",
       "properties": {
-        "osm_id": 7903685339,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 90835951,
-        "version": 1,
-        "edited_at": "2020-09-14T02:26:35+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.086336,
-          26.4619529
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "osm_id": 7903710102,
         "geom_type": "Point",
         "name": "Mosque",
@@ -165086,38 +164670,6 @@
         "coordinates": [
           50.093723,
           26.4647158
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "osm_id": 7903710103,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 90835951,
-        "version": 1,
-        "edited_at": "2020-09-14T02:26:35+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.0934322,
-          26.4678885
         ]
       }
     },
@@ -241604,6 +241156,38 @@
     {
       "type": "Feature",
       "properties": {
+        "osm_id": 14024957023,
+        "geom_type": "Point",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Abdullah Abdulrhman",
+        "user_id": 10478308,
+        "changeset_id": 185979324,
+        "version": 1,
+        "edited_at": "2026-07-18T21:18:07+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.7674162,
+          23.478264
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "osm_id": 40589083,
         "geom_type": "Polygon",
         "name": "جامع الإمام تركي بن عبد الله",
@@ -283590,9 +283174,9 @@
       "properties": {
         "osm_id": 404675078,
         "geom_type": "Polygon",
-        "name": "مسجد",
-        "name_en": "مسجد",
-        "name_original": "مسجد",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
         "name_en_original": "",
         "religion": "muslim",
         "denomination": "sunni",
@@ -283603,11 +283187,11 @@
         "female": "",
         "capacity": "",
         "addr_city": "",
-        "last_edited_by": "IbnTēšfīn",
-        "user_id": 4260390,
-        "changeset_id": 45157612,
-        "version": 2,
-        "edited_at": "2017-01-14T11:03:26+00:00"
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994106,
+        "version": 3,
+        "edited_at": "2026-07-19T08:14:42+00:00"
       },
       "geometry": {
         "type": "Point",
@@ -283692,18 +283276,18 @@
         "name_en_original": "",
         "religion": "muslim",
         "denomination": "unknown",
-        "building": "yes",
+        "building": "mosque",
         "amenity": "place_of_worship",
         "place_of_worship": "",
         "wheelchair": "",
         "female": "",
         "capacity": "",
         "addr_city": "",
-        "last_edited_by": "Sarvihepo",
-        "user_id": 2057798,
-        "changeset_id": 40886938,
-        "version": 2,
-        "edited_at": "2016-07-20T05:24:23+00:00"
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994106,
+        "version": 3,
+        "edited_at": "2026-07-19T08:14:42+00:00"
       },
       "geometry": {
         "type": "Point",
@@ -349926,30 +349510,30 @@
       "properties": {
         "osm_id": 846944821,
         "geom_type": "Polygon",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
+        "name": "جامع الشيخ العسكر",
+        "name_en": "جامع الشيخ العسكر",
+        "name_original": "جامع الشيخ العسكر",
         "name_en_original": "",
         "religion": "muslim",
         "denomination": "unknown",
-        "building": "yes",
+        "building": "mosque",
         "amenity": "place_of_worship",
         "place_of_worship": "",
         "wheelchair": "",
         "female": "",
         "capacity": "",
         "addr_city": "",
-        "last_edited_by": "woodpeck_repair",
-        "user_id": 145231,
-        "changeset_id": 105099385,
-        "version": 3,
-        "edited_at": "2021-05-21T16:31:03+00:00"
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185929472,
+        "version": 4,
+        "edited_at": "2026-07-17T21:24:22+00:00"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          50.01491644,
-          26.4222538
+          50.014998966666674,
+          26.422211066666666
         ]
       }
     },
@@ -378564,6 +378148,38 @@
     {
       "type": "Feature",
       "properties": {
+        "osm_id": 1242991978,
+        "geom_type": "Polygon",
+        "name": "جامع الإمام الحسين بن علي بن أبي طالب رضي الله عنه",
+        "name_en": "جامع الإمام الحسين بن علي بن أبي طالب رضي الله عنه",
+        "name_original": "جامع الإمام الحسين بن علي بن أبي طالب رضي الله عنه",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "shia",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185930229,
+        "version": 2,
+        "edited_at": "2026-07-17T21:48:32+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.07253204814815,
+          26.446958796296297
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "osm_id": 1243237354,
         "geom_type": "Polygon",
         "name": "مسجد نواف بن عيسى الدوسري",
@@ -378756,6 +378372,134 @@
     {
       "type": "Feature",
       "properties": {
+        "osm_id": 1243437785,
+        "geom_type": "Polygon",
+        "name": "مسجد القدس",
+        "name_en": "Alquds Mosque",
+        "name_original": "مسجد القدس",
+        "name_en_original": "Alquds Mosque",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185929910,
+        "version": 2,
+        "edited_at": "2026-07-17T21:37:28+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.07226601666667,
+          26.45438068888889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1243439103,
+        "geom_type": "Polygon",
+        "name": "Esam Bulbul Grand Mosque",
+        "name_en": "Esam Bulbul Grand Mosque",
+        "name_original": "",
+        "name_en_original": "Esam Bulbul Grand Mosque",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185930572,
+        "version": 2,
+        "edited_at": "2026-07-17T21:57:50+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.079442158823525,
+          26.46173627647059
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1243439950,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185931163,
+        "version": 2,
+        "edited_at": "2026-07-17T22:15:56+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.09347483333333,
+          26.467800633333333
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1243440051,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185930964,
+        "version": 2,
+        "edited_at": "2026-07-17T22:10:08+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.08850901428571,
+          26.472787
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "osm_id": 1243440559,
         "geom_type": "Polygon",
         "name": "Mosque",
@@ -378782,6 +378526,70 @@
         "coordinates": [
           50.0907609,
           26.476063099999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1243441080,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185930672,
+        "version": 2,
+        "edited_at": "2026-07-17T22:01:20+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.08637637058823,
+          26.461964829411762
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1243441451,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185931012,
+        "version": 2,
+        "edited_at": "2026-07-17T22:11:18+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.09111375714286,
+          26.470423885714286
         ]
       }
     },
@@ -415102,6 +414910,710 @@
         "coordinates": [
           50.01900601052631,
           26.429246936842105
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540123930,
+        "geom_type": "Polygon",
+        "name": "مسجدالشيخ محمدسليمان الشيحة",
+        "name_en": "مسجدالشيخ محمدسليمان الشيحة",
+        "name_original": "مسجدالشيخ محمدسليمان الشيحة",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185929369,
+        "version": 1,
+        "edited_at": "2026-07-17T21:21:03+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.013269438461535,
+          26.424214469230773
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540124091,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185929403,
+        "version": 1,
+        "edited_at": "2026-07-17T21:22:06+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.01362942,
+          26.426498400000003
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540124566,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185929523,
+        "version": 1,
+        "edited_at": "2026-07-17T21:25:59+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.031704339130435,
+          26.427047543478263
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540124702,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185929559,
+        "version": 1,
+        "edited_at": "2026-07-17T21:27:00+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.037249333333335,
+          26.43542805555556
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540125153,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185929690,
+        "version": 1,
+        "edited_at": "2026-07-17T21:31:11+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.04078343076923,
+          26.43281069230769
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540338410,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185978736,
+        "version": 1,
+        "edited_at": "2026-07-18T21:00:26+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.558169604347825,
+          25.39983889130435
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540351194,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 185981062,
+        "version": 1,
+        "edited_at": "2026-07-18T22:12:06+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.999575255555555,
+          26.260365466666666
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540716433,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994106,
+        "version": 1,
+        "edited_at": "2026-07-19T08:14:42+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.24764525555556,
+          21.55068961111111
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540716451,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosquem",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994106,
+        "version": 1,
+        "edited_at": "2026-07-19T08:14:42+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.24152586,
+          21.55074066
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540716455,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "yes",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994106,
+        "version": 1,
+        "edited_at": "2026-07-19T08:14:42+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.251033570000004,
+          21.560309519999997
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540716460,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "yes",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994106,
+        "version": 1,
+        "edited_at": "2026-07-19T08:14:42+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.244603957142864,
+          21.566287471428573
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540716463,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "yes",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994106,
+        "version": 1,
+        "edited_at": "2026-07-19T08:14:42+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.24137711666666,
+          21.56236745
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718415,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.250273436363635,
+          21.31369916363636
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718418,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.25854324,
+          21.31450786
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718420,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.25586376,
+          21.31927498
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718424,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.25303212857143,
+          21.324697657142856
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718425,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.25035842727272,
+          21.30776678181818
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718427,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.258466985714286,
+          21.307475642857145
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718448,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.248407566666664,
+          21.32090158888889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718450,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.244446800000006,
+          21.320992359999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718451,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "yes",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.239999822222224,
+          21.324613633333332
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1540718459,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 185994774,
+        "version": 1,
+        "edited_at": "2026-07-19T08:31:34+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2350317375,
+          21.3070905125
         ]
       }
     }
