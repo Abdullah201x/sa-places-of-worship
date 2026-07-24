@@ -10,13 +10,22 @@ from shapely.prepared import prep
 # Resolve all paths relative to this script so it runs on any machine.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def find_pbf(base_dir):
-    matches = glob.glob(os.path.join(base_dir, "*.osm.pbf"))
-    if not matches:
-        sys.exit("No .osm.pbf file found in " + base_dir)
-    if len(matches) > 1:
-        sys.exit("Multiple .osm.pbf files found, expected exactly one: " + ", ".join(matches))
-    return matches[0]
+def find_pbf(base_dir=None):
+    if base_dir is None:
+        base_dir = BASE_DIR
+    search_dirs = [
+        base_dir,
+        os.path.abspath(os.path.join(base_dir, "..", "update osm")),
+        r"C:\Users\abdul\Desktop\update osm",
+    ]
+    for d in search_dirs:
+        if os.path.exists(d):
+            matches = glob.glob(os.path.join(d, "*.osm.pbf")) + glob.glob(os.path.join(d, "*.pbf"))
+            seen = set()
+            unique = [m for m in matches if not (m in seen or seen.add(m))]
+            if unique:
+                return unique[0]
+    sys.exit("No .osm.pbf or .pbf file found in project or update osm directory.")
 
 class PlacesOfWorshipExtractor(osmium.SimpleHandler):
     def __init__(self, boundary_prep, bounds):

@@ -27,13 +27,22 @@ M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
 DEFAULT_MIN_AREA_M2 = 20      # smaller than a small prayer room -> likely a mis-mapped footprint
 DEFAULT_MAX_AREA_M2 = 15000   # bigger than almost all neighborhood/city mosques -> likely merged buildings or an oversized outline
 
-def find_pbf(base_dir):
-    matches = glob.glob(os.path.join(base_dir, "*.osm.pbf"))
-    if not matches:
-        sys.exit("No .osm.pbf file found in " + base_dir)
-    if len(matches) > 1:
-        sys.exit("Multiple .osm.pbf files found, expected exactly one: " + ", ".join(matches))
-    return matches[0]
+def find_pbf(base_dir=None):
+    if base_dir is None:
+        base_dir = BASE_DIR
+    search_dirs = [
+        base_dir,
+        os.path.abspath(os.path.join(base_dir, "..", "update osm")),
+        r"C:\Users\abdul\Desktop\update osm",
+    ]
+    for d in search_dirs:
+        if os.path.exists(d):
+            matches = glob.glob(os.path.join(d, "*.osm.pbf")) + glob.glob(os.path.join(d, "*.pbf"))
+            seen = set()
+            unique = [m for m in matches if not (m in seen or seen.add(m))]
+            if unique:
+                return unique[0]
+    sys.exit("No .osm.pbf or .pbf file found in project or update osm directory.")
 
 class MosqueSizeExtractor(osmium.SimpleHandler):
     def __init__(self, boundary_prep, bounds):

@@ -9,13 +9,22 @@ from shapely.ops import polygonize, unary_union
 # Resolve all paths relative to this script so it runs on any machine.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def find_pbf(base_dir):
-    matches = glob.glob(os.path.join(base_dir, "*.osm.pbf"))
-    if not matches:
-        sys.exit("No .osm.pbf file found in " + base_dir)
-    if len(matches) > 1:
-        sys.exit("Multiple .osm.pbf files found, expected exactly one: " + ", ".join(matches))
-    return matches[0]
+def find_pbf(base_dir=None):
+    if base_dir is None:
+        base_dir = BASE_DIR
+    search_dirs = [
+        base_dir,
+        os.path.abspath(os.path.join(base_dir, "..", "update osm")),
+        r"C:\Users\abdul\Desktop\update osm",
+    ]
+    for d in search_dirs:
+        if os.path.exists(d):
+            matches = glob.glob(os.path.join(d, "*.osm.pbf")) + glob.glob(os.path.join(d, "*.pbf"))
+            seen = set()
+            unique = [m for m in matches if not (m in seen or seen.add(m))]
+            if unique:
+                return unique[0]
+    sys.exit("No .osm.pbf or .pbf file found in project or update osm directory.")
 
 class RelationWayCollector(osmium.SimpleHandler):
     def __init__(self, target_relation_id):
@@ -47,9 +56,38 @@ class WayCoordinateCollector(osmium.SimpleHandler):
                 # Node location was not resolved, skip
                 pass
 
+import shutil
+
+def check_cached_boundary(output_path, pbf_path):
+    if "--force" not in sys.argv:
+        pbf_mtime = os.path.getmtime(pbf_path) if os.path.exists(pbf_path) else 0
+        if os.path.exists(output_path) and os.path.getmtime(output_path) >= pbf_mtime:
+            print(f"[SKIP] sa_boundary.geojson already exists and is up to date.")
+            return True
+
+        sister_dirs = [
+            os.path.abspath(os.path.join(BASE_DIR, "..", "GCC20260707")),
+            os.path.abspath(os.path.join(BASE_DIR, "..", "random osm mapping")),
+            os.path.abspath(os.path.join(BASE_DIR, "..", "street_lighting_SA")),
+            r"C:\Users\abdul\Desktop\GCC20260707",
+            r"C:\Users\abdul\Desktop\random osm mapping",
+            r"C:\Users\abdul\Desktop\street_lighting_SA",
+        ]
+        for s_dir in sister_dirs:
+            candidate = os.path.join(s_dir, "sa_boundary.geojson")
+            if os.path.exists(candidate) and os.path.abspath(candidate) != os.path.abspath(output_path):
+                if os.path.getmtime(candidate) >= pbf_mtime:
+                    print(f"[COPY] Copying cached sa_boundary.geojson from {s_dir}...")
+                    shutil.copy2(candidate, output_path)
+                    return True
+    return False
+
 def main():
     pbf_path = find_pbf(BASE_DIR)
     output_path = os.path.join(BASE_DIR, "sa_boundary.geojson")
+    if check_cached_boundary(output_path, pbf_path):
+        return
+
     target_rel_id = 307584
 
     print("Pass 1: Identifying boundary ways...")
