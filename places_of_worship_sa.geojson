@@ -416800,6 +416800,38 @@
           26.378174433333335
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1546457394,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 186741550,
+        "version": 1,
+        "edited_at": "2026-08-01T03:12:04+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.63746844,
+          24.5239277
+        ]
+      }
     }
   ]
 }
