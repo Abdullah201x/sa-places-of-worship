@@ -241574,11 +241574,11 @@
       "properties": {
         "osm_id": 14067953501,
         "geom_type": "Point",
-        "name": "مسجد الإمام ابن ماجه 1416",
-        "name_en": "مسجد الإمام ابن ماجه 1416",
-        "name_original": "مسجد الإمام ابن ماجه 1416",
+        "name": "مسجد الإمام ابن ماجه",
+        "name_en": "مسجد الإمام ابن ماجه",
+        "name_original": "مسجد الإمام ابن ماجه",
         "name_en_original": "",
-        "religion": "unknown",
+        "religion": "muslim",
         "denomination": "unknown",
         "building": "",
         "amenity": "place_of_worship",
@@ -241587,17 +241587,17 @@
         "female": "",
         "capacity": "",
         "addr_city": "",
-        "last_edited_by": "Hassane George",
-        "user_id": 24071049,
-        "changeset_id": 186802591,
-        "version": 1,
-        "edited_at": "2026-08-02T10:36:34+00:00"
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 186848461,
+        "version": 2,
+        "edited_at": "2026-08-03T05:09:15+00:00"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          46.8225813,
-          24.6971656
+          46.822586,
+          24.6970189
         ]
       }
     },
@@ -241630,6 +241630,102 @@
         "coordinates": [
           46.8116686,
           24.6918909
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 14069241054,
+        "geom_type": "Point",
+        "name": "جامع خالد بن الوليد",
+        "name_en": "جامع خالد بن الوليد",
+        "name_original": "جامع خالد بن الوليد",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "ابو عريش",
+        "last_edited_by": "MOHAMMED07",
+        "user_id": 22302721,
+        "changeset_id": 186839346,
+        "version": 1,
+        "edited_at": "2026-08-02T22:38:23+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42.8432835,
+          16.9599623
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 14069817344,
+        "geom_type": "Point",
+        "name": "مسجد مجاهد المجاهد",
+        "name_en": "مسجد مجاهد المجاهد",
+        "name_original": "مسجد مجاهد المجاهد",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 186848237,
+        "version": 1,
+        "edited_at": "2026-08-03T05:02:08+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.8178803,
+          24.6855035
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 14070170526,
+        "geom_type": "Point",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "20242024",
+        "user_id": 21732543,
+        "changeset_id": 186859913,
+        "version": 1,
+        "edited_at": "2026-08-03T09:48:56+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          41.3743481,
+          27.6406645
         ]
       }
     },
@@ -266183,9 +266279,9 @@
         "osm_id": 330996304,
         "geom_type": "Polygon",
         "name": "جامع الفرقان",
-        "name_en": "Al Furqan Mosque",
+        "name_en": "Al Furqan Grand Mosque",
         "name_original": "جامع الفرقان",
-        "name_en_original": "Al Furqan Mosque",
+        "name_en_original": "Al Furqan Grand Mosque",
         "religion": "muslim",
         "denomination": "sunni",
         "building": "mosque",
@@ -266197,9 +266293,9 @@
         "addr_city": "Dammam",
         "last_edited_by": "Alshowaiey",
         "user_id": 23585350,
-        "changeset_id": 186379374,
-        "version": 7,
-        "edited_at": "2026-07-26T04:26:39+00:00"
+        "changeset_id": 186852896,
+        "version": 8,
+        "edited_at": "2026-08-03T07:13:57+00:00"
       },
       "geometry": {
         "type": "Point",
@@ -324652,18 +324748,18 @@
         "name_en_original": "",
         "religion": "muslim",
         "denomination": "unknown",
-        "building": "yes",
+        "building": "mosque",
         "amenity": "place_of_worship",
         "place_of_worship": "",
         "wheelchair": "",
         "female": "",
         "capacity": "",
         "addr_city": "",
-        "last_edited_by": "Seandebasti",
-        "user_id": 550560,
-        "changeset_id": 63882540,
-        "version": 1,
-        "edited_at": "2018-10-25T21:26:23+00:00"
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 186848649,
+        "version": 2,
+        "edited_at": "2026-08-03T05:14:02+00:00"
       },
       "geometry": {
         "type": "Point",
@@ -417054,6 +417150,38 @@
         "coordinates": [
           44.21741747,
           17.541135349999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1546965756,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 186872783,
+        "version": 1,
+        "edited_at": "2026-08-03T14:05:02+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.2298789,
+          21.54993322
         ]
       }
     }
