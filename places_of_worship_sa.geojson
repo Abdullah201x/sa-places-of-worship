@@ -243236,6 +243236,70 @@
     {
       "type": "Feature",
       "properties": {
+        "osm_id": 14080512068,
+        "geom_type": "Point",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 187141361,
+        "version": 1,
+        "edited_at": "2026-08-08T15:59:40+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.6101626,
+          24.7597139
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 14080514788,
+        "geom_type": "Point",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 187141395,
+        "version": 1,
+        "edited_at": "2026-08-08T16:00:30+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.6120496,
+          24.7624949
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "osm_id": 40589083,
         "geom_type": "Polygon",
         "name": "جامع الإمام تركي بن عبد الله",
@@ -393374,6 +393438,38 @@
         "coordinates": [
           46.6845847,
           24.76557166
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1306092715,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "الرياض",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 187141467,
+        "version": 2,
+        "edited_at": "2026-08-08T16:02:04+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.63615363,
+          24.75068962
         ]
       }
     },
