@@ -804,38 +804,6 @@
     {
       "type": "Feature",
       "properties": {
-        "osm_id": 563234641,
-        "geom_type": "Point",
-        "name": "Mosque",
-        "name_en": "Mosque",
-        "name_original": "",
-        "name_en_original": "",
-        "religion": "muslim",
-        "denomination": "unknown",
-        "building": "",
-        "amenity": "place_of_worship",
-        "place_of_worship": "",
-        "wheelchair": "",
-        "female": "",
-        "capacity": "",
-        "addr_city": "",
-        "last_edited_by": "woodpeck_repair",
-        "user_id": 145231,
-        "changeset_id": 105115755,
-        "version": 3,
-        "edited_at": "2021-05-22T01:19:32+00:00"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.1527938,
-          21.6136946
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "osm_id": 564188119,
         "geom_type": "Point",
         "name": "مسجد طيبة",
@@ -243300,6 +243268,38 @@
     {
       "type": "Feature",
       "properties": {
+        "osm_id": 14080954840,
+        "geom_type": "Point",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 187152102,
+        "version": 1,
+        "edited_at": "2026-08-08T20:28:24+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.1788548,
+          26.2023397
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "osm_id": 40589083,
         "geom_type": "Polygon",
         "name": "جامع الإمام تركي بن عبد الله",
@@ -419262,6 +419262,38 @@
         "coordinates": [
           44.05302084,
           26.33124214
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1548198961,
+        "geom_type": "Polygon",
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Growebis",
+        "user_id": 16297720,
+        "changeset_id": 187154029,
+        "version": 1,
+        "edited_at": "2026-08-08T21:29:21+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.15282114,
+          21.61367176
         ]
       }
     }
