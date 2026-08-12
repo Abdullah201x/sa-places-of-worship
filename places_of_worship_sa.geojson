@@ -234378,7 +234378,7 @@
         "name_en": "مسجد الوالدتين",
         "name_original": "مسجد الوالدتين",
         "name_en_original": "",
-        "religion": "unknown",
+        "religion": "muslim",
         "denomination": "unknown",
         "building": "",
         "amenity": "place_of_worship",
@@ -234387,11 +234387,11 @@
         "female": "",
         "capacity": "",
         "addr_city": "",
-        "last_edited_by": "Abdullah Abdulrhman",
-        "user_id": 10478308,
-        "changeset_id": 183698446,
-        "version": 1,
-        "edited_at": "2026-06-05T14:17:55+00:00"
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 187200532,
+        "version": 2,
+        "edited_at": "2026-08-09T20:48:13+00:00"
       },
       "geometry": {
         "type": "Point",
@@ -379998,6 +379998,38 @@
         "coordinates": [
           50.09101703333334,
           26.366105011111113
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_id": 1241994711,
+        "geom_type": "Polygon",
+        "name": "جامع الذكر",
+        "name_en": "جامع الذكر",
+        "name_original": "جامع الذكر",
+        "name_en_original": "",
+        "religion": "muslim",
+        "denomination": "unknown",
+        "building": "mosque",
+        "amenity": "place_of_worship",
+        "place_of_worship": "",
+        "wheelchair": "",
+        "female": "",
+        "capacity": "",
+        "addr_city": "",
+        "last_edited_by": "Alshowaiey",
+        "user_id": 23585350,
+        "changeset_id": 187214158,
+        "version": 2,
+        "edited_at": "2026-08-10T07:19:32+00:00"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.08728464285714,
+          26.37080972857143
         ]
       }
     },
