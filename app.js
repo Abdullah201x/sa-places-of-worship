@@ -737,6 +737,23 @@ function updateQiblaCompass() {
   }
 }
 
+// Controls sidebar collapsed state and persists preference
+function setSidebarCollapsed(isCollapsed) {
+  const container = document.getElementById('app-container');
+  const toggleBtn = document.getElementById('sidebar-toggle');
+  if (!container) return;
+
+  container.classList.toggle('sidebar-collapsed', isCollapsed);
+  if (toggleBtn) {
+    toggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
+  }
+  try {
+    localStorage.setItem('sidebar_collapsed', String(isCollapsed));
+  } catch (e) {
+    // Ignore storage errors in private browsing
+  }
+}
+
 // Applies persisted (or, on a first-ever mobile visit, defaulted-collapsed)
 // sidebar state and wires the toggle button. The auth overlay is a fixed,
 // higher-z-index full-viewport modal, so it already covers this button
@@ -746,16 +763,15 @@ function initSidebarToggle() {
   const toggleBtn = document.getElementById('sidebar-toggle');
   if (!container || !toggleBtn) return;
 
-  function setSidebarCollapsed(isCollapsed) {
-    container.classList.toggle('sidebar-collapsed', isCollapsed);
-    toggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
-    localStorage.setItem('sidebar_collapsed', String(isCollapsed));
+  let initialCollapsed = false;
+  try {
+    const stored = localStorage.getItem('sidebar_collapsed');
+    initialCollapsed = stored !== null
+      ? stored === 'true'
+      : window.matchMedia('(max-width: 768px)').matches;
+  } catch (e) {
+    initialCollapsed = window.matchMedia('(max-width: 768px)').matches;
   }
-
-  const stored = localStorage.getItem('sidebar_collapsed');
-  const initialCollapsed = stored !== null
-    ? stored === 'true'
-    : window.matchMedia('(max-width: 768px)').matches;
   setSidebarCollapsed(initialCollapsed);
 
   toggleBtn.addEventListener('click', () => {
@@ -1533,7 +1549,6 @@ function showDetails(props, lat, lon) {
     changesetLink.style.opacity = '0.6';
     changesetLink.style.textDecoration = 'none';
 
-    if (mapperTools) mapperTools.style.display = 'none';
     if (guestToolsNotice) guestToolsNotice.style.display = 'flex';
   } else {
     userLink.onclick = null;
@@ -1551,15 +1566,31 @@ function showDetails(props, lat, lon) {
     changesetLink.style.opacity = '1';
     changesetLink.style.textDecoration = '';
 
-    if (mapperTools) mapperTools.style.display = 'block';
     if (guestToolsNotice) guestToolsNotice.style.display = 'none';
+  }
 
-    // Update mapper editing tools
-    const type = props.geom_type === 'Point' ? 'node' : 'way';
-    document.getElementById('btn-view-osm').href = `https://www.openstreetmap.org/${type}/${props.osm_id}`;
-    document.getElementById('btn-edit-osm').href = `https://www.openstreetmap.org/edit?editor=id&${type}=${props.osm_id}`;
-    
-    const josmBtn = document.getElementById('btn-edit-josm');
+  // Update mapper editing tools (always available in both guest and authenticated modes)
+  if (mapperTools) mapperTools.style.display = 'block';
+  const type = (props.geom_type === 'Polygon' || props.geom_type === 'MultiPolygon' || props.geom_type === 'way') ? 'way' : 'node';
+  const isDev = OSM_ENVIRONMENT === 'dev';
+  const osmBase = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://www.openstreetmap.org';
+
+  const viewOsmBtn = document.getElementById('btn-view-osm');
+  if (viewOsmBtn) {
+    viewOsmBtn.href = props.osm_id
+      ? `${osmBase}/${type}/${props.osm_id}`
+      : `${osmBase}/#map=18/${lat.toFixed(5)}/${lon.toFixed(5)}`;
+  }
+
+  const editOsmBtn = document.getElementById('btn-edit-osm');
+  if (editOsmBtn) {
+    editOsmBtn.href = props.osm_id
+      ? `${osmBase}/edit?editor=id&${type}=${props.osm_id}`
+      : `${osmBase}/edit?editor=id#map=18/${lat.toFixed(5)}/${lon.toFixed(5)}`;
+  }
+  
+  const josmBtn = document.getElementById('btn-edit-josm');
+  if (josmBtn) {
     const newJosmBtn = josmBtn.cloneNode(true);
     josmBtn.parentNode.replaceChild(newJosmBtn, josmBtn);
     newJosmBtn.addEventListener('click', () => {
