@@ -180,20 +180,222 @@
 
       <!-- Quality Issues Filters (Improvement Mode Only) -->
       <div class="control-group" id="improve-filter-section" style="display: none;">
-        <h2 class="section-title">نوع مشكلة جودة البيانات</h2>
-        <div class="chips-container" id="improve-filters" role="group" aria-label="أزرار اختيار نوع مشكلة جودة البيانات">
-          <button class="chip active" data-improve="all">جميع المشاكل</button>
-          <button class="chip" data-improve="missing_amenity">مسجد بدون تصنيف دار عبادة</button>
-          <button class="chip" data-improve="missing_name">بلا اسم محدد</button>
-          <button class="chip" data-improve="missing_name_en">الاسم بالإنجليزية مفقود</button>
-          <button class="chip" data-improve="missing_denom">المذهب غير محدد</button>
-          <button class="chip" data-improve="size_too_small">مبنى أصغر من المعتاد</button>
-          <button class="chip" data-improve="size_too_large">مبنى أكبر من المعتاد</button>
-          <button class="chip" data-improve="stale_data">بيانات قديمة لم تُحدّث</button>
-          <button class="chip" data-improve="building_yes">مبنى مصنف building=yes</button>
-          <button class="chip" data-improve="mapped_as_node">مرسوم كنقطة وليس كمساحة</button>
-          <button class="chip" data-improve="ml_geometry_anomaly">🤖 شذوذ هندسي (ذكاء اصطناعي)</button>
-          <button class="chip" data-improve="qibla_deviation">🕋 انحراف القبلة</button>
+        <div class="improve-section-header">
+          <div class="improve-header-title-wrap">
+            <h2 class="section-title">نوع مشكلة جودة البيانات</h2>
+            <span class="improve-header-badge" id="quality-total-issues-badge">١١ فحص نشط</span>
+          </div>
+          <button type="button" class="improve-reset-filter-btn" id="btn-reset-improve-filter" title="إعادة تعيين إلى جميع المشاكل">إعادة تعيين</button>
+        </div>
+        <p class="section-hint">اختر نوع التدقيق المكاني أو الوصفي لفحص الأماكن وتصحيحها عبر JOSM أو iD Editor.</p>
+
+        <!-- Master Hero Card for "All Issues" -->
+        <button type="button" class="improve-hero-card chip active" data-improve="all" id="btn-improve-all" aria-label="عرض جميع المشاكل المكتشفة">
+          <div class="improve-hero-content">
+            <div class="improve-hero-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            </div>
+            <div class="improve-hero-text">
+              <span class="improve-hero-title">جميع المشاكل المكتشفة</span>
+              <span class="improve-hero-subtitle">عرض كافة الأماكن المحتاجة للمراجعة والتحسين</span>
+            </div>
+          </div>
+          <div class="improve-hero-badge-wrap">
+            <span class="improve-count-pill highlight" id="count-improve-all">-</span>
+            <span class="improve-check-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </span>
+          </div>
+        </button>
+
+        <!-- Category Tabs -->
+        <div class="improve-category-tabs" role="tablist" aria-label="تصنيفات مشاكل البيانات">
+          <button type="button" class="category-tab active" data-category="all" role="tab" aria-selected="true">
+            <span>الكل</span>
+            <span class="category-tab-count" id="cat-count-all">١١</span>
+          </button>
+          <button type="button" class="category-tab" data-category="ai" role="tab" aria-selected="false">
+            <span>🤖 ذكاء اصطناعي</span>
+            <span class="category-tab-count" id="cat-count-ai">٢</span>
+          </button>
+          <button type="button" class="category-tab" data-category="geometry" role="tab" aria-selected="false">
+            <span>📐 الهندسة</span>
+            <span class="category-tab-count" id="cat-count-geom">٤</span>
+          </button>
+          <button type="button" class="category-tab" data-category="metadata" role="tab" aria-selected="false">
+            <span>📝 الوسوم والبيانات</span>
+            <span class="category-tab-count" id="cat-count-meta">٥</span>
+          </button>
+        </div>
+
+        <!-- Issue Cards List -->
+        <div class="improve-issues-list" id="improve-filters" role="group" aria-label="أزرار اختيار نوع مشكلة جودة البيانات">
+          
+          <!-- AI & Qibla Group -->
+          <button type="button" class="improve-item chip" data-improve="qibla_deviation" data-category="ai" aria-label="تصفية حسب انحراف القبلة">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-qibla">🕋</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">انحراف حاد عن القبلة</div>
+                <div class="improve-item-meta">محاذاة المحور المعماري للمبنى (≥ 20°)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-qibla_deviation">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="ml_geometry_anomaly" data-category="ai" aria-label="تصفية حسب الشذوذ الهندسي">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-ai">🤖</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">شذوذ هندسي (ذكاء اصطناعي)</div>
+                <div class="improve-item-meta">كشف الأشكال غير المعتادة بـ Isolation Forest</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-ml_geometry_anomaly">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <!-- Geometry Group -->
+          <button type="button" class="improve-item chip" data-improve="mapped_as_node" data-category="geometry" aria-label="تصفية حسب مرسوم كنقطة">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-node">📍</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مرسوم كنقطة وليس كمساحة</div>
+                <div class="improve-item-meta">يحتاج رسم حدود المبنى (Way/Polygon)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-mapped_as_node">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="size_too_small" data-category="geometry" aria-label="تصفية حسب مبنى أصغر من المعتاد">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-small">📐</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مبنى أصغر من المعتاد</div>
+                <div class="improve-item-meta">مساحة أصغر من الحد الأدنى (&lt; 20 م²)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-size_too_small">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="size_too_large" data-category="geometry" aria-label="تصفية حسب مبنى أكبر من المعتاد">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-large">🏢</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مبنى أكبر من المعتاد</div>
+                <div class="improve-item-meta">مساحة غير معتادة تتجاوز (&gt; 15,000 م²)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-size_too_large">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="building_yes" data-category="geometry" aria-label="تصفية حسب مبنى مصنف building=yes">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-tag">🏷️</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مبنى مصنف كـ building=yes</div>
+                <div class="improve-item-meta">يُفضل تعديله إلى building=mosque</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-building_yes">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <!-- Metadata & Tags Group -->
+          <button type="button" class="improve-item chip" data-improve="missing_amenity" data-category="metadata" aria-label="تصفية حسب مسجد بدون تصنيف دار عبادة">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-mosque">🕌</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مسجد بدون وسم دار عبادة</div>
+                <div class="improve-item-meta">مفقود وسم amenity=place_of_worship</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-missing_amenity">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="missing_name" data-category="metadata" aria-label="تصفية حسب اسم المسجد مفقود">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-name">✏️</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">اسم المسجد مفقود أو افتراضي</div>
+                <div class="improve-item-meta">اسم غير محدد أو مدخل كاسم عام "مسجد"</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-missing_name">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="missing_name_en" data-category="metadata" aria-label="تصفية حسب الاسم بالإنجليزية مفقود">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-lang">🌐</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">الاسم بالإنجليزية مفقود</div>
+                <div class="improve-item-meta">وسم name:en غير متوفر أو مطابق للاسم العربي</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-missing_name_en">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="missing_denom" data-category="metadata" aria-label="تصفية حسب المذهب غير محدد">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-denom">📜</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">المذهب غير محدد</div>
+                <div class="improve-item-meta">تحديد المذهب (سني / شيعي / أخرى)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-missing_denom">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="stale_data" data-category="metadata" aria-label="تصفية حسب بيانات قديمة لم تُحدث">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-stale">⏳</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">بيانات قديمة لم تُحدّث</div>
+                <div class="improve-item-meta">لم يتم مراجعته منذ إضافته الأولى (+5 سنوات)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-stale_data">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
         </div>
 
         <div class="threshold-controls" id="size-threshold-controls">

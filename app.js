@@ -334,6 +334,52 @@ function getQualityIssues(props) {
   return issues;
 }
 
+// Calculate and update the dynamic counts badge for each quality issue filter
+function updateImprovementIssueCounts() {
+  if (!allPlaces || allPlaces.length === 0) return;
+
+  const counts = {
+    all: 0,
+    missing_amenity: 0,
+    missing_name: 0,
+    missing_name_en: 0,
+    missing_denom: 0,
+    size_too_small: 0,
+    size_too_large: 0,
+    stale_data: 0,
+    building_yes: 0,
+    mapped_as_node: 0,
+    ml_geometry_anomaly: 0,
+    qibla_deviation: 0
+  };
+
+  for (let i = 0; i < allPlaces.length; i++) {
+    const issues = getQualityIssues(allPlaces[i].properties);
+    if (issues.length > 0) {
+      counts.all++;
+      for (let j = 0; j < issues.length; j++) {
+        const id = issues[j].id;
+        if (counts[id] !== undefined) {
+          counts[id]++;
+        }
+      }
+    }
+  }
+
+  // Populate counts in badges
+  Object.keys(counts).forEach(key => {
+    const el = document.getElementById(`count-improve-${key}`);
+    if (el) {
+      el.textContent = counts[key].toLocaleString('ar-SA');
+    }
+  });
+
+  const totalBadge = document.getElementById('quality-total-issues-badge');
+  if (totalBadge) {
+    totalBadge.textContent = `${counts.all.toLocaleString('ar-SA')} مكان يحتاج تدقيق`;
+  }
+}
+
 // Send load_and_zoom request to JOSM Remote Control port (8111)
 function editInJOSM(lat, lon, osmId, geomType) {
   const type = geomType === 'Point' ? 'node' : 'way';
@@ -1173,6 +1219,7 @@ function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyDa
     });
   }
   filteredPlaces = [...allPlaces];
+  updateImprovementIssueCounts();
 
   allGaps = gapData.features;
   filteredGaps = [...allGaps];
@@ -1868,6 +1915,7 @@ function setupEventListeners() {
     document.getElementById('mode-gap').classList.remove('active');
     e.target.classList.add('active');
     currentMode = 'improve';
+    updateImprovementIssueCounts();
     filterData();
     updateDashboardUI();
   });
@@ -1913,17 +1961,62 @@ function setupEventListeners() {
     });
   });
 
-  // Quality Improvement Chips Selector (Improvement Mode Only)
-  const improveChips = document.querySelectorAll('#improve-filters .chip');
-  improveChips.forEach(chip => {
-    chip.addEventListener('click', (e) => {
-      improveChips.forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
+  // Quality Improvement Filter Buttons Selector (Hero card + List Items)
+  const allImproveButtons = document.querySelectorAll('[data-improve]');
+  allImproveButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      allImproveButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
       
-      currentImprovementFilter = chip.getAttribute('data-improve');
+      currentImprovementFilter = btn.getAttribute('data-improve');
       filterData();
+
+      // Toggle sub-control visibility based on active improvement filter
+      const sizeControls = document.getElementById('size-threshold-controls');
+      const qiblaControls = document.getElementById('qibla-threshold-controls');
+      if (sizeControls) {
+        sizeControls.style.display = (currentImprovementFilter === 'size_too_small' || currentImprovementFilter === 'size_too_large' || currentImprovementFilter === 'all') ? 'block' : 'none';
+      }
+      if (qiblaControls) {
+        qiblaControls.style.display = (currentImprovementFilter === 'qibla_deviation') ? 'block' : 'none';
+      }
     });
   });
+
+  // Category Tabs filtering for Quality Issues
+  const categoryTabs = document.querySelectorAll('.improve-category-tabs .category-tab');
+  const improveItems = document.querySelectorAll('#improve-filters .improve-item');
+
+  categoryTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      categoryTabs.forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+
+      const category = tab.getAttribute('data-category');
+      improveItems.forEach(item => {
+        if (category === 'all' || item.getAttribute('data-category') === category) {
+          item.style.display = 'flex';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    });
+  });
+
+  // Reset Improvement Filter Button (in header)
+  const resetImproveBtn = document.getElementById('btn-reset-improve-filter');
+  if (resetImproveBtn) {
+    resetImproveBtn.addEventListener('click', () => {
+      const heroBtn = document.getElementById('btn-improve-all');
+      if (heroBtn) heroBtn.click();
+      const allTab = document.querySelector('.improve-category-tabs .category-tab[data-category="all"]');
+      if (allTab) allTab.click();
+    });
+  }
 
   // Size Threshold Inputs (Improvement Mode Only) — user-adjustable too_small/too_large cutoffs
   const sizeMinInput = document.getElementById('size-min-input');
@@ -1943,6 +2036,7 @@ function setupEventListeners() {
     if (validMin) currentSizeMinM2 = minVal;
     if (validMax) currentSizeMaxM2 = maxVal;
 
+    updateImprovementIssueCounts();
     debouncedSizeFilter();
   }
 
@@ -1956,6 +2050,7 @@ function setupEventListeners() {
     sizeMaxInput.classList.remove('invalid');
     currentSizeMinM2 = SIZE_MIN_AREA_DEFAULT;
     currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
+    updateImprovementIssueCounts();
     filterData();
   });
 
@@ -1975,6 +2070,7 @@ function setupEventListeners() {
       if (qiblaSlider) qiblaSlider.value = num;
       if (qiblaInput) qiblaInput.value = num;
       currentQiblaNavIndex = 0;
+      updateImprovementIssueCounts();
       debouncedQiblaFilter();
     }
   }
