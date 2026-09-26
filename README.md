@@ -14,6 +14,7 @@ processing happens ahead of time in Python from an OpenStreetMap `.pbf` extract.
 | [extract_sa_boundary.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_sa_boundary.py) | Builds the Saudi Arabia boundary polygon from OSM. |
 | [extract_places.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_places.py) | Extracts all `amenity=place_of_worship` features inside the boundary. |
 | [calculate_gaps.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_gaps.py) | Grids the country and flags road-populated cells with no worship place. |
+| `import_wikidata_suggestions.py` | Builds `suggested_mosques_sa.geojson`: Wikidata mosques missing from OSM (from the osm x wikidata project's `data/sa.json`), shown as an optional "suggested additions" layer. |
 | [calculate_mosque_sizes.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_mosque_sizes.py) | Independent, separately-scheduled script (e.g. weekly) that flags mosque building footprints that are unusually small/large. |
 | [index.html](file:///c:/Users/abdul/Desktop/GCC20260707/index.html) / [app.js](file:///c:/Users/abdul/Desktop/GCC20260707/app.js) / [index.css](file:///c:/Users/abdul/Desktop/GCC20260707/index.css) | The Leaflet dashboard front-end. |
 | `*.geojson` | Generated data consumed by the front-end. |
@@ -41,6 +42,7 @@ paths are resolved relative to the script location, so no arguments are needed:
 python extract_sa_boundary.py     # -> sa_boundary.geojson
 python extract_places.py          # -> places_of_worship_sa.geojson
 python calculate_gaps.py          # -> worship_gaps_sa.geojson
+python import_wikidata_suggestions.py  # -> suggested_mosques_sa.geojson (needs ../osm x wikidata/data/sa.json)
 ```
 
 Separately, `calculate_mosque_sizes.py` re-scans the `.pbf` for mosque building

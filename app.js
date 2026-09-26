@@ -325,6 +325,127 @@ function editInJOSM(lat, lon, osmId, geomType) {
     });
 }
 
+// === Suggested Additions Layer ===
+// Wikidata mosques with no OSM counterpart, built by import_wikidata_suggestions.py.
+// The file is large, so it is only fetched the first time the layer is turned on.
+let suggestionsLayer = null;
+let suggestionsLoading = false;
+const suggestionsByQid = {};
+
+function setSuggestionsVisible(visible) {
+  if (!visible) {
+    if (suggestionsLayer && map.hasLayer(suggestionsLayer)) map.removeLayer(suggestionsLayer);
+    return;
+  }
+  if (suggestionsLayer) {
+    map.addLayer(suggestionsLayer);
+    return;
+  }
+  if (suggestionsLoading) return;
+  suggestionsLoading = true;
+  const label = document.getElementById('suggestions-switch-label');
+  const originalLabel = label ? label.innerText : '';
+  if (label) label.innerText = 'جارٍ تحميل الاقتراحات...';
+
+  fetch(`suggested_mosques_sa.geojson?t=${Date.now()}`)
+    .then(r => {
+      if (!r.ok) throw new Error('Failed to load suggestions');
+      return r.json();
+    })
+    .then(data => {
+      suggestionsLayer = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        chunkedLoading: true,
+        disableClusteringAtZoom: 16,
+        iconCreateFunction: cluster => L.divIcon({
+          html: `<div class="suggestion-cluster"><span>${cluster.getChildCount()}</span></div>`,
+          className: 'marker-cluster-custom',
+          iconSize: new L.Point(34, 34)
+        })
+      });
+      const markers = data.features.map(f => {
+        const [lon, lat] = f.geometry.coordinates;
+        const lowQuality = f.properties.low_quality_name;
+        suggestionsByQid[f.properties.qid] = { ...f.properties, lat, lon };
+        const marker = L.circleMarker([lat, lon], {
+          radius: 6,
+          color: lowQuality ? '#9aa0a6' : '#ff9f1c',
+          fillColor: lowQuality ? '#9aa0a6' : '#ff9f1c',
+          fillOpacity: 0.8,
+          weight: 1
+        });
+        marker.bindPopup(() => buildSuggestionPopup(f.properties, lat, lon));
+        return marker;
+      });
+      suggestionsLayer.addLayers(markers);
+      // The user may have switched the toggle off while the file was loading.
+      const toggle = document.getElementById('suggestions-toggle');
+      if (!toggle || toggle.checked) map.addLayer(suggestionsLayer);
+      showToast(`تم تحميل ${data.features.length.toLocaleString('ar-SA')} مسجدًا مقترحًا للإضافة.`);
+    })
+    .catch(err => {
+      console.error('Error loading suggestions:', err);
+      showToast('تعذر تحميل ملف الاقتراحات (suggested_mosques_sa.geojson).', 'error');
+      const toggle = document.getElementById('suggestions-toggle');
+      if (toggle) toggle.checked = false;
+    })
+    .finally(() => {
+      suggestionsLoading = false;
+      if (label) label.innerText = originalLabel;
+    });
+}
+
+function buildSuggestionPopup(props, lat, lon) {
+  const name = props.name_ar || props.name_en || 'مسجد بدون اسم';
+  const nearest = props.nearest_osm_m == null ? 'أكثر من 1 كم' : `${props.nearest_osm_m} م`;
+  const idUrl = `https://www.openstreetmap.org/edit?editor=id#map=19/${lat}/${lon}`;
+  return `
+    <div class="suggestion-popup" dir="rtl">
+      <strong>${escapeHtml(name)}</strong>
+      ${props.name_en && props.name_ar ? `<div>${escapeHtml(props.name_en)}</div>` : ''}
+      ${props.low_quality_name ? '<div class="suggestion-warning">⚠️ اسم عام أو مرقّم، تحقق منه قبل الإضافة</div>' : ''}
+      <div>ويكي بيانات: <a href="https://www.wikidata.org/wiki/${escapeHtml(props.qid)}" target="_blank" rel="noopener">${escapeHtml(props.qid)}</a></div>
+      <div>أقرب مكان عبادة في OSM: ${nearest}</div>
+      <div class="suggestion-actions">
+        <a href="${idUrl}" target="_blank" rel="noopener">فتح في iD</a>
+        <a href="#" onclick="addSuggestionInJOSM('${escapeHtml(props.qid)}'); return false;">إضافة في JOSM</a>
+      </div>
+    </div>`;
+}
+
+// Create a new mosque node in JOSM via Remote Control, pre-tagged with the
+// Wikidata item. The mapper still reviews and uploads it themselves.
+// Only clear names are copied; generic or numbered ones are left for the mapper.
+function addSuggestionInJOSM(qid) {
+  const s = suggestionsByQid[qid];
+  if (!s) return;
+  const { lat, lon } = s;
+  const delta = 0.0015;
+  const loadUrl = `http://127.0.0.1:8111/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}`;
+  let tags = `amenity=place_of_worship|religion=muslim|wikidata=${qid}`;
+  if (!s.low_quality_name) {
+    // '|' separates tags in the Remote Control addtags syntax.
+    const clean = str => String(str).replace(/\|/g, ' ');
+    if (s.name_ar) tags += `|name=${clean(s.name_ar)}|name:ar=${clean(s.name_ar)}`;
+    else if (s.name_en) tags += `|name=${clean(s.name_en)}`;
+    if (s.name_en) tags += `|name:en=${clean(s.name_en)}`;
+  }
+  const addUrl = `http://127.0.0.1:8111/add_node?lon=${lon}&lat=${lat}&addtags=${encodeURIComponent(tags)}`;
+
+  fetch(loadUrl)
+    .then(() => fetch(addUrl))
+    .then(res => {
+      if (res.ok) {
+        showToast('تمت إضافة نقطة المسجد في JOSM. راجع الوسوم والاسم قبل الرفع.');
+      } else {
+        showToast('فشل JOSM في إضافة النقطة. تأكد من تفعيل Remote Control.', 'error');
+      }
+    })
+    .catch(() => {
+      showToast('تعذر الاتصال بـ JOSM. يرجى تشغيل JOSM وتفعيل التحكم عن بعد (Remote Control) في الإعدادات.', 'error');
+    });
+}
+
 // Send the currently visible map viewport (used in Gap Mode after locating an
 // underserved area via the heatmap + Qibla compass) to JOSM Remote Control so
 // the user can survey the area and add a new mosque node with its own ID.
@@ -1425,6 +1546,14 @@ function setupEventListeners() {
       } else {
         compassEl.classList.add('hidden');
       }
+    });
+  }
+
+  // 7a. Suggested Additions (Wikidata mosques missing in OSM) Toggle
+  const suggestionsToggle = document.getElementById('suggestions-toggle');
+  if (suggestionsToggle) {
+    suggestionsToggle.addEventListener('change', (e) => {
+      setSuggestionsVisible(e.target.checked);
     });
   }
 

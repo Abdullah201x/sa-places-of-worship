@@ -1640,3 +1640,35 @@ h1 {
     padding: 20px;
   }
 }
+
+/* Suggested additions (Wikidata mosques missing in OSM) */
+.suggestion-cluster {
+  background-color: rgba(255, 159, 28, 0.6);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ff9f1c;
+  box-shadow: 0 0 10px #ff9f1c;
+  font-weight: bold;
+  color: white;
+}
+
+.suggestion-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+
+.suggestion-warning {
+  color: #f5a623;
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
