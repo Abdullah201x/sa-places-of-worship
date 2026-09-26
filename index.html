@@ -193,6 +193,7 @@
           <button class="chip" data-improve="building_yes">مبنى مصنف building=yes</button>
           <button class="chip" data-improve="mapped_as_node">مرسوم كنقطة وليس كمساحة</button>
           <button class="chip" data-improve="ml_geometry_anomaly">🤖 شذوذ هندسي (ذكاء اصطناعي)</button>
+          <button class="chip" data-improve="qibla_deviation">🕋 انحراف القبلة</button>
         </div>
 
         <div class="threshold-controls" id="size-threshold-controls">
@@ -210,6 +211,40 @@
               <span>الحد الأقصى</span>
               <input type="number" id="size-max-input" class="threshold-input" min="0" step="1" value="15000" aria-label="الحد الأقصى لمساحة المبنى بالمتر المربع">
             </label>
+          </div>
+        </div>
+
+        <!-- Qibla Deviation Controls (Improvement Mode Only) -->
+        <div class="threshold-controls" id="qibla-threshold-controls" style="display: none;">
+          <div class="threshold-controls-header">
+            <span class="threshold-controls-title">الحد الأدنى للانحراف عن القبلة (بالدرجات °)</span>
+            <button type="button" id="btn-reset-qibla-threshold" class="threshold-reset-btn">إعادة تعيين (20°)</button>
+          </div>
+          <p class="section-hint">تحديد المباني التي تنحرف محاورها المعمارية عن سمت الكعبة المشرفة بمقدار يتجاوز هذا الحد. الافتراضي: 20° (يمثل أشد 10% من المساجد انحرافاً).</p>
+          <div class="threshold-fields">
+            <label class="threshold-field" style="flex: 1;">
+              <span>الحد الأدنى للانحراف</span>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="range" id="qibla-dev-slider" class="slider" min="5" max="45" value="20" step="1" style="flex: 1;" aria-label="منزلق حد انحراف القبلة">
+                <input type="number" id="qibla-dev-input" class="threshold-input" min="1" max="45" step="1" value="20" style="width: 70px; text-align: center;" aria-label="قيمة حد انحراف القبلة">
+              </div>
+            </label>
+          </div>
+
+          <div style="margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary, #666);">ترتيب المساجد:</span>
+            <select id="qibla-sort-select" class="threshold-input" style="flex: 1; padding: 4px 8px; font-size: 12px; cursor: pointer;" aria-label="خيارات ترتيب المساجد حسب دقة القبلة">
+              <option value="least_accurate" selected>⚠️ من الأقل دقة إلى الأكثر دقة (الأشد انحرافاً)</option>
+              <option value="most_accurate">✨ من الأكثر دقة إلى الأقل دقة (الأقرب للقبلة)</option>
+            </select>
+          </div>
+
+          <div id="qibla-nav-box" style="margin-top: 10px; padding: 8px 12px; background: rgba(255, 149, 0, 0.08); border: 1px solid rgba(255, 149, 0, 0.25); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span id="qibla-nav-counter" style="font-size: 12px; font-weight: 700; color: #d97706;">عرض الأشد انحرافاً</span>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" id="btn-qibla-prev" class="threshold-reset-btn" title="المسجد السابق" style="padding: 2px 8px;">السابق ▶</button>
+              <button type="button" id="btn-qibla-next" class="threshold-reset-btn" title="المسجد التالي" style="padding: 2px 8px;">◀ التالي</button>
+            </div>
           </div>
         </div>
       </div>
@@ -299,6 +334,10 @@
           <div class="details-row">
             <span class="details-label">تاريخ آخر تعديل</span>
             <span class="details-val" id="details-edited-at">-</span>
+          </div>
+          <div class="details-row" id="row-details-qibla" style="display: none;">
+            <span class="details-label">محاذاة القبلة 🕋</span>
+            <span class="details-val" id="details-qibla">-</span>
           </div>
 
           <!-- Quality Issues Warning Box -->

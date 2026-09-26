@@ -69,6 +69,12 @@ const SIZE_MAX_AREA_DEFAULT = 15000;
 let currentSizeMinM2 = SIZE_MIN_AREA_DEFAULT;
 let currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
 
+// Qibla-outlier threshold (degrees), user-adjustable in Improve Mode. Default is 20 deg (top ~10% outliers).
+const QIBLA_DEV_DEFAULT = 20.0;
+let currentQiblaDevThreshold = QIBLA_DEV_DEFAULT;
+let currentQiblaSort = 'least_accurate'; // 'least_accurate' or 'most_accurate'
+let currentQiblaNavIndex = 0;
+
 // Map configuration
 const MAP_INITIAL_CENTER = [24.0, 45.0]; // Centered on Saudi Arabia
 const MAP_INITIAL_ZOOM = 6;
@@ -306,12 +312,23 @@ function getQualityIssues(props) {
   }
 
   // 9. Machine Learning Spatial Geometry Anomaly (Isolation Forest)
-  if (props.ml_anomaly) {
+  if (props.ml_anomaly && props.ml_anomaly.is_anomaly) {
     issues.push({
       id: 'ml_geometry_anomaly',
       title_ar: `🤖 شذوذ هندسي (ذكاء اصطناعي): ${props.ml_anomaly.diagnosis}`,
       title_en: `🤖 ML Geometry Anomaly: ${props.ml_anomaly.diagnosis}`
     });
+  }
+
+  // 10. Qibla Orientation Misalignment
+  if (props.ml_anomaly && typeof props.ml_anomaly.qibla_dev === 'number') {
+    if (props.ml_anomaly.qibla_dev >= currentQiblaDevThreshold) {
+      issues.push({
+        id: 'qibla_deviation',
+        title_ar: `🕋 انحراف حاد عن القبلة (${props.ml_anomaly.qibla_dev}° — سمت القبلة ${props.ml_anomaly.qibla_az}° مقابل ${props.ml_anomaly.bldg_az}° لمحور المبنى)`,
+        title_en: `🕋 Severe Qibla Misalignment (${props.ml_anomaly.qibla_dev}° deviation from Kaaba)`
+      });
+    }
   }
 
   return issues;
@@ -1613,6 +1630,35 @@ function showDetails(props, lat, lon) {
     ? new Date(props.edited_at).toLocaleString('ar-SA')
     : '-';
 
+  // Update Qibla row in details table
+  const qiblaRow = document.getElementById('row-details-qibla');
+  const qiblaVal = document.getElementById('details-qibla');
+  if (qiblaRow && qiblaVal) {
+    if (props.ml_anomaly && typeof props.ml_anomaly.qibla_dev === 'number') {
+      const dev = props.ml_anomaly.qibla_dev;
+      const qAz = props.ml_anomaly.qibla_az;
+      const bAz = props.ml_anomaly.bldg_az;
+      let badgeColor = '#34c759';
+      let badgeText = 'دقيق جداً';
+      if (dev >= currentQiblaDevThreshold) {
+        badgeColor = '#ff3b30';
+        badgeText = 'انحراف حاد';
+      } else if (dev > 10) {
+        badgeColor = '#ff9500';
+        badgeText = 'انحراف طفيف';
+      }
+      qiblaVal.innerHTML = `
+        <span style="display: inline-block; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 11px; background: ${badgeColor}20; color: ${badgeColor}; border: 1px solid ${badgeColor}40; margin-left: 6px;">
+          ${dev}° (${badgeText})
+        </span>
+        <span style="font-size: 11px; color: #777;">القبلة: ${qAz}° | المبنى: ${bAz}°</span>
+      `;
+      qiblaRow.style.display = 'flex';
+    } else {
+      qiblaRow.style.display = 'none';
+    }
+  }
+
   // Update quality issues warning box
   const issues = getQualityIssues(props);
   const issuesBox = document.getElementById('details-quality-issues');
@@ -1663,6 +1709,16 @@ function updateDashboardUI() {
     dateFilterSection.style.display = 'block';
     gapInfoBox.style.display = 'none';
     gapJosmBox.style.display = 'none';
+
+    // Toggle sub-control visibility based on active improvement filter
+    const sizeControls = document.getElementById('size-threshold-controls');
+    const qiblaControls = document.getElementById('qibla-threshold-controls');
+    if (sizeControls) {
+      sizeControls.style.display = (currentImprovementFilter === 'size_too_small' || currentImprovementFilter === 'size_too_large' || currentImprovementFilter === 'all') ? 'block' : 'none';
+    }
+    if (qiblaControls) {
+      qiblaControls.style.display = (currentImprovementFilter === 'qibla_deviation') ? 'block' : 'none';
+    }
   } else {
     // Adjust layout for Gap Mode
     totalCountLabel.innerText = "الفجوات المكتشفة";
@@ -1773,8 +1829,18 @@ function filterData() {
     return false;
   });
 
+  // Sort filtered places if Qibla Deviation filter is active
+  if (currentMode === 'improve' && currentImprovementFilter === 'qibla_deviation') {
+    if (currentQiblaSort === 'least_accurate') {
+      filteredPlaces.sort((a, b) => ((b.properties.ml_anomaly?.qibla_dev) || 0) - ((a.properties.ml_anomaly?.qibla_dev) || 0));
+    } else if (currentQiblaSort === 'most_accurate') {
+      filteredPlaces.sort((a, b) => ((a.properties.ml_anomaly?.qibla_dev) || 0) - ((b.properties.ml_anomaly?.qibla_dev) || 0));
+    }
+  }
+
   updateMapLayers();
   updateStats();
+  updateQiblaNavUI();
 }
 
 // Wire up events for buttons, chips, search inputs, and range sliders
@@ -1892,6 +1958,51 @@ function setupEventListeners() {
     currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
     filterData();
   });
+
+  // Qibla Deviation Controls (Improvement Mode Only)
+  const qiblaSlider = document.getElementById('qibla-dev-slider');
+  const qiblaInput = document.getElementById('qibla-dev-input');
+  const qiblaResetBtn = document.getElementById('btn-reset-qibla-threshold');
+  const qiblaSortSelect = document.getElementById('qibla-sort-select');
+  const qiblaPrevBtn = document.getElementById('btn-qibla-prev');
+  const qiblaNextBtn = document.getElementById('btn-qibla-next');
+  const debouncedQiblaFilter = debounce(filterData, 200);
+
+  function applyQiblaThreshold(val) {
+    const num = parseFloat(val);
+    if (!isNaN(num) && num >= 1 && num <= 45) {
+      currentQiblaDevThreshold = num;
+      if (qiblaSlider) qiblaSlider.value = num;
+      if (qiblaInput) qiblaInput.value = num;
+      currentQiblaNavIndex = 0;
+      debouncedQiblaFilter();
+    }
+  }
+
+  if (qiblaSlider) {
+    qiblaSlider.addEventListener('input', (e) => applyQiblaThreshold(e.target.value));
+  }
+  if (qiblaInput) {
+    qiblaInput.addEventListener('input', (e) => applyQiblaThreshold(e.target.value));
+  }
+  if (qiblaResetBtn) {
+    qiblaResetBtn.addEventListener('click', () => {
+      applyQiblaThreshold(QIBLA_DEV_DEFAULT);
+    });
+  }
+  if (qiblaSortSelect) {
+    qiblaSortSelect.addEventListener('change', (e) => {
+      currentQiblaSort = e.target.value;
+      currentQiblaNavIndex = 0;
+      filterData();
+    });
+  }
+  if (qiblaPrevBtn) {
+    qiblaPrevBtn.addEventListener('click', () => navigateQiblaMosque(-1));
+  }
+  if (qiblaNextBtn) {
+    qiblaNextBtn.addEventListener('click', () => navigateQiblaMosque(1));
+  }
 
   // 3. Search Box keypress (POI Mode Only)
   // filterData() rebuilds every marker, so debounce to avoid per-keystroke lag on large datasets.
@@ -2606,3 +2717,33 @@ function logoutOSM() {
   showToast('تم تسجيل الخروج بنجاح.');
   window.location.reload();
 }
+
+// Qibla Outlier Navigation & UI Updater
+function navigateQiblaMosque(direction) {
+  if (!filteredPlaces || filteredPlaces.length === 0) return;
+  currentQiblaNavIndex = (currentQiblaNavIndex + direction + filteredPlaces.length) % filteredPlaces.length;
+  const target = filteredPlaces[currentQiblaNavIndex];
+  if (!target || !target.geometry) return;
+  const lat = target.geometry.coordinates[1];
+  const lon = target.geometry.coordinates[0];
+
+  map.flyTo([lat, lon], Math.max(map.getZoom(), 18), { duration: 0.8 });
+  showPlaceDetails(target.properties, lat, lon);
+  updateQiblaNavUI();
+}
+
+function updateQiblaNavUI() {
+  const counterEl = document.getElementById('qibla-nav-counter');
+  if (!counterEl) return;
+  if (currentMode === 'improve' && currentImprovementFilter === 'qibla_deviation' && filteredPlaces.length > 0) {
+    if (currentQiblaNavIndex >= filteredPlaces.length) currentQiblaNavIndex = 0;
+    const currentPlace = filteredPlaces[currentQiblaNavIndex];
+    const dev = currentPlace?.properties?.ml_anomaly?.qibla_dev;
+    const devStr = dev !== undefined ? ` (${dev}°)` : '';
+    const sortPrefix = currentQiblaSort === 'least_accurate' ? 'الأقل دقة' : 'الأكثر دقة';
+    counterEl.innerText = `${sortPrefix} [${currentQiblaNavIndex + 1} من ${filteredPlaces.length}]${devStr}`;
+  } else {
+    counterEl.innerText = `إجمالي المنحرفة: ${filteredPlaces.length}`;
+  }
+}
+

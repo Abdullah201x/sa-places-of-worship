@@ -38,6 +38,54 @@ REF_LAT_RAD = math.radians(24.0)
 M_PER_DEG_LAT = 110_574.0
 M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
 
+# Coordinates of the Holy Kaaba in Makkah
+KAABA_LAT = 21.422487
+KAABA_LON = 39.826206
+
+
+def calculate_qibla_azimuth(lat, lon):
+    """Calculates forward geodesic azimuth from (lat, lon) to the Holy Kaaba."""
+    lat1, lon1 = math.radians(lat), math.radians(lon)
+    lat2, lon2 = math.radians(KAABA_LAT), math.radians(KAABA_LON)
+    dlon = lon2 - lon1
+    y = math.sin(dlon) * math.cos(lat2)
+    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+    return (math.degrees(math.atan2(y, x)) + 360.0) % 360.0
+
+
+def get_building_azimuth_and_deviation(poly, qibla_deg):
+    """
+    Finds building's principal orientation angle (Minimum Bounding Box)
+    and computes the minimum deviation from the Qibla axis (0 to 45 degrees).
+    """
+    mrr = poly.minimum_rotated_rectangle
+    coords = list(mrr.exterior.coords)[:-1]
+    if len(coords) < 4:
+        return None, None
+    edges = []
+    for i in range(len(coords)):
+        p1, p2 = coords[i], coords[(i + 1) % len(coords)]
+        dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+        length = math.hypot(dx, dy)
+        if length < 0.5:
+            continue
+        angle = math.degrees(math.atan2(dx, dy)) % 180.0
+        edges.append((angle, length))
+    if not edges:
+        return None, None
+
+    # Find the edge with minimum deviation to Qibla (or perpendicular to Qibla)
+    best_dev = 999.0
+    best_angle = edges[0][0]
+    for angle, length in edges:
+        diff = abs(angle - (qibla_deg % 180.0))
+        diff_90 = diff % 90.0
+        dev = min(diff_90, 90.0 - diff_90)
+        if dev < best_dev:
+            best_dev = dev
+            best_angle = angle
+    return round(best_angle, 1), round(best_dev, 1)
+
 
 def find_pbf(base_dir=None):
     if base_dir is None:
@@ -115,6 +163,10 @@ class MosqueFeatureExtractor(osmium.SimpleHandler):
             # FEATURE 5: Area per Node (ratio)
             area_per_node = area_m2 / n_nodes
 
+            # FEATURE 6: Qibla Azimuth & Principal Building Axis Deviation
+            qibla_az = calculate_qibla_azimuth(centroid_lat, centroid_lon)
+            bldg_az, qibla_dev = get_building_azimuth_and_deviation(poly, qibla_az)
+
             name = tags.get('name', tags.get('name:ar', tags.get('name:en', 'Unnamed Mosque')))
 
             self.records.append({
@@ -126,6 +178,9 @@ class MosqueFeatureExtractor(osmium.SimpleHandler):
                 "compactness": round(compactness, 4),
                 "node_count": n_nodes,
                 "area_per_node": round(area_per_node, 1),
+                "qibla_azimuth": round(qibla_az, 1),
+                "building_azimuth": bldg_az,
+                "qibla_dev": qibla_dev if qibla_dev is not None else 0.0,
             })
         except osmium.InvalidLocationError:
             pass
@@ -149,6 +204,7 @@ def train_anomaly_detector(records, contamination=0.015):
             r["compactness"],                             # Compactness (0 to 1)
             math.log10(max(r["node_count"], 1.0)),       # Log Node Count
             math.log10(max(r["area_per_node"], 0.1)),    # Log Area/Node
+            min(r["qibla_dev"], 45.0) / 45.0             # Normalized Qibla deviation (0 to 1)
         ]
         feature_matrix.append(feature_vector)
 
@@ -174,7 +230,8 @@ def train_anomaly_detector(records, contamination=0.015):
 
     for i, r in enumerate(records):
         r["anomaly_score"] = round(float(raw_scores[i]), 4)
-        r["is_anomaly"] = bool(predictions[i] == -1)
+        # Marked as anomaly if model says -1 OR if Qibla deviation >= 20.0 degrees (default alert threshold)
+        r["is_anomaly"] = bool(predictions[i] == -1 or r["qibla_dev"] >= 20.0)
 
     # Sort so the most severe anomalies appear first
     anomalies = [r for r in records if r["is_anomaly"]]
@@ -186,6 +243,14 @@ def train_anomaly_detector(records, contamination=0.015):
 def diagnose_anomaly(r):
     """Provides a human-readable explanation of why this mosque was flagged."""
     reasons = []
+
+    # Qibla orientation check (Default 20.0 deg)
+    q_dev = r.get("qibla_dev", 0.0)
+    if q_dev >= 20.0:
+        reasons.append(f"انحراف حاد عن القبلة ({q_dev}° — سمت القبلة {r.get('qibla_azimuth')}° مقابل {r.get('building_azimuth')}° لمحور المبنى)")
+    elif q_dev >= 15.0:
+        reasons.append(f"انحراف ملحوظ عن القبلة ({q_dev}°)")
+
     if r["node_count"] > 100:
         reasons.append(f"عدد عقد مفرط جداً ({r['node_count']} عقدة — رسم تفصيلي معقد أو استيراد CAD)")
     elif r["node_count"] > 40 and r["area_m2"] < 1500:
@@ -252,19 +317,28 @@ def main():
 
     # Save to JSON
     # Map by osm_id so it can be merged directly into the dashboard
+    # We save all scored mosque footprints with their exact Qibla deviation so the UI can dynamically filter and sort
     anomalies_dict = {
-        str(a["osm_id"]): {
-            "anomaly_score": a["anomaly_score"],
-            "compactness": a["compactness"],
-            "diagnosis": diagnose_anomaly(a)
+        str(r["osm_id"]): {
+            "anomaly_score": r["anomaly_score"],
+            "is_anomaly": r["is_anomaly"],
+            "compactness": r["compactness"],
+            "area_m2": r["area_m2"],
+            "node_count": r["node_count"],
+            "qibla_dev": r["qibla_dev"],
+            "qibla_az": r["qibla_azimuth"],
+            "bldg_az": r["building_azimuth"],
+            "diagnosis": diagnose_anomaly(r)
         }
-        for a in anomalies
+        for r in all_scored
     }
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(anomalies_dict, f, indent=2, ensure_ascii=False)
 
-    print(f"\n[Done] Saved {len(anomalies_dict)} flagged anomalies to {output_path}")
+    flagged_count = sum(1 for r in anomalies_dict.values() if r["is_anomaly"])
+    qibla_flagged = sum(1 for r in anomalies_dict.values() if r["qibla_dev"] >= 20.0)
+    print(f"\n[Done] Saved {len(anomalies_dict):,} mosque footprints ({flagged_count} flagged anomalies, {qibla_flagged} with Qibla dev >= 20°) to {output_path}")
 
 
 if __name__ == "__main__":
