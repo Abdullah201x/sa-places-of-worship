@@ -16,6 +16,7 @@ processing happens ahead of time in Python from an OpenStreetMap `.pbf` extract.
 | [calculate_gaps.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_gaps.py) | Grids the country and flags road-populated cells with no worship place. |
 | [import_wikidata_suggestions.py](file:///c:/Users/abdul/Desktop/GCC20260707/import_wikidata_suggestions.py) | Builds `suggested_mosques_sa.geojson`: Wikidata mosques missing from OSM (from the osm x wikidata project's `data/sa.json`), shown as an optional "suggested additions" layer. |
 | [calculate_mosque_sizes.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_mosque_sizes.py) | Independent, separately-scheduled script (e.g. weekly) that flags mosque building footprints that are unusually small/large. |
+| [detect_geometry_anomalies.py](file:///c:/Users/abdul/Desktop/GCC20260707/detect_geometry_anomalies.py) | Machine Learning (Isolation Forest) script detecting distorted, over-noded, or anomalous mosque building outlines. |
 | [index.html](file:///c:/Users/abdul/Desktop/GCC20260707/index.html) / [app.js](file:///c:/Users/abdul/Desktop/GCC20260707/app.js) / [index.css](file:///c:/Users/abdul/Desktop/GCC20260707/index.css) | The Leaflet dashboard front-end. |
 | `*.geojson` | Generated data consumed by the front-end. |
 
@@ -106,6 +107,7 @@ The database is updated with the latest OpenStreetMap data:
   6. **Stale Data**: Still at `version=1` and not edited in 5+ years — never revisited since first mapped.
   7. **Generic Building Tag (`building=yes`)**: Mosque building tagged as `building=yes` instead of `building=mosque`.
   8. **Mapped as a Node**: Place of worship represented as a single point (`geom_type=Point`) rather than an area/way — ideally a mosque's footprint is traced as a building outline so its true size and shape appear on the map.
+  9. **ML Spatial Geometry Anomaly (`ml_geometry_anomaly`)**: Unsupervised machine learning ([detect_geometry_anomalies.py](file:///c:/Users/abdul/Desktop/GCC20260707/detect_geometry_anomalies.py)) using Isolation Forest to flag multi-dimensional shape distortions, CAD import artifacts, over-noded polygons (e.g., 800+ nodes), or low-compactness outlines.
 - **محرر OSM المدمج (OSM Editor Integration):**
   - Integrated OpenStreetMap authentication via OAuth 2.0 (supports production and development environment logins) to verify user accounts.
   - Direct integration with **iD Editor (Web)** to edit the current map view area.

@@ -44,6 +44,7 @@ let pendingPoiData = null;
 let pendingGapData = null;
 let pendingBoundaryData = null;
 let pendingSizeData = null;
+let pendingAnomalyData = null;
 
 // Datasets
 let allPlaces = [];
@@ -301,6 +302,15 @@ function getQualityIssues(props) {
       id: 'mapped_as_node',
       title_ar: 'مرسوم كنقطة وليس كمساحة (مبنى) — يفضّل رسم حدود المبنى',
       title_en: 'Mapped as a single node instead of an area — ideally traced as a building outline'
+    });
+  }
+
+  // 9. Machine Learning Spatial Geometry Anomaly (Isolation Forest)
+  if (props.ml_anomaly) {
+    issues.push({
+      id: 'ml_geometry_anomaly',
+      title_ar: `🤖 شذوذ هندسي (ذكاء اصطناعي): ${props.ml_anomaly.diagnosis}`,
+      title_en: `🤖 ML Geometry Anomaly: ${props.ml_anomaly.diagnosis}`
     });
   }
 
@@ -1081,19 +1091,22 @@ function loadData() {
     }),
     // Best-effort: computed on its own schedule (e.g. weekly) by
     // calculate_mosque_sizes.py, may not exist yet or may be mid-refresh.
-    fetch(`mosque_sizes.json${cacheBuster}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+    fetch(`mosque_sizes.json${cacheBuster}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+    // Best-effort: ML spatial anomaly detection (detect_geometry_anomalies.py)
+    fetch(`mosque_anomalies.json${cacheBuster}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
   ])
-  .then(([poiData, gapData, boundaryData, sizeData]) => {
+  .then(([poiData, gapData, boundaryData, sizeData, anomalyData]) => {
     // Store data in pending variables
     pendingPoiData = poiData;
     pendingGapData = gapData;
     pendingBoundaryData = boundaryData;
     pendingSizeData = sizeData;
+    pendingAnomalyData = anomalyData;
 
     // Check if user is logged in via OSM OAuth; default directly to guest mode if not
     checkAuthStatus().then(isAuthenticated => {
       isOsmAnonymized = !isAuthenticated;
-      initializeDashboard(poiData, gapData, boundaryData, sizeData);
+      initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData);
     });
   })
   .catch(error => {
@@ -1102,7 +1115,7 @@ function loadData() {
   });
 }
 
-function initializeDashboard(poiData, gapData, boundaryData, sizeData) {
+function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData) {
   allPlaces = poiData.features;
   // Merge in weekly-computed building footprint areas (calculate_mosque_sizes.py),
   // keyed by osm_id; features with no entry simply have no size data. The
@@ -1113,6 +1126,16 @@ function initializeDashboard(poiData, gapData, boundaryData, sizeData) {
       const sizeInfo = sizeData[f.properties.osm_id];
       if (sizeInfo) {
         f.properties.size_area_m2 = sizeInfo.area_m2;
+      }
+    });
+  }
+
+  // Merge in ML geometry anomalies (Isolation Forest from detect_geometry_anomalies.py)
+  if (anomalyData) {
+    allPlaces.forEach(f => {
+      const anomInfo = anomalyData[String(f.properties.osm_id)];
+      if (anomInfo) {
+        f.properties.ml_anomaly = anomInfo;
       }
     });
   }
@@ -2017,7 +2040,7 @@ function setupEventListeners() {
       
       // Initialize dashboard if not yet loaded
       if (allPlaces.length === 0 && pendingPoiData && pendingGapData && pendingBoundaryData) {
-        initializeDashboard(pendingPoiData, pendingGapData, pendingBoundaryData, pendingSizeData);
+        initializeDashboard(pendingPoiData, pendingGapData, pendingBoundaryData, pendingSizeData, pendingAnomalyData);
       }
     });
   }
