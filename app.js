@@ -3,13 +3,14 @@ let heatmapLayer = null;
 let markerClusterLayer = null;
 let basemaps = {};
 let currentBasemap = null;
+let currentBasemapKey = 'dark';
 
 // OSM OAuth 2.0 State Variables
 let OSM_ENVIRONMENT = localStorage.getItem('osm_oauth_environment') || 'production';
 let OSM_CLIENT_ID = localStorage.getItem('osm_oauth_client_id') || '';
 // Automatically resolve Redirect URI based on the current window location (without parameters)
 const OSM_REDIRECT_URI = window.location.origin + window.location.pathname;
-let isOsmAnonymized = sessionStorage.getItem('osm_auth_skipped') === 'true';
+let isOsmAnonymized = true;
 
 let OSM_AUTH_URL = '';
 let OSM_TOKEN_URL = '';
@@ -171,10 +172,10 @@ async function findEsriMaxZoom(centerLatLng) {
 // Re-probes real imagery availability for the current view and raises/lowers the satellite
 // layer's zoom ceiling to match, so users can overzoom exactly as far as real data allows.
 async function updateSatelliteZoomCap() {
-  if (currentBasemap !== basemaps['satellite']) return;
+  if (currentBasemapKey !== 'satellite') return;
   const layer = basemaps['satellite'];
   const maxFound = await findEsriMaxZoom(map.getCenter());
-  if (currentBasemap !== basemaps['satellite']) return; // basemap may have changed while awaiting
+  if (currentBasemapKey !== 'satellite') return; // basemap may have changed while awaiting
   
   // Only update and redraw if the zoom capability has actually changed
   if (layer.options.maxNativeZoom !== maxFound) {
@@ -358,6 +359,311 @@ function updateIdEditorAreaLink() {
   }
 }
 
+// === Wikidata Suggested Mosques Layer ===
+let suggestionsLayer = null;
+let suggestionsLoading = false;
+let suggestionsAllFeatures = [];
+let suggestionsMarkers = [];
+const suggestionsByQid = {};
+let currentSuggestionFilter = 'all'; // 'all' | 'named' | 'unnamed'
+
+function setSuggestionsVisible(visible) {
+  const toggle = document.getElementById('suggestions-toggle');
+  const subcontrols = document.getElementById('suggestions-subcontrols');
+  const badge = document.getElementById('suggestions-badge');
+
+  if (!visible) {
+    if (suggestionsLayer && map.hasLayer(suggestionsLayer)) {
+      map.removeLayer(suggestionsLayer);
+    }
+    if (subcontrols) subcontrols.style.display = 'none';
+    return;
+  }
+
+  if (subcontrols) subcontrols.style.display = 'flex';
+
+  if (suggestionsLayer) {
+    if (!map.hasLayer(suggestionsLayer)) {
+      map.addLayer(suggestionsLayer);
+    }
+    updateSuggestionsViewportCount();
+    return;
+  }
+
+  if (suggestionsLoading) return;
+  suggestionsLoading = true;
+
+  const label = document.getElementById('suggestions-switch-label');
+  const originalLabel = label ? label.innerText : '';
+  if (label) label.innerText = 'جارٍ تحميل 53,000+ اقتراح...';
+
+  fetch(`suggested_mosques_sa.geojson?t=${Date.now()}`)
+    .then(r => {
+      if (!r.ok) throw new Error('Failed to load suggestions');
+      return r.json();
+    })
+    .then(data => {
+      suggestionsAllFeatures = data.features || [];
+      const meta = data.metadata || {};
+
+      const countAll = meta.total_suggestions || suggestionsAllFeatures.length;
+      const countNamed = meta.named_suggestions || suggestionsAllFeatures.filter(f => !f.properties.is_unnamed).length;
+      const countUnnamed = meta.unnamed_suggestions || (countAll - countNamed);
+
+      if (badge) {
+        badge.innerText = `${countAll.toLocaleString('ar-SA')} مقترح`;
+        badge.style.display = 'inline-block';
+      }
+      const elAll = document.getElementById('sug-count-all');
+      const elNamed = document.getElementById('sug-count-named');
+      const elUnnamed = document.getElementById('sug-count-unnamed');
+      if (elAll) elAll.innerText = countAll.toLocaleString('ar-SA');
+      if (elNamed) elNamed.innerText = countNamed.toLocaleString('ar-SA');
+      if (elUnnamed) elUnnamed.innerText = countUnnamed.toLocaleString('ar-SA');
+
+      suggestionsLayer = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        chunkedLoading: true,
+        chunkInterval: 100,
+        chunkDelay: 20,
+        maxClusterRadius: 50,
+        disableClusteringAtZoom: 17,
+        iconCreateFunction: function (cluster) {
+          const childCount = cluster.getChildCount();
+          let size = 32;
+          if (childCount < 10) size = 32;
+          else if (childCount < 100) size = 42;
+          else size = 52;
+
+          return L.divIcon({
+            html: `<div class="suggestion-cluster" style="width: ${size}px; height: ${size}px; font-size: ${size > 40 ? 12 : 11}px;"><span>${childCount.toLocaleString('ar-SA')}</span></div>`,
+            className: 'marker-cluster-custom',
+            iconSize: new L.Point(size, size)
+          });
+        }
+      });
+
+      suggestionsMarkers = [];
+      suggestionsAllFeatures.forEach(f => {
+        const [lon, lat] = f.geometry.coordinates;
+        const props = f.properties;
+        const isUnnamed = props.is_unnamed;
+        suggestionsByQid[props.qid] = { ...props, lat, lon };
+
+        const marker = L.circleMarker([lat, lon], {
+          radius: 6,
+          color: isUnnamed ? '#64748b' : '#d97706',
+          fillColor: isUnnamed ? '#94a3b8' : '#f59e0b',
+          fillOpacity: 0.85,
+          weight: 1.5
+        });
+
+        marker._sugProperties = props;
+        marker._sugCoords = [lat, lon];
+        marker.bindPopup(() => buildSuggestionPopup(props, lat, lon));
+        suggestionsMarkers.push(marker);
+      });
+
+      applySuggestionsFilter();
+
+      const currentToggle = document.getElementById('suggestions-toggle');
+      if (!currentToggle || currentToggle.checked) {
+        map.addLayer(suggestionsLayer);
+      }
+      if (subcontrols) subcontrols.style.display = 'flex';
+
+      showToast(`تم تحميل ${countAll.toLocaleString('ar-SA')} مسجداً مقترحاً من ويكي بيانات بنجاح!`);
+      updateSuggestionsViewportCount();
+    })
+    .catch(err => {
+      console.error('Error loading suggestions:', err);
+      showToast('تعذر تحميل ملف اقتراحات المساجد (suggested_mosques_sa.geojson)', 'error');
+      if (toggle) toggle.checked = false;
+      if (subcontrols) subcontrols.style.display = 'none';
+    })
+    .finally(() => {
+      suggestionsLoading = false;
+      if (label) label.innerText = originalLabel;
+    });
+}
+
+function applySuggestionsFilter() {
+  if (!suggestionsLayer) return;
+  suggestionsLayer.clearLayers();
+
+  const searchQuery = (currentSearchQuery || '').toLowerCase().trim();
+
+  const filteredMarkers = suggestionsMarkers.filter(m => {
+    const props = m._sugProperties;
+    if (currentSuggestionFilter === 'named' && props.is_unnamed) return false;
+    if (currentSuggestionFilter === 'unnamed' && !props.is_unnamed) return false;
+
+    if (searchQuery) {
+      const ar = (props.name_ar || '').toLowerCase();
+      const en = (props.name_en || '').toLowerCase();
+      const qid = (props.qid || '').toLowerCase();
+      if (!ar.includes(searchQuery) && !en.includes(searchQuery) && !qid.includes(searchQuery)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  suggestionsLayer.addLayers(filteredMarkers);
+  updateSuggestionsViewportCount();
+}
+
+function updateSuggestionsViewportCount() {
+  if (!map || !suggestionsLayer || !map.hasLayer(suggestionsLayer)) return;
+  const countEl = document.getElementById('suggestions-viewport-count');
+  if (!countEl) return;
+
+  const bounds = map.getBounds();
+  let inView = 0;
+  for (let i = 0; i < suggestionsMarkers.length; i++) {
+    const m = suggestionsMarkers[i];
+    const props = m._sugProperties;
+    if (currentSuggestionFilter === 'named' && props.is_unnamed) continue;
+    if (currentSuggestionFilter === 'unnamed' && !props.is_unnamed) continue;
+
+    const [lat, lon] = m._sugCoords;
+    if (bounds.contains([lat, lon])) {
+      inView++;
+    }
+  }
+  countEl.innerText = inView.toLocaleString('ar-SA');
+}
+
+function buildSuggestionPopup(props, lat, lon) {
+  const isUnnamed = props.is_unnamed;
+  const displayName = props.name_ar || props.name_en || 'مسجد بدون اسم محدد';
+  const nearest = props.nearest_osm_m == null ? 'أكثر من 1 كم' : `${props.nearest_osm_m.toLocaleString('ar-SA')} م`;
+  const idUrl = `https://www.openstreetmap.org/edit?editor=id#map=19/${lat}/${lon}`;
+
+  return `
+    <div class="suggestion-popup" dir="rtl">
+      <div class="suggestion-popup-header">
+        <h3 class="suggestion-title">🕌 ${escapeHtml(displayName)}</h3>
+        ${props.name_en && props.name_ar ? `<div class="suggestion-subtitle">${escapeHtml(props.name_en)}</div>` : ''}
+      </div>
+
+      <div>
+        ${isUnnamed 
+          ? `<span class="badge-sug-generic">⚠️ اسم عام / غير محدد - تحقق ميدانياً</span>` 
+          : `<span class="badge-sug-verified">✓ اسم معتمد في ويكي بيانات</span>`
+        }
+      </div>
+
+      <div class="suggestion-meta-list">
+        <div class="suggestion-meta-item">
+          <span class="suggestion-meta-label">معرف ويكي بيانات:</span>
+          <span class="suggestion-meta-val"><a href="https://www.wikidata.org/wiki/${escapeHtml(props.qid)}" target="_blank" rel="noopener noreferrer">${escapeHtml(props.qid)} ↗</a></span>
+        </div>
+        <div class="suggestion-meta-item">
+          <span class="suggestion-meta-label">أقرب مكان عبادة بـ OSM:</span>
+          <span class="suggestion-meta-val">${nearest}</span>
+        </div>
+        <div class="suggestion-meta-item">
+          <span class="suggestion-meta-label">الإحداثيات:</span>
+          <span class="suggestion-meta-val" dir="ltr">${lat.toFixed(5)}, ${lon.toFixed(5)}</span>
+        </div>
+      </div>
+
+      <div class="suggestion-actions">
+        <button type="button" class="btn-sug-action btn-sug-satellite" onclick="previewSuggestionSatellite(${lat}, ${lon}); return false;" title="معاينة فورية للمبنى أو القبة عبر الأقمار الصناعية">
+          🛰️ معاينة بالأقمار الصناعية (Esri)
+        </button>
+        <button type="button" class="btn-sug-action btn-sug-copy" onclick="copySuggestionTags('${escapeHtml(props.qid)}'); return false;" title="نسخ وسوم المسجد الجاهزة للحافظة">
+          📋 نسخ الوسوم
+        </button>
+        <a href="${idUrl}" target="_blank" rel="noopener noreferrer" class="btn-sug-action btn-sug-id" title="فتح المحرر في متصفح الويب">
+          ✏️ فتح في iD
+        </a>
+        <button type="button" class="btn-sug-action btn-sug-josm" onclick="addSuggestionInJOSM('${escapeHtml(props.qid)}'); return false;" title="إرسال نقطة المسجد مباشرة لمحرر JOSM">
+          ⚡ إضافة في JOSM
+        </button>
+      </div>
+    </div>`;
+}
+
+function previewSuggestionSatellite(lat, lon) {
+  if (!map) return;
+  setBasemap('satellite');
+  const satChip = document.querySelector('#basemap-filters .chip[data-basemap="satellite"]');
+  if (satChip) {
+    document.querySelectorAll('#basemap-filters .chip').forEach(c => c.classList.remove('active'));
+    satChip.classList.add('active');
+  }
+  map.setView([lat, lon], 18, { animate: true });
+  showToast('تم التبديل لخريطة الأقمار الصناعية والتقريب لمعاينة المسجد.');
+}
+
+function copySuggestionTags(qid) {
+  const s = suggestionsByQid[qid];
+  if (!s) return;
+  const lines = [
+    'amenity=place_of_worship',
+    'religion=muslim',
+  ];
+  if (!s.is_unnamed) {
+    if (s.name_ar) {
+      lines.push(`name=${s.name_ar}`);
+      lines.push(`name:ar=${s.name_ar}`);
+    } else if (s.name_en) {
+      lines.push(`name=${s.name_en}`);
+    }
+    if (s.name_en) {
+      lines.push(`name:en=${s.name_en}`);
+    }
+  }
+  lines.push(`wikidata=${qid}`);
+
+  const text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('تم نسخ الوسوم بنجاح إلى الحافظة! جاهزة للصق في المحرر.'))
+      .catch(() => showToast('تعذر النسخ للحافظة تلقائياً.', 'error'));
+  } else {
+    showToast('المتصفح لا يدعم النسخ التلقائي للحافظة.', 'error');
+  }
+}
+
+function addSuggestionInJOSM(qid) {
+  const s = suggestionsByQid[qid];
+  if (!s) return;
+  const { lat, lon } = s;
+  const delta = 0.0015;
+  const loadUrl = `http://127.0.0.1:8111/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}`;
+  
+  let tags = `amenity=place_of_worship|religion=muslim|wikidata=${qid}`;
+  if (!s.is_unnamed) {
+    const clean = str => String(str).replace(/\|/g, ' ');
+    if (s.name_ar) tags += `|name=${clean(s.name_ar)}|name:ar=${clean(s.name_ar)}`;
+    else if (s.name_en) tags += `|name=${clean(s.name_en)}`;
+    if (s.name_en) tags += `|name:en=${clean(s.name_en)}`;
+  }
+  const addUrl = `http://127.0.0.1:8111/add_node?lon=${lon}&lat=${lat}&addtags=${encodeURIComponent(tags)}`;
+
+  showToast('جارٍ التواصل مع JOSM لتحميل المنطقة وإضافة المسجد...');
+  fetch(loadUrl)
+    .then(res => {
+      if (!res.ok) throw new Error('Load failed');
+      return new Promise(resolve => setTimeout(resolve, 700));
+    })
+    .then(() => fetch(addUrl))
+    .then(res => {
+      if (res.ok) {
+        showToast('تمت إضافة نقطة المسجد في JOSM بنجاح! راجع الوسوم وموقع المبنى قبل الرفع.');
+      } else {
+        showToast('فشل JOSM في إضافة النقطة. تأكد من تفعيل "Create new objects" في إعدادات Remote Control.', 'error');
+      }
+    })
+    .catch(() => {
+      showToast('تعذر الاتصال بـ JOSM. يرجى تشغيل JOSM وتفعيل Remote Control في الإعدادات.', 'error');
+    });
+}
+
+
 // Show animated non-blocking toast notification
 function showToast(message, type = 'success') {
   // Remove existing toast if any
@@ -457,6 +763,231 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// Build basemap layers according to whether a CARTO API key is provided
+function createBasemapLayers() {
+  const cartoKey = (localStorage.getItem('carto_api_key') || '').trim();
+  const cartoParam = cartoKey ? `?key=${encodeURIComponent(cartoKey)}` : '';
+
+  let darkLayer;
+  let lightLayer;
+
+  if (cartoKey) {
+    // If CARTO API key is provided, use official CARTO Dark Matter & Positron without watermark
+    darkLayer = L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png${cartoParam}`, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 20
+    });
+    lightLayer = L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png${cartoParam}`, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 20
+    });
+  } else {
+    // Keyless, watermark-free Esri Canvas layers by default
+    darkLayer = L.layerGroup([
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+        maxZoom: 20,
+        maxNativeZoom: 19
+      }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '',
+        maxZoom: 20,
+        maxNativeZoom: 19
+      })
+    ]);
+    darkLayer.options = { maxZoom: 20 };
+
+    lightLayer = L.layerGroup([
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+        maxZoom: 20,
+        maxNativeZoom: 19
+      }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '',
+        maxZoom: 20,
+        maxNativeZoom: 19
+      })
+    ]);
+    lightLayer.options = { maxZoom: 20 };
+  }
+
+  const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    maxZoom: 20,
+    maxNativeZoom: 19
+  });
+
+  const streetsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012',
+    maxZoom: 20
+  });
+
+  return {
+    'dark': darkLayer,
+    'satellite': satelliteLayer,
+    'light': lightLayer,
+    'streets': streetsLayer
+  };
+}
+
+// Switches the active basemap on the map
+function setBasemap(key) {
+  if (basemaps[key] && (currentBasemap !== basemaps[key] || !map.hasLayer(basemaps[key]))) {
+    if (currentBasemap) {
+      map.removeLayer(currentBasemap);
+    }
+    currentBasemapKey = key;
+    currentBasemap = basemaps[key];
+    currentBasemap.addTo(map);
+
+    if (key === 'satellite') {
+      updateSatelliteZoomCap();
+    } else {
+      const maxZoom = currentBasemap.options?.maxZoom || 20;
+      map.setMaxZoom(maxZoom);
+    }
+  }
+
+  // Automatic Qibla compass visibility triggers based on basemap
+  const compassToggle = document.getElementById('qibla-compass-toggle');
+  const compassEl = document.getElementById('qibla-compass');
+  if (compassToggle && compassEl) {
+    if (key === 'satellite') {
+      if (!compassToggle.checked) {
+        compassToggle.checked = true;
+        compassEl.classList.remove('hidden');
+        updateQiblaCompass();
+      }
+    } else {
+      if (compassToggle.checked) {
+        compassToggle.checked = false;
+        compassEl.classList.add('hidden');
+      }
+    }
+  }
+}
+
+// Rebuilds basemaps when CARTO API key is saved or cleared, without losing state
+function reloadBasemapLayers() {
+  const activeKey = currentBasemapKey || 'dark';
+  if (currentBasemap) {
+    map.removeLayer(currentBasemap);
+  }
+  basemaps = createBasemapLayers();
+  currentBasemap = basemaps[activeKey];
+  currentBasemap.addTo(map);
+
+  if (activeKey === 'satellite') {
+    updateSatelliteZoomCap();
+  } else {
+    const maxZoom = currentBasemap.options?.maxZoom || 20;
+    map.setMaxZoom(maxZoom);
+  }
+  updateCartoBadgeStatus();
+}
+
+// Updates UI badge and modal fields based on stored CARTO key
+function updateCartoBadgeStatus() {
+  const cartoKey = (localStorage.getItem('carto_api_key') || '').trim();
+  const btn = document.getElementById('btn-carto-config');
+  const inputEl = document.getElementById('carto-api-key-input');
+  const statusEl = document.getElementById('carto-key-status');
+  const statusText = document.getElementById('carto-status-text');
+  const clearBtn = document.getElementById('btn-clear-carto-key');
+  const badgeText = document.getElementById('carto-badge-text');
+
+  if (inputEl) {
+    inputEl.value = cartoKey;
+  }
+
+  if (cartoKey) {
+    if (btn) btn.classList.add('active-key');
+    if (badgeText) badgeText.innerText = 'CARTO (مفعّل)';
+    if (clearBtn) clearBtn.style.display = 'block';
+    if (statusEl) {
+      statusEl.className = 'carto-status-box active';
+      const dot = statusEl.querySelector('.status-dot');
+      if (dot) dot.className = 'status-dot green';
+    }
+    if (statusText) {
+      statusText.innerText = 'مفتاح CARTO مفعّل بنجاح. يتم استخدام خرائط CARTO الرسمية بدون أي علامة مائية.';
+    }
+  } else {
+    if (btn) btn.classList.remove('active-key');
+    if (badgeText) badgeText.innerText = 'مفتاح CARTO';
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (statusEl) {
+      statusEl.className = 'carto-status-box default';
+      const dot = statusEl.querySelector('.status-dot');
+      if (dot) dot.className = 'status-dot neutral';
+    }
+    if (statusText) {
+      statusText.innerText = 'الخرائط الافتراضية نشطة (Esri Canvas - بدون علامات مائية وبدون مفتاح).';
+    }
+  }
+}
+
+// Sets up CARTO API Key modal event listeners
+function setupCartoModalEvents() {
+  const configBtn = document.getElementById('btn-carto-config');
+  const modal = document.getElementById('carto-settings-overlay');
+  const closeBtn = document.getElementById('btn-close-carto-modal');
+  const saveBtn = document.getElementById('btn-save-carto-key');
+  const clearBtn = document.getElementById('btn-clear-carto-key');
+  const inputEl = document.getElementById('carto-api-key-input');
+
+  if (configBtn && modal) {
+    configBtn.addEventListener('click', () => {
+      updateCartoBadgeStatus();
+      modal.classList.remove('hidden');
+    });
+  }
+
+  if (closeBtn && modal) {
+    closeBtn.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.add('hidden');
+      }
+    });
+  }
+
+  if (saveBtn && inputEl && modal) {
+    saveBtn.addEventListener('click', () => {
+      const key = inputEl.value.trim();
+      if (key) {
+        localStorage.setItem('carto_api_key', key);
+        reloadBasemapLayers();
+        modal.classList.add('hidden');
+        showToast('تم تفعيل خرائط CARTO بالمفتاح بنجاح!');
+      } else {
+        localStorage.removeItem('carto_api_key');
+        reloadBasemapLayers();
+        modal.classList.add('hidden');
+        showToast('تم اعتماد خرائط Esri الافتراضية بدون مفتاح.');
+      }
+    });
+  }
+
+  if (clearBtn && modal) {
+    clearBtn.addEventListener('click', () => {
+      localStorage.removeItem('carto_api_key');
+      if (inputEl) inputEl.value = '';
+      reloadBasemapLayers();
+      modal.classList.add('hidden');
+      showToast('تمت استعادة خرائط Esri الافتراضية بدون علامات مائية.');
+    });
+  }
+}
+
 // Initialize Leaflet Map
 function initMap() {
   map = L.map('map', {
@@ -468,31 +999,12 @@ function initMap() {
     position: 'bottomleft'
   }).addTo(map);
 
-  // Define available basemaps
-  basemaps = {
-    'dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20
-    }),
-    'satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      maxZoom: 20,
-      maxNativeZoom: 19
-    }),
-    'light': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20
-    }),
-    'streets': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012',
-      maxZoom: 20
-    })
-  };
+  // Define available basemaps (uses keyless Esri Dark/Light by default, or CARTO if API key is provided)
+  basemaps = createBasemapLayers();
 
   // Add default (dark) basemap
-  currentBasemap = basemaps['dark'];
+  currentBasemapKey = 'dark';
+  currentBasemap = basemaps[currentBasemapKey];
   currentBasemap.addTo(map);
 
   // Initialize Marker Cluster Layer for POI/Improve mode
@@ -530,6 +1042,11 @@ function initMap() {
   map.on('moveend', debouncedUpdateStats);
   map.on('moveend', debouncedUpdateSatelliteZoomCap);
   map.on('moveend', updateIdEditorAreaLink);
+  map.on('moveend', () => {
+    if (suggestionsLayer && map.hasLayer(suggestionsLayer)) {
+      updateSuggestionsViewportCount();
+    }
+  });
   map.on('zoomend', () => {
     debouncedUpdateStats();
     toggleLayersByZoom(); // layer swap must stay immediate
@@ -567,33 +1084,17 @@ function loadData() {
     fetch(`mosque_sizes.json${cacheBuster}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
   ])
   .then(([poiData, gapData, boundaryData, sizeData]) => {
-    // Detect if this is an internal OSM extract containing contributor metadata
-    const isInternalExtract = poiData.features.some(f => f.properties && (f.properties.last_edited_by || f.properties.user_id));
-    
-    if (isInternalExtract) {
-      // Store data in pending variables in case we need to authenticate first
-      pendingPoiData = poiData;
-      pendingGapData = gapData;
-      pendingBoundaryData = boundaryData;
-      pendingSizeData = sizeData;
+    // Store data in pending variables
+    pendingPoiData = poiData;
+    pendingGapData = gapData;
+    pendingBoundaryData = boundaryData;
+    pendingSizeData = sizeData;
 
-      checkAuthStatus().then(isAuthenticated => {
-        if (isAuthenticated || isOsmAnonymized) {
-          // User is authorized or skipped, initialize dashboard
-          initializeDashboard(poiData, gapData, boundaryData, sizeData);
-        } else {
-          // User is not authorized, show login overlay
-          hideLoadingOverlay();
-          const authOverlay = document.getElementById('osm-auth-overlay');
-          if (authOverlay) {
-            authOverlay.classList.remove('hidden');
-          }
-        }
-      });
-    } else {
-      // Standard/anonymized dataset, no authentication required
+    // Check if user is logged in via OSM OAuth; default directly to guest mode if not
+    checkAuthStatus().then(isAuthenticated => {
+      isOsmAnonymized = !isAuthenticated;
       initializeDashboard(poiData, gapData, boundaryData, sizeData);
-    }
+    });
   })
   .catch(error => {
     console.error('Error loading GeoJSON datasets:', error);
@@ -962,6 +1463,12 @@ function showDetails(props, lat, lon) {
   const panel = document.getElementById('details-panel');
   panel.style.display = 'block';
 
+  // Ensure sidebar is expanded so user sees the details immediately
+  setSidebarCollapsed(false);
+  setTimeout(() => {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+
   document.getElementById('details-name-ar').innerText = props.name || 'غير مسمى';
   document.getElementById('details-name-en').innerText = props.name_en || 'Unnamed';
   
@@ -985,9 +1492,15 @@ function showDetails(props, lat, lon) {
   if (isOsmAnonymized) {
     userLink.innerText = 'مساهم OSM (سجل دخولك)';
     userLink.href = '#';
-    userLink.style.pointerEvents = 'none';
-    userLink.style.opacity = '0.6';
-    userLink.style.textDecoration = 'none';
+    userLink.style.pointerEvents = 'auto';
+    userLink.style.opacity = '0.85';
+    userLink.style.textDecoration = 'underline';
+    userLink.style.cursor = 'pointer';
+    userLink.onclick = (e) => {
+      e.preventDefault();
+      const authOverlay = document.getElementById('osm-auth-overlay');
+      if (authOverlay) authOverlay.classList.remove('hidden');
+    };
 
     document.getElementById('details-uid').innerText = 'محجوب بموجب GDPR';
 
@@ -1000,6 +1513,7 @@ function showDetails(props, lat, lon) {
     if (mapperTools) mapperTools.style.display = 'none';
     if (guestToolsNotice) guestToolsNotice.style.display = 'flex';
   } else {
+    userLink.onclick = null;
     userLink.innerText = props.last_edited_by || 'مجهول';
     userLink.href = props.last_edited_by ? `https://www.openstreetmap.org/user/${encodeURIComponent(props.last_edited_by)}` : '#';
     userLink.style.pointerEvents = 'auto';
@@ -1259,36 +1773,13 @@ function setupEventListeners() {
       chip.classList.add('active');
       
       const selectedBasemap = chip.getAttribute('data-basemap');
-      if (basemaps[selectedBasemap] && currentBasemap !== basemaps[selectedBasemap]) {
-        map.removeLayer(currentBasemap);
-        currentBasemap = basemaps[selectedBasemap];
-        currentBasemap.addTo(map);
-        if (selectedBasemap === 'satellite') {
-          updateSatelliteZoomCap();
-        } else {
-          map.setMaxZoom(currentBasemap.options.maxZoom);
-        }
-      }
-
-      // Automatic Qibla compass visibility triggers based on basemap
-      const compassToggle = document.getElementById('qibla-compass-toggle');
-      const compassEl = document.getElementById('qibla-compass');
-      if (compassToggle && compassEl) {
-        if (selectedBasemap === 'satellite') {
-          if (!compassToggle.checked) {
-            compassToggle.checked = true;
-            compassEl.classList.remove('hidden');
-            updateQiblaCompass();
-          }
-        } else {
-          if (compassToggle.checked) {
-            compassToggle.checked = false;
-            compassEl.classList.add('hidden');
-          }
-        }
-      }
+      setBasemap(selectedBasemap);
     });
   });
+
+  // Wire CARTO Basemap Key modal & status
+  setupCartoModalEvents();
+  updateCartoBadgeStatus();
 
   // 2. Religion Chips Selector (POI Mode Only)
   const chips = document.querySelectorAll('#religion-filters .chip');
@@ -1351,7 +1842,12 @@ function setupEventListeners() {
   // 3. Search Box keypress (POI Mode Only)
   // filterData() rebuilds every marker, so debounce to avoid per-keystroke lag on large datasets.
   const searchBox = document.getElementById('search-input');
-  const debouncedFilter = debounce(filterData, 250);
+  const debouncedFilter = debounce(() => {
+    filterData();
+    if (suggestionsLayer) {
+      applySuggestionsFilter();
+    }
+  }, 250);
   searchBox.addEventListener('input', (e) => {
     currentSearchQuery = e.target.value;
     debouncedFilter();
@@ -1473,25 +1969,55 @@ function setupEventListeners() {
     });
   }
 
-  // Handle skip/guest mode login
+  // Modal close handlers (close button, backdrop, Escape, guest notice link)
+  const closeAuthModal = () => {
+    const authOverlay = document.getElementById('osm-auth-overlay');
+    if (authOverlay) {
+      authOverlay.classList.add('hidden');
+    }
+  };
+
+  const closeAuthBtn = document.getElementById('btn-close-auth-modal');
+  if (closeAuthBtn) {
+    closeAuthBtn.addEventListener('click', closeAuthModal);
+  }
+
+  const authOverlay = document.getElementById('osm-auth-overlay');
+  if (authOverlay) {
+    authOverlay.addEventListener('click', (e) => {
+      if (e.target === authOverlay) {
+        closeAuthModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeAuthModal();
+    }
+  });
+
+  const guestLoginLink = document.getElementById('link-guest-login');
+  if (guestLoginLink) {
+    guestLoginLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const overlay = document.getElementById('osm-auth-overlay');
+      if (overlay) {
+        overlay.classList.remove('hidden');
+      }
+    });
+  }
+
+  // Handle skip/guest mode login button in modal
   const skipBtn = document.getElementById('btn-osm-skip');
   if (skipBtn) {
     skipBtn.addEventListener('click', () => {
       isOsmAnonymized = true;
-      sessionStorage.setItem('osm_auth_skipped', 'true');
+      closeAuthModal();
       
-      // Close overlay
-      const authOverlay = document.getElementById('osm-auth-overlay');
-      if (authOverlay) {
-        authOverlay.classList.add('hidden');
-      }
-      
-      // Initialize dashboard using pending data
-      if (pendingPoiData && pendingGapData && pendingBoundaryData) {
+      // Initialize dashboard if not yet loaded
+      if (allPlaces.length === 0 && pendingPoiData && pendingGapData && pendingBoundaryData) {
         initializeDashboard(pendingPoiData, pendingGapData, pendingBoundaryData, pendingSizeData);
-      } else {
-        // Fallback: reload page to fetch correctly
-        window.location.reload();
       }
     });
   }
@@ -1553,6 +2079,24 @@ function setupEventListeners() {
   if (redirectUriDisplay) {
     redirectUriDisplay.innerText = OSM_REDIRECT_URI;
   }
+
+  // 7a. Suggested Additions (Wikidata mosques missing in OSM) Toggle & Chips
+  const suggestionsToggle = document.getElementById('suggestions-toggle');
+  if (suggestionsToggle) {
+    suggestionsToggle.addEventListener('change', (e) => {
+      setSuggestionsVisible(e.target.checked);
+    });
+  }
+
+  const sugFilterChips = document.querySelectorAll('#suggestions-filter-chips .chip');
+  sugFilterChips.forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      sugFilterChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentSuggestionFilter = chip.getAttribute('data-sug-filter') || 'all';
+      applySuggestionsFilter();
+    });
+  });
 }
 
 // ==========================================

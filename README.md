@@ -14,6 +14,7 @@ processing happens ahead of time in Python from an OpenStreetMap `.pbf` extract.
 | [extract_sa_boundary.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_sa_boundary.py) | Builds the Saudi Arabia boundary polygon from OSM. |
 | [extract_places.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_places.py) | Extracts all `amenity=place_of_worship` features inside the boundary. |
 | [calculate_gaps.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_gaps.py) | Grids the country and flags road-populated cells with no worship place. |
+| [import_wikidata_suggestions.py](file:///c:/Users/abdul/Desktop/GCC20260707/import_wikidata_suggestions.py) | Builds `suggested_mosques_sa.geojson`: Wikidata mosques missing from OSM (from the osm x wikidata project's `data/sa.json`), shown as an optional "suggested additions" layer. |
 | [calculate_mosque_sizes.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_mosque_sizes.py) | Independent, separately-scheduled script (e.g. weekly) that flags mosque building footprints that are unusually small/large. |
 | [index.html](file:///c:/Users/abdul/Desktop/GCC20260707/index.html) / [app.js](file:///c:/Users/abdul/Desktop/GCC20260707/app.js) / [index.css](file:///c:/Users/abdul/Desktop/GCC20260707/index.css) | The Leaflet dashboard front-end. |
 | `*.geojson` | Generated data consumed by the front-end. |
@@ -38,9 +39,10 @@ Run the scripts **in this order** (each reads the previous step's output). All
 paths are resolved relative to the script location, so no arguments are needed:
 
 ```bash
-python extract_sa_boundary.py     # -> sa_boundary.geojson
-python extract_places.py          # -> places_of_worship_sa.geojson
-python calculate_gaps.py          # -> worship_gaps_sa.geojson
+python extract_sa_boundary.py         # -> sa_boundary.geojson
+python extract_places.py              # -> places_of_worship_sa.geojson
+python calculate_gaps.py              # -> worship_gaps_sa.geojson
+python import_wikidata_suggestions.py # -> suggested_mosques_sa.geojson (reads osm x wikidata data/sa.json)
 ```
 
 Separately, `calculate_mosque_sizes.py` re-scans the `.pbf` for mosque building
@@ -112,4 +114,20 @@ The database is updated with the latest OpenStreetMap data:
 - **ملاحظات OSM (OSM Notes):** Add [OpenStreetMap Notes](https://wiki.openstreetmap.org/wiki/Notes) directly from the map — either by toggling Add Note mode and clicking a location, or via the "Add note here" shortcut on a place's detail panel. Works both for signed-in OSM users (attributed, requires the `write_notes` OAuth scope) and anonymous visitors with no OSM account (posted anonymously, as supported natively by the Notes API). Existing open notes in view are shown while Add Note mode is active to avoid duplicates.
   - **Structured presets:** besides free text, the composer offers quick templates for "there's a place of worship here" (missing from the map), a terse `fixme:` report, and a "place is gone" report — mirroring the structured-note conventions used by real OSM clients like StreetComplete and MAPS.ME.
   - **Auto-signature:** every submitted note, preset or free text, is signed `via خارطة أماكن العبادة (https://abdullah201x.github.io/sa-places-of-worship) #sa-worship-map`, the same convention StreetComplete/MAPS.ME use to identify their notes to mappers — and it doubles as promotion for this site.
+- **خرائط الأساس (Basemaps & CARTO Support):**
+  - High-performance, keyless dark and light basemaps powered by **Esri Canvas** (`World_Dark_Gray` and `World_Light_Gray`), providing a clean, watermark-free view out of the box with zero configuration required.
+  - Also includes **Esri World Imagery** (Satellite) with automatic overzoom discovery, and **Esri World Street Map**.
+  - **CARTO Basemaps API Key Support:** For users who prefer official CARTO Dark Matter or Positron tiles, a dedicated settings modal allows entering a free CARTO API key (obtained in 1 minute from [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey)), instantly unlocking CARTO tiles without the watermark notice.
+- **اقتراحات ويكي بيانات للإضافة (Wikidata Mosque Suggestions Layer):**
+  - Displays over 53,000+ Wikidata mosques missing in OSM (spatial distance > 100m from any existing OSM place of worship).
+  - **Cleaned Mosque Names:** Automatically strips Wikidata batch-ingestion serial suffixes (e.g., ` 1`, ` 5`), preserving 47,400+ genuine Arabic mosque names and flagging truly generic/unnamed items.
+  - **False Positive Elimination:** Strips non-mosque entities (universities, stadiums, neighborhoods, hospitals) that erroneously received `Q32815` in Wikidata.
+  - **Interactive Mapper Actions:**
+    - **معاينة بالأقمار الصناعية (Satellite Preview):** Instant one-click switch to high-resolution Esri Satellite imagery zoomed to zoom level 18, allowing mappers to visually verify the mosque building, dome, or minaret.
+    - **نسخ الوسوم المقترحة (Copy Tags):** One-click copy of standard OpenStreetMap tags (`amenity=place_of_worship`, `religion=muslim`, `name`, `name:ar`, `name:en`, `wikidata=Q...`).
+    - **فتح في iD (Open in iD):** Opens the web editor directly at the exact coordinates.
+    - **إضافة في JOSM (Add in JOSM):** Remote Control integration that creates the node with pre-filled tags and coordinates.
+  - Sub-filters by name status (الكل / مسماة / عامة وبدون اسم) and live in-viewport count.
 - Adjustable heatmap radius/blur, live in-viewport counts.
+
+

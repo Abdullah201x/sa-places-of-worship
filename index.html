@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
   
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="index.css?v=guest1">
 </head>
 <body>
 
@@ -83,9 +83,17 @@
 
       <!-- Base Map Selection -->
       <div class="control-group" id="basemap-section">
-        <h2 class="section-title">خارطة الأساس</h2>
+        <div class="section-header-row">
+          <h2 class="section-title">خارطة الأساس</h2>
+          <button type="button" id="btn-carto-config" class="carto-config-btn" title="إعدادات مزود CARTO API" aria-label="إعدادات مزود CARTO API">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2l-2 2m-1.5 6.1L16 11l-1.5-1.5L16 8l-1.5-1.5L13 8l-1.5-1.5L10 8 4 14l-2 5 5-2 6-6 1.5 1.5L16 11l1.5-1.5L16 8l1.5-1.5L19 8l1.5-1.5z"></path>
+            </svg>
+            <span id="carto-badge-text">مفتاح CARTO</span>
+          </button>
+        </div>
         <div class="chips-container" id="basemap-filters" role="group" aria-label="أزرار اختيار خارطة الأساس">
-          <button class="chip active" data-basemap="dark">داكن (Black)</button>
+          <button class="chip active" data-basemap="dark">داكن (Dark)</button>
           <button class="chip" data-basemap="satellite">أقمار صناعية (Esri)</button>
           <button class="chip" data-basemap="light">فاتح (Light)</button>
           <button class="chip" data-basemap="streets">شوارع (Streets)</button>
@@ -116,6 +124,36 @@
           <span class="switch-label">وضع إضافة ملاحظة (اضغط على الخريطة)</span>
         </div>
       </div>
+
+      <!-- Suggested Additions (Wikidata mosques missing in OSM) -->
+      <div class="control-group" id="suggestions-section">
+        <div class="section-header-row">
+          <h2 class="section-title">اقتراحات ويكي بيانات 🕌</h2>
+          <span class="suggestions-count-badge" id="suggestions-badge" style="display: none;">0</span>
+        </div>
+        <p class="section-hint">مساجد موثقة في ويكي بيانات ومفقودة من OpenStreetMap (أبعد من 100م عن أي دار عبادة حالية). يمكنك فحصها بالأقمار الصناعية وإضافتها مباشرة عبر JOSM أو iD.</p>
+        
+        <div class="switch-control-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="suggestions-toggle">
+            <span class="slider-switch round"></span>
+          </label>
+          <span class="switch-label" id="suggestions-switch-label">عرض المساجد المقترحة للإضافة</span>
+        </div>
+
+        <!-- Filter chips for suggestions (shown when active) -->
+        <div class="suggestions-subcontrols" id="suggestions-subcontrols" style="display: none;">
+          <div class="suggestions-stats-row">
+            <span class="suggestions-viewport-text">في النطاق المرئي: <strong id="suggestions-viewport-count">0</strong></span>
+          </div>
+          <div class="chips-container" id="suggestions-filter-chips" role="group" aria-label="أزرار تصفية الاقتراحات">
+            <button class="chip active" data-sug-filter="all">الكل (<span id="sug-count-all">0</span>)</button>
+            <button class="chip" data-sug-filter="named">مسماة (<span id="sug-count-named">0</span>)</button>
+            <button class="chip" data-sug-filter="unnamed">عامة / بدون اسم (<span id="sug-count-unnamed">0</span>)</button>
+          </div>
+        </div>
+      </div>
+
 
       <!-- Search Section -->
       <div class="control-group" id="search-section">
@@ -294,7 +332,7 @@
               <line x1="12" y1="16" x2="12" y2="12"></line>
               <line x1="12" y1="8" x2="12.01" y2="8"></line>
             </svg>
-            <span>أدوات التعديل وبيانات المساهمين التفصيلية مغلقة حالياً. الرجاء <strong>تسجيل الدخول باستخدام OSM</strong> للوصول لهذه البيانات والمساهمة في تحسين جودة الخارطة.</span>
+            <span>أدوات التعديل وبيانات المساهمين التفصيلية مغلقة حالياً. الرجاء <a href="#" id="link-guest-login" style="color: var(--color-primary); font-weight: 700; text-decoration: underline;">تسجيل الدخول باستخدام OSM</a> للوصول لهذه البيانات والمساهمة في تحسين جودة الخارطة.</span>
           </div>
         </div>
       </section>
@@ -351,6 +389,7 @@
     <!-- OSM Authentication Overlay -->
     <div id="osm-auth-overlay" class="auth-overlay hidden">
       <div class="auth-card">
+        <button id="btn-close-auth-modal" class="auth-close-btn" aria-label="إغلاق" title="إغلاق">&times;</button>
         <div class="auth-glow"></div>
         <div class="auth-header">
           <div class="auth-icon">🔐</div>
@@ -409,7 +448,7 @@
             </div>
 
             <button id="btn-osm-skip" class="auth-skip-btn">
-              <span>استكشاف الخريطة كزائر (بيانات مجهلة)</span>
+              <span>المتابعة كزائر (تصفح بدون تسجيل)</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
@@ -546,6 +585,57 @@
       </div>
     </div>
 
+    <!-- CARTO Basemaps API Key Settings Overlay -->
+    <div id="carto-settings-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="carto-settings-title">
+      <div class="auth-card">
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">🗺️</div>
+          <h2 id="carto-settings-title">إعدادات مزود الخرائط (CARTO API)</h2>
+          <p>تعمل الخرائط الداكنة والفاتحة افتراضياً عبر <strong>Esri Canvas</strong> مجاناً وبدون أي علامة مائية. إذا كنت ترغب باستخدام خرائط <strong>CARTO</strong> (Dark Matter / Positron)، يمكنك إضافة مفتاح CARTO المجاني هنا.</p>
+        </div>
+
+        <div class="auth-body">
+          <div id="carto-key-status" class="carto-status-box default">
+            <span class="status-dot neutral"></span>
+            <span id="carto-status-text">الخرائط الافتراضية نشطة (Esri Canvas - بدون علامات مائية وبدون مفتاح).</span>
+          </div>
+
+          <div class="client-id-config">
+            <label for="carto-api-key-input">مفتاح CARTO API Key:</label>
+            <input type="text" id="carto-api-key-input" class="auth-input" placeholder="أدخل مفتاح CARTO هنا (أو اتركه فارغاً للوضع الافتراضي)..." dir="ltr" spellcheck="false" autocomplete="off" />
+            <p class="input-help">مفتاح CARTO مجاني تماماً حتى 5 ملايين طلب شهرياً ولا يتطلب بطاقة ائتمانية.</p>
+          </div>
+
+          <div class="carto-guide-shortcut">
+            <a href="https://carto.com/basemaps/apikey" target="_blank" rel="noopener noreferrer" class="carto-free-key-link">
+              <span>طلب مفتاح مجاني من موقع CARTO الرسمي</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+          </div>
+
+          <button id="btn-save-carto-key" class="auth-submit-btn">
+            <span>حفظ وتفعيل CARTO</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+
+          <button id="btn-clear-carto-key" class="carto-clear-btn" style="display: none;">
+            <span>استعادة الخرائط الافتراضية (Esri - حذف المفتاح)</span>
+          </button>
+
+          <button id="btn-close-carto-modal" class="auth-skip-btn">
+            <span>إغلاق</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Loading / Error Overlay -->
     <div id="loading-overlay" role="status" aria-live="polite">
       <div class="loading-box">
@@ -569,6 +659,6 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
   
   <!-- App JS -->
-  <script src="app.js"></script>
+  <script src="app.js?v=guest1"></script>
 </body>
 </html>

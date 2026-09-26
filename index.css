@@ -1132,6 +1132,33 @@ h1 {
   direction: rtl;
 }
 
+.auth-close-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  z-index: 10;
+}
+
+.auth-close-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.08);
+}
+
 .auth-glow {
   position: absolute;
   top: -100px;
@@ -1640,3 +1667,398 @@ h1 {
     padding: 20px;
   }
 }
+
+/* ==========================================================================
+   CARTO Basemap Configuration & Modal Styles
+   ========================================================================== */
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-header-row .section-title {
+  margin-bottom: 0;
+}
+
+.carto-config-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.carto-config-btn:hover {
+  background: rgba(0, 242, 254, 0.12);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.carto-config-btn.active-key {
+  border-color: rgba(0, 255, 135, 0.4);
+  color: #00ff87;
+  background: rgba(0, 255, 135, 0.08);
+  box-shadow: 0 0 10px rgba(0, 255, 135, 0.15);
+}
+
+.carto-status-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  font-family: var(--font-body);
+}
+
+.carto-status-box.default {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-text-muted);
+}
+
+.carto-status-box.active {
+  background: rgba(0, 255, 135, 0.08);
+  border: 1px solid rgba(0, 255, 135, 0.25);
+  color: #a8ffcc;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.neutral {
+  background: #888;
+}
+
+.status-dot.green {
+  background: #00ff87;
+  box-shadow: 0 0 8px #00ff87;
+}
+
+.carto-guide-shortcut {
+  margin-top: -6px;
+}
+
+.carto-free-key-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0, 242, 254, 0.06);
+  border: 1px dashed rgba(0, 242, 254, 0.35);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition: all 0.2s ease;
+}
+
+.carto-free-key-link:hover {
+  background: rgba(0, 242, 254, 0.15);
+  border-style: solid;
+  transform: translateY(-1px);
+}
+
+.carto-clear-btn {
+  background: rgba(255, 59, 48, 0.08);
+  border: 1px solid rgba(255, 59, 48, 0.25);
+  color: #ff8b85;
+  border-radius: 12px;
+  padding: 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.carto-clear-btn:hover {
+  background: rgba(255, 59, 48, 0.16);
+  border-color: #ff3b30;
+  color: #ff3b30;
+}
+
+/* ==========================================================================
+   Wikidata Suggested Mosques Layer & Popups
+   ========================================================================== */
+
+.suggestions-count-badge {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-family: var(--font-body);
+  letter-spacing: 0.3px;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+}
+
+.suggestions-subcontrols {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.suggestions-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.suggestions-viewport-text strong {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+/* Glassmorphism Dark Leaflet Popups */
+.leaflet-popup-content-wrapper {
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 20px rgba(0, 242, 254, 0.08) !important;
+  color: #f1f5f9 !important;
+  padding: 4px !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: #94a3b8 !important;
+  padding: 6px 10px !important;
+  font-size: 16px !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+}
+
+/* Suggestion Cluster Markers */
+.suggestion-cluster {
+  background: radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.95), rgba(180, 83, 9, 0.85));
+  border: 2px solid #fef3c7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.6), 0 4px 10px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  font-family: var(--font-body);
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.suggestion-cluster:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
+}
+
+/* Suggestion Popup Card */
+.suggestion-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 260px;
+  max-width: 320px;
+  font-family: var(--font-body);
+  direction: rtl;
+  text-align: right;
+  line-height: 1.4;
+  padding: 4px;
+}
+
+.suggestion-popup-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 6px;
+}
+
+.suggestion-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.suggestion-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  direction: ltr;
+  text-align: right;
+  margin-top: 2px;
+}
+
+.suggestion-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.suggestion-meta-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.suggestion-meta-label {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.suggestion-meta-val {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.suggestion-meta-val a {
+  color: #38bdf8;
+  text-decoration: none;
+}
+
+.suggestion-meta-val a:hover {
+  color: #7dd3fc;
+  text-decoration: underline;
+}
+
+.badge-sug-verified {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-sug-generic {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.suggestion-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-sug-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-body);
+  border: 1px solid transparent;
+}
+
+.btn-sug-satellite {
+  background: rgba(0, 242, 254, 0.12);
+  border-color: rgba(0, 242, 254, 0.35);
+  color: #4facfe;
+  grid-column: span 2;
+}
+
+.btn-sug-satellite:hover {
+  background: rgba(0, 242, 254, 0.22);
+  border-color: #00f2fe;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-sug-copy {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+}
+
+.btn-sug-copy:hover {
+  background: rgba(148, 163, 184, 0.22);
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+.btn-sug-id {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+}
+
+.btn-sug-id:hover {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.btn-sug-josm {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.btn-sug-josm:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+  color: #ffffff;
+}
+
+
