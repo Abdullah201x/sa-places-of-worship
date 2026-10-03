@@ -1490,29 +1490,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "12520_6610",
-        "road_length_m": 2465.6,
-        "gap_score": 11.493
+        "road_length_m": 2932.1,
+        "gap_score": 11.675
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          50.081553,
-          26.441981
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "12520_6609",
-        "road_length_m": 5899.8,
-        "gap_score": 13.466
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          50.081699,
-          26.437947
+          50.081594,
+          26.441929
         ]
       }
     },
@@ -2338,21 +2323,6 @@
         "coordinates": [
           50.021429,
           26.414841
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "9781_5430",
-        "road_length_m": 4467.7,
-        "gap_score": 24.116
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.126394,
-          21.723091
         ]
       }
     },
@@ -4069,6 +4039,21 @@
     {
       "type": "Feature",
       "properties": {
+        "grid_id": "12520_6609",
+        "road_length_m": 5172.3,
+        "gap_score": 13.378
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.08162,
+          26.437978
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "grid_id": "12528_6573",
         "road_length_m": 435.9,
         "gap_score": 9.457
@@ -4401,7 +4386,7 @@
       "properties": {
         "grid_id": "9788_5387",
         "road_length_m": 4127.6,
-        "gap_score": 10.458
+        "gap_score": 10.241
       },
       "geometry": {
         "type": "Point",
@@ -5811,7 +5796,7 @@
       "properties": {
         "grid_id": "9783_5429",
         "road_length_m": 8030.7,
-        "gap_score": 28.871
+        "gap_score": 16.514
       },
       "geometry": {
         "type": "Point",
@@ -6058,21 +6043,6 @@
         "coordinates": [
           39.277633,
           21.516706
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "9786_5389",
-        "road_length_m": 7593.5,
-        "gap_score": 15.147
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.146273,
-          21.558724
         ]
       }
     },
@@ -7461,7 +7431,7 @@
       "properties": {
         "grid_id": "9779_5431",
         "road_length_m": 14487.5,
-        "gap_score": 21.562
+        "gap_score": 11.663
       },
       "geometry": {
         "type": "Point",
@@ -8406,7 +8376,7 @@
       "properties": {
         "grid_id": "9783_5432",
         "road_length_m": 5220.9,
-        "gap_score": 15.311
+        "gap_score": 12.171
       },
       "geometry": {
         "type": "Point",
@@ -8436,7 +8406,7 @@
       "properties": {
         "grid_id": "9785_5429",
         "road_length_m": 462.6,
-        "gap_score": 20.732
+        "gap_score": 16.2
       },
       "geometry": {
         "type": "Point",
@@ -10671,7 +10641,7 @@
       "properties": {
         "grid_id": "9783_5428",
         "road_length_m": 1008.8,
-        "gap_score": 21.791
+        "gap_score": 17.403
       },
       "geometry": {
         "type": "Point",
@@ -14389,21 +14359,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "9788_5389",
-        "road_length_m": 3104.6,
-        "gap_score": 11.278
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.153707,
-          21.557649
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "9799_5376",
         "road_length_m": 2001.3,
         "gap_score": 9.683
@@ -15351,7 +15306,7 @@
       "properties": {
         "grid_id": "9785_5388",
         "road_length_m": 3059.8,
-        "gap_score": 16.765
+        "gap_score": 12.946
       },
       "geometry": {
         "type": "Point",
@@ -15373,21 +15328,6 @@
         "coordinates": [
           39.133863,
           21.550024
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "9787_5388",
-        "road_length_m": 3023.7,
-        "gap_score": 14.639
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.150023,
-          21.55441
         ]
       }
     },
@@ -15733,21 +15673,6 @@
         "coordinates": [
           46.582129,
           24.617434
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "9788_5388",
-        "road_length_m": 1125.8,
-        "gap_score": 9.667
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.153157,
-          21.553104
         ]
       }
     },
@@ -16804,36 +16729,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11008_6583",
-        "road_length_m": 5814.7,
-        "gap_score": 11.633
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.033871,
-          26.334564
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6576",
-        "road_length_m": 4510.7,
-        "gap_score": 11.226
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.041578,
-          26.306271
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11008_6563",
         "road_length_m": 1792.3,
         "gap_score": 16.111
@@ -16843,21 +16738,6 @@
         "coordinates": [
           44.034688,
           26.255282
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11007_6576",
-        "road_length_m": 2823.6,
-        "gap_score": 15.848
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.030166,
-          26.306276
         ]
       }
     },
@@ -33919,21 +33799,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11011_6587",
-        "road_length_m": 3179.7,
-        "gap_score": 22.876
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.047028,
-          26.34934
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10997_6586",
         "road_length_m": 7267.0,
         "gap_score": 11.809
@@ -45710,14 +45575,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "9547_5998",
-        "road_length_m": 1567.5,
-        "gap_score": 8.763
+        "road_length_m": 1783.7,
+        "gap_score": 11.334
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          38.190002,
-          23.994819
+          38.190086,
+          23.994719
         ]
       }
     },
@@ -45726,7 +45591,7 @@
       "properties": {
         "grid_id": "9546_5998",
         "road_length_m": 1199.6,
-        "gap_score": 10.645
+        "gap_score": 10.673
       },
       "geometry": {
         "type": "Point",
@@ -47488,6 +47353,21 @@
         "coordinates": [
           45.557575,
           20.461676
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "grid_id": "9548_5998",
+        "road_length_m": 2206.4,
+        "gap_score": 8.815
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.194465,
+          23.993772
         ]
       }
     },
@@ -53509,21 +53389,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "9794_5394",
-        "road_length_m": 3230.6,
-        "gap_score": 9.93
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.17869,
-          21.578363
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10101_5290",
         "road_length_m": 660.8,
         "gap_score": 29.974
@@ -55108,21 +54973,6 @@
         "coordinates": [
           46.479423,
           24.362596
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "9794_5395",
-        "road_length_m": 1193.7,
-        "gap_score": 8.443
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.177848,
-          21.581316
         ]
       }
     },
@@ -57124,21 +56974,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11014_6581",
-        "road_length_m": 589.3,
-        "gap_score": 8.024
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.057904,
-          26.325391
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11019_6553",
         "road_length_m": 453.2,
         "gap_score": 15.848
@@ -57246,7 +57081,7 @@
       "properties": {
         "grid_id": "11016_6572",
         "road_length_m": 143.1,
-        "gap_score": 20.236
+        "gap_score": 13.731
       },
       "geometry": {
         "type": "Point",
@@ -57276,58 +57111,13 @@
       "properties": {
         "grid_id": "11016_6571",
         "road_length_m": 1216.6,
-        "gap_score": 29.993
+        "gap_score": 23.287
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           44.065479,
           26.285063
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11013_6580",
-        "road_length_m": 2803.5,
-        "gap_score": 10.351
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.054331,
-          26.321486
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11015_6580",
-        "road_length_m": 989.1,
-        "gap_score": 9.147
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.061335,
-          26.321629
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6587",
-        "road_length_m": 10332.2,
-        "gap_score": 11.983
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.034067,
-          26.3491
         ]
       }
     },
@@ -61714,24 +61504,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "10993_6606",
-        "road_length_m": 482.0,
-        "gap_score": 28.712
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.975208,
-          26.426073
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10997_6606",
         "road_length_m": 1163.2,
-        "gap_score": 32.236
+        "gap_score": 13.513
       },
       "geometry": {
         "type": "Point",
@@ -61746,7 +61521,7 @@
       "properties": {
         "grid_id": "11012_6587",
         "road_length_m": 2069.6,
-        "gap_score": 22.034
+        "gap_score": 9.624
       },
       "geometry": {
         "type": "Point",
@@ -62376,7 +62151,7 @@
       "properties": {
         "grid_id": "11006_6599",
         "road_length_m": 2810.4,
-        "gap_score": 35.764
+        "gap_score": 30.91
       },
       "geometry": {
         "type": "Point",
@@ -62391,7 +62166,7 @@
       "properties": {
         "grid_id": "11007_6598",
         "road_length_m": 550.5,
-        "gap_score": 27.367
+        "gap_score": 22.174
       },
       "geometry": {
         "type": "Point",
@@ -62406,7 +62181,7 @@
       "properties": {
         "grid_id": "11005_6601",
         "road_length_m": 2263.1,
-        "gap_score": 34.898
+        "gap_score": 32.756
       },
       "geometry": {
         "type": "Point",
@@ -62421,7 +62196,7 @@
       "properties": {
         "grid_id": "11005_6600",
         "road_length_m": 425.0,
-        "gap_score": 28.208
+        "gap_score": 22.715
       },
       "geometry": {
         "type": "Point",
@@ -62434,75 +62209,15 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11011_6591",
-        "road_length_m": 825.0,
-        "gap_score": 11.066
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.044198,
-          26.365065
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10994_6600",
-        "road_length_m": 3525.2,
-        "gap_score": 15.654
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.977667,
-          26.401931
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10992_6606",
         "road_length_m": 303.0,
-        "gap_score": 26.686
+        "gap_score": 7.679
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           43.969638,
           26.425349
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10995_6606",
-        "road_length_m": 228.1,
-        "gap_score": 25.719
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.98228,
-          26.426482
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10994_6606",
-        "road_length_m": 1152.4,
-        "gap_score": 32.198
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.977569,
-          26.426402
         ]
       }
     },
@@ -63403,6 +63118,21 @@
         "coordinates": [
           35.028632,
           29.149036
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "grid_id": "9548_5999",
+        "road_length_m": 3540.8,
+        "gap_score": 10.186
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.193402,
+          23.997802
         ]
       }
     },
@@ -65766,7 +65496,7 @@
       "properties": {
         "grid_id": "9780_5433",
         "road_length_m": 1846.0,
-        "gap_score": 16.652
+        "gap_score": 10.808
       },
       "geometry": {
         "type": "Point",
@@ -65811,7 +65541,7 @@
       "properties": {
         "grid_id": "9781_5434",
         "road_length_m": 2844.2,
-        "gap_score": 18.684
+        "gap_score": 15.292
       },
       "geometry": {
         "type": "Point",
@@ -73279,21 +73009,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "9780_5432",
-        "road_length_m": 1134.5,
-        "gap_score": 17.871
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.122999,
-          21.731172
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "9783_5434",
         "road_length_m": 3870.2,
         "gap_score": 9.484
@@ -73311,7 +73026,7 @@
       "properties": {
         "grid_id": "9781_5433",
         "road_length_m": 1837.2,
-        "gap_score": 18.985
+        "gap_score": 9.453
       },
       "geometry": {
         "type": "Point",
@@ -73326,7 +73041,7 @@
       "properties": {
         "grid_id": "9782_5433",
         "road_length_m": 6518.5,
-        "gap_score": 16.953
+        "gap_score": 12.188
       },
       "geometry": {
         "type": "Point",
@@ -73564,21 +73279,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11014_6580",
-        "road_length_m": 288.2,
-        "gap_score": 9.032
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.058521,
-          26.323392
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11494_6378",
         "road_length_m": 1261.7,
         "gap_score": 32.561
@@ -73618,21 +73318,6 @@
         "coordinates": [
           45.955189,
           25.52268
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "9789_5408",
-        "road_length_m": 1177.3,
-        "gap_score": 8.938
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.157924,
-          21.634008
         ]
       }
     },
@@ -75058,6 +74743,21 @@
         "coordinates": [
           43.556363,
           25.605974
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "grid_id": "11220_6541",
+        "road_length_m": 9991.5,
+        "gap_score": 40.838
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          44.882061,
+          26.165629
         ]
       }
     },
@@ -81726,7 +81426,7 @@
       "properties": {
         "grid_id": "9795_5395",
         "road_length_m": 4599.4,
-        "gap_score": 13.703
+        "gap_score": 11.943
       },
       "geometry": {
         "type": "Point",
@@ -81786,7 +81486,7 @@
       "properties": {
         "grid_id": "9786_5388",
         "road_length_m": 4262.2,
-        "gap_score": 15.755
+        "gap_score": 9.709
       },
       "geometry": {
         "type": "Point",
@@ -81801,7 +81501,7 @@
       "properties": {
         "grid_id": "9786_5390",
         "road_length_m": 2960.4,
-        "gap_score": 10.455
+        "gap_score": 9.159
       },
       "geometry": {
         "type": "Point",
@@ -81814,30 +81514,15 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "9787_5389",
-        "road_length_m": 2885.3,
-        "gap_score": 13.815
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.150058,
-          21.55779
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "9786_5387",
         "road_length_m": 2051.7,
-        "gap_score": 8.865
+        "gap_score": 8.876
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          39.145957,
-          21.549335
+          39.145956,
+          21.549344
         ]
       }
     },
@@ -82026,7 +81711,7 @@
       "properties": {
         "grid_id": "9785_5389",
         "road_length_m": 1785.6,
-        "gap_score": 16.589
+        "gap_score": 12.87
       },
       "geometry": {
         "type": "Point",
@@ -92719,24 +92404,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "9782_5430",
-        "road_length_m": 2293.2,
-        "gap_score": 24.104
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.129344,
-          21.721891
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "9782_5429",
         "road_length_m": 1538.4,
-        "gap_score": 20.11
+        "gap_score": 10.12
       },
       "geometry": {
         "type": "Point",
@@ -92856,13 +92526,13 @@
       "properties": {
         "grid_id": "9542_7626",
         "road_length_m": 10282.0,
-        "gap_score": 33.726
+        "gap_score": 33.918
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          38.169294,
-          30.505745
+          38.16918,
+          30.505923
         ]
       }
     },
@@ -108448,21 +108118,6 @@
         "coordinates": [
           46.677088,
           24.637265
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6595",
-        "road_length_m": 2269.8,
-        "gap_score": 20.053
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.001785,
-          26.381801
         ]
       }
     },
@@ -141815,13 +141470,13 @@
       "type": "Feature",
       "properties": {
         "grid_id": "10747_4152",
-        "road_length_m": 3962.5,
-        "gap_score": 34.074
+        "road_length_m": 4136.0,
+        "gap_score": 34.36
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          42.990141,
+          42.990246,
           16.610406
         ]
       }
@@ -154243,36 +153898,6 @@
         "coordinates": [
           43.954322,
           26.062562
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11012_6589",
-        "road_length_m": 1038.9,
-        "gap_score": 20.773
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.048841,
-          26.356919
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11012_6588",
-        "road_length_m": 2836.1,
-        "gap_score": 25.716
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.048737,
-          26.355142
         ]
       }
     },
@@ -220236,28 +219861,13 @@
       "properties": {
         "grid_id": "11003_6598",
         "road_length_m": 1215.9,
-        "gap_score": 29.667
+        "gap_score": 13.931
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           44.014484,
           26.393315
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10999_6591",
-        "road_length_m": 6907.9,
-        "gap_score": 19.382
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.998163,
-          26.36611
         ]
       }
     },
@@ -223161,7 +222771,7 @@
       "properties": {
         "grid_id": "10993_6611",
         "road_length_m": 1563.6,
-        "gap_score": 33.419
+        "gap_score": 28.346
       },
       "geometry": {
         "type": "Point",
@@ -223176,7 +222786,7 @@
       "properties": {
         "grid_id": "10994_6611",
         "road_length_m": 742.4,
-        "gap_score": 30.44
+        "gap_score": 27.544
       },
       "geometry": {
         "type": "Point",
@@ -223191,7 +222801,7 @@
       "properties": {
         "grid_id": "10993_6612",
         "road_length_m": 1803.9,
-        "gap_score": 33.991
+        "gap_score": 32.529
       },
       "geometry": {
         "type": "Point",
@@ -223221,73 +222831,13 @@
       "properties": {
         "grid_id": "10995_6607",
         "road_length_m": 2047.7,
-        "gap_score": 34.498
+        "gap_score": 10.835
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           43.982026,
           26.430409
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10995_6603",
-        "road_length_m": 3003.1,
-        "gap_score": 29.067
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.98206,
-          26.413476
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10994_6603",
-        "road_length_m": 679.0,
-        "gap_score": 22.414
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.978894,
-          26.414006
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10996_6603",
-        "road_length_m": 1825.2,
-        "gap_score": 28.764
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.985509,
-          26.413538
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10995_6604",
-        "road_length_m": 1532.0,
-        "gap_score": 31.713
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.982778,
-          26.418313
         ]
       }
     },
@@ -228651,13 +228201,13 @@
       "properties": {
         "grid_id": "9333_7822",
         "road_length_m": 5377.4,
-        "gap_score": 19.268
+        "gap_score": 19.477
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          37.335081,
-          31.290103
+          37.335149,
+          31.289932
         ]
       }
     },
@@ -256684,24 +256234,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11008_6569",
-        "road_length_m": 3007.5,
-        "gap_score": 9.9
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.034322,
-          26.278398
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11007_6569",
         "road_length_m": 1626.2,
-        "gap_score": 13.794
+        "gap_score": 9.23
       },
       "geometry": {
         "type": "Point",
@@ -256716,7 +256251,7 @@
       "properties": {
         "grid_id": "11006_6570",
         "road_length_m": 3858.8,
-        "gap_score": 18.075
+        "gap_score": 15.448
       },
       "geometry": {
         "type": "Point",
@@ -256731,7 +256266,7 @@
       "properties": {
         "grid_id": "11005_6570",
         "road_length_m": 1021.9,
-        "gap_score": 11.674
+        "gap_score": 11.62
       },
       "geometry": {
         "type": "Point",
@@ -256746,7 +256281,7 @@
       "properties": {
         "grid_id": "11005_6571",
         "road_length_m": 2855.5,
-        "gap_score": 10.154
+        "gap_score": 10.146
       },
       "geometry": {
         "type": "Point",
@@ -256761,7 +256296,7 @@
       "properties": {
         "grid_id": "11007_6568",
         "road_length_m": 2666.3,
-        "gap_score": 13.35
+        "gap_score": 11.123
       },
       "geometry": {
         "type": "Point",
@@ -272164,81 +271699,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11011_6581",
-        "road_length_m": 3297.1,
-        "gap_score": 11.801
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.045487,
-          26.325826
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6581",
-        "road_length_m": 6360.7,
-        "gap_score": 12.6
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.041926,
-          26.325963
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6580",
-        "road_length_m": 2828.4,
-        "gap_score": 11.272
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.045561,
-          26.322699
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11012_6580",
-        "road_length_m": 1796.5,
-        "gap_score": 9.987
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.049351,
-          26.321347
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6581",
-        "road_length_m": 6472.3,
-        "gap_score": 12.302
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.037681,
-          26.326636
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10788_4327",
         "road_length_m": 9707.1,
         "gap_score": 40.722
@@ -276311,8 +275771,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.842345,
-          26.18074
+          44.842343,
+          26.180735
         ]
       }
     },
@@ -276364,15 +275824,15 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11201_6567",
-        "road_length_m": 5287.6,
-        "gap_score": 13.369
+        "grid_id": "11201_6568",
+        "road_length_m": 6068.0,
+        "gap_score": 12.998
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.805338,
-          26.271902
+          44.805184,
+          26.272844
         ]
       }
     },
@@ -276478,21 +275938,6 @@
         "coordinates": [
           43.186146,
           17.418055
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6584",
-        "road_length_m": 3369.0,
-        "gap_score": 10.892
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.00238,
-          26.338219
         ]
       }
     },
@@ -279043,21 +278488,6 @@
         "coordinates": [
           40.234434,
           30.01375
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6574",
-        "road_length_m": 2934.6,
-        "gap_score": 9.024
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.041756,
-          26.298048
         ]
       }
     },
@@ -298251,13 +297681,13 @@
       "properties": {
         "grid_id": "11205_6565",
         "road_length_m": 5032.8,
-        "gap_score": 10.621
+        "gap_score": 10.902
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.821285,
-          26.261301
+          44.82139,
+          26.261019
         ]
       }
     },
@@ -298378,51 +297808,6 @@
         "coordinates": [
           42.962359,
           17.262276
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10997_6599",
-        "road_length_m": 548.9,
-        "gap_score": 8.502
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.988955,
-          26.398491
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10995_6599",
-        "road_length_m": 5960.2,
-        "gap_score": 12.184
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.982217,
-          26.397613
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10995_6600",
-        "road_length_m": 2965.0,
-        "gap_score": 14.776
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.982169,
-          26.400638
         ]
       }
     },
@@ -309366,28 +308751,13 @@
       "properties": {
         "grid_id": "11005_6569",
         "road_length_m": 1063.8,
-        "gap_score": 17.274
+        "gap_score": 16.092
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           44.023012,
           26.277641
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6591",
-        "road_length_m": 2257.6,
-        "gap_score": 13.043
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.042403,
-          26.365164
         ]
       }
     },
@@ -344104,114 +343474,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "10994_6599",
-        "road_length_m": 274.2,
-        "gap_score": 10.071
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.979847,
-          26.398135
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10993_6600",
-        "road_length_m": 1483.6,
-        "gap_score": 10.59
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.973904,
-          26.401971
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10997_6600",
-        "road_length_m": 1462.7,
-        "gap_score": 14.162
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.989597,
-          26.402142
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10996_6600",
-        "road_length_m": 1038.8,
-        "gap_score": 12.997
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.986893,
-          26.401768
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10996_6599",
-        "road_length_m": 804.9,
-        "gap_score": 9.024
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.984597,
-          26.398145
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6596",
-        "road_length_m": 2506.9,
-        "gap_score": 17.989
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.00172,
-          26.385869
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10999_6597",
-        "road_length_m": 5012.8,
-        "gap_score": 14.511
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.998858,
-          26.390115
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10999_6600",
         "road_length_m": 2589.9,
-        "gap_score": 20.338
+        "gap_score": 14.992
       },
       "geometry": {
         "type": "Point",
@@ -348726,13 +347991,13 @@
       "properties": {
         "grid_id": "11213_6580",
         "road_length_m": 3927.0,
-        "gap_score": 18.923
+        "gap_score": 18.646
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.855392,
-          26.321996
+          44.855608,
+          26.322071
         ]
       }
     },
@@ -348771,13 +348036,13 @@
       "properties": {
         "grid_id": "11218_6582",
         "road_length_m": 2270.5,
-        "gap_score": 10.205
+        "gap_score": 10.146
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.874208,
-          26.329929
+          44.874236,
+          26.329864
         ]
       }
     },
@@ -348861,28 +348126,13 @@
       "properties": {
         "grid_id": "11219_6579",
         "road_length_m": 5098.0,
-        "gap_score": 11.869
+        "gap_score": 11.893
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.877477,
-          26.317421
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11219_6580",
-        "road_length_m": 1671.6,
-        "gap_score": 8.658
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.877638,
-          26.320698
+          44.877513,
+          26.317433
         ]
       }
     },
@@ -348966,13 +348216,13 @@
       "properties": {
         "grid_id": "11219_6578",
         "road_length_m": 4192.0,
-        "gap_score": 14.613
+        "gap_score": 14.67
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.877386,
-          26.314356
+          44.877531,
+          26.314406
         ]
       }
     },
@@ -349371,13 +348621,13 @@
       "properties": {
         "grid_id": "11207_6558",
         "road_length_m": 7162.4,
-        "gap_score": 20.714
+        "gap_score": 20.847
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.829759,
-          26.233715
+          44.829794,
+          26.23358
         ]
       }
     },
@@ -355513,21 +354763,6 @@
         "coordinates": [
           43.893866,
           26.402317
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6575",
-        "road_length_m": 3394.7,
-        "gap_score": 10.378
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.037817,
-          26.302416
         ]
       }
     },
@@ -378816,7 +378051,7 @@
       "properties": {
         "grid_id": "11006_6569",
         "road_length_m": 11142.8,
-        "gap_score": 22.171
+        "gap_score": 17.042
       },
       "geometry": {
         "type": "Point",
@@ -378921,7 +378156,7 @@
       "properties": {
         "grid_id": "11006_6568",
         "road_length_m": 7138.4,
-        "gap_score": 19.936
+        "gap_score": 17.101
       },
       "geometry": {
         "type": "Point",
@@ -387366,7 +386601,7 @@
       "properties": {
         "grid_id": "11007_6567",
         "road_length_m": 85.3,
-        "gap_score": 9.684
+        "gap_score": 9.466
       },
       "geometry": {
         "type": "Point",
@@ -387394,21 +386629,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11005_6573",
-        "road_length_m": 6041.6,
-        "gap_score": 10.165
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.023103,
-          26.294584
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10742_4542",
         "road_length_m": 8914.1,
         "gap_score": 40.382
@@ -387418,51 +386638,6 @@
         "coordinates": [
           42.969839,
           18.168559
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10999_6595",
-        "road_length_m": 2491.6,
-        "gap_score": 14.959
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.997358,
-          26.381331
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10997_6593",
-        "road_length_m": 1006.8,
-        "gap_score": 8.616
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.990116,
-          26.373873
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10998_6594",
-        "road_length_m": 4312.6,
-        "gap_score": 12.628
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.994279,
-          26.378325
         ]
       }
     },
@@ -388311,7 +387486,7 @@
       "properties": {
         "grid_id": "11004_6598",
         "road_length_m": 1133.4,
-        "gap_score": 32.132
+        "gap_score": 16.449
       },
       "geometry": {
         "type": "Point",
@@ -388326,7 +387501,7 @@
       "properties": {
         "grid_id": "11003_6599",
         "road_length_m": 2454.9,
-        "gap_score": 34.128
+        "gap_score": 19.213
       },
       "geometry": {
         "type": "Point",
@@ -388341,7 +387516,7 @@
       "properties": {
         "grid_id": "11004_6599",
         "road_length_m": 710.5,
-        "gap_score": 30.264
+        "gap_score": 17.927
       },
       "geometry": {
         "type": "Point",
@@ -407331,13 +406506,13 @@
       "properties": {
         "grid_id": "11198_6572",
         "road_length_m": 3376.0,
-        "gap_score": 11.229
+        "gap_score": 11.205
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.793742,
-          26.289438
+          44.793743,
+          26.28942
         ]
       }
     },
@@ -412236,13 +411411,13 @@
       "properties": {
         "grid_id": "11220_6580",
         "road_length_m": 1719.7,
-        "gap_score": 12.716
+        "gap_score": 12.731
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.882522,
-          26.320532
+          44.882504,
+          26.320534
         ]
       }
     },
@@ -412251,13 +411426,13 @@
       "properties": {
         "grid_id": "11220_6579",
         "road_length_m": 1174.0,
-        "gap_score": 10.443
+        "gap_score": 10.435
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.881697,
-          26.317609
+          44.88169,
+          26.317589
         ]
       }
     },
@@ -462154,51 +461329,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11000_6585",
-        "road_length_m": 3105.6,
-        "gap_score": 12.455
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.001911,
-          26.341526
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11001_6584",
-        "road_length_m": 3042.2,
-        "gap_score": 11.523
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.006344,
-          26.338306
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6586",
-        "road_length_m": 720.1,
-        "gap_score": 9.122
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.002525,
-          26.346501
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10808_6103",
         "road_length_m": 1049.9,
         "gap_score": 8.667
@@ -462523,21 +461653,6 @@
         "coordinates": [
           43.873088,
           26.377194
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10994_6602",
-        "road_length_m": 2295.4,
-        "gap_score": 20.764
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.978124,
-          26.408821
         ]
       }
     },
@@ -465336,7 +464451,7 @@
       "properties": {
         "grid_id": "11003_6597",
         "road_length_m": 2030.5,
-        "gap_score": 30.477
+        "gap_score": 12.131
       },
       "geometry": {
         "type": "Point",
@@ -465351,7 +464466,7 @@
       "properties": {
         "grid_id": "11003_6596",
         "road_length_m": 2583.6,
-        "gap_score": 30.815
+        "gap_score": 10.34
       },
       "geometry": {
         "type": "Point",
@@ -465366,7 +464481,7 @@
       "properties": {
         "grid_id": "11005_6597",
         "road_length_m": 4067.3,
-        "gap_score": 37.243
+        "gap_score": 21.047
       },
       "geometry": {
         "type": "Point",
@@ -465381,7 +464496,7 @@
       "properties": {
         "grid_id": "11004_6597",
         "road_length_m": 898.9,
-        "gap_score": 31.205
+        "gap_score": 15.045
       },
       "geometry": {
         "type": "Point",
@@ -465396,7 +464511,7 @@
       "properties": {
         "grid_id": "11004_6595",
         "road_length_m": 578.6,
-        "gap_score": 29.442
+        "gap_score": 11.572
       },
       "geometry": {
         "type": "Point",
@@ -465411,7 +464526,7 @@
       "properties": {
         "grid_id": "11005_6598",
         "road_length_m": 807.1,
-        "gap_score": 30.774
+        "gap_score": 19.75
       },
       "geometry": {
         "type": "Point",
@@ -465666,7 +464781,7 @@
       "properties": {
         "grid_id": "11004_6596",
         "road_length_m": 1595.5,
-        "gap_score": 32.914
+        "gap_score": 13.729
       },
       "geometry": {
         "type": "Point",
@@ -466348,21 +465463,6 @@
         "coordinates": [
           43.981487,
           26.361855
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10996_6591",
-        "road_length_m": 3123.8,
-        "gap_score": 12.577
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.987197,
-          26.366456
         ]
       }
     },
@@ -470675,14 +469775,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "11221_6583",
-        "road_length_m": 3215.4,
-        "gap_score": 24.304
+        "road_length_m": 4544.0,
+        "gap_score": 25.076
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.885608,
-          26.334409
+          44.885844,
+          26.333963
         ]
       }
     },
@@ -471538,21 +470638,6 @@
         "coordinates": [
           43.966076,
           26.278981
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11006_6577",
-        "road_length_m": 3931.3,
-        "gap_score": 10.222
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.025608,
-          26.310621
         ]
       }
     },
@@ -473081,8 +472166,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.867006,
-          26.168863
+          44.866252,
+          26.169005
         ]
       }
     },
@@ -473171,8 +472256,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.885864,
-          26.094666
+          44.885822,
+          26.094668
         ]
       }
     },
@@ -473644,21 +472729,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11201_6568",
-        "road_length_m": 951.3,
-        "gap_score": 10.486
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.804942,
-          26.273207
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11202_6557",
         "road_length_m": 665.5,
         "gap_score": 7.674
@@ -473801,8 +472871,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.913833,
-          26.146807
+          44.913835,
+          26.1468
         ]
       }
     },
@@ -473816,7 +472886,7 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.910162,
+          44.910127,
           26.146879
         ]
       }
@@ -473840,14 +472910,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "11226_6536",
-        "road_length_m": 571.9,
-        "gap_score": 29.396
+        "road_length_m": 960.7,
+        "gap_score": 31.471
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.906363,
-          26.147311
+          44.906307,
+          26.147411
         ]
       }
     },
@@ -473855,14 +472925,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "11226_6537",
-        "road_length_m": 1651.3,
-        "gap_score": 33.637
+        "road_length_m": 1262.5,
+        "gap_score": 32.563
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.906118,
-          26.148105
+          44.906122,
+          26.148114
         ]
       }
     },
@@ -473876,8 +472946,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.858704,
-          26.118907
+          44.858725,
+          26.11872
         ]
       }
     },
@@ -473901,13 +472971,13 @@
       "properties": {
         "grid_id": "11196_6590",
         "road_length_m": 1628.4,
-        "gap_score": 11.189
+        "gap_score": 10.969
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.786473,
-          26.363122
+          44.786556,
+          26.362843
         ]
       }
     },
@@ -546919,21 +545989,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "9782_5432",
-        "road_length_m": 3254.8,
-        "gap_score": 18.968
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.129568,
-          21.729926
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "9784_5432",
         "road_length_m": 3864.2,
         "gap_score": 12.701
@@ -547011,7 +546066,7 @@
       "properties": {
         "grid_id": "9783_5431",
         "road_length_m": 3460.4,
-        "gap_score": 19.979
+        "gap_score": 9.391
       },
       "geometry": {
         "type": "Point",
@@ -547024,24 +546079,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "9782_5431",
-        "road_length_m": 2227.2,
-        "gap_score": 21.993
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.130067,
-          21.72544
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "9784_5431",
         "road_length_m": 4212.4,
-        "gap_score": 18.601
+        "gap_score": 14.29
       },
       "geometry": {
         "type": "Point",
@@ -547056,43 +546096,13 @@
       "properties": {
         "grid_id": "9783_5430",
         "road_length_m": 1993.1,
-        "gap_score": 22.138
+        "gap_score": 10.067
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           39.134072,
           21.722962
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "9781_5432",
-        "road_length_m": 2889.6,
-        "gap_score": 21.598
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.126263,
-          21.730387
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "9781_5431",
-        "road_length_m": 4088.5,
-        "gap_score": 26.083
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.126502,
-          21.725206
         ]
       }
     },
@@ -553226,8 +552236,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.895536,
-          26.274586
+          44.89549,
+          26.274609
         ]
       }
     },
@@ -567881,8 +566891,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.925826,
-          26.141371
+          44.925789,
+          26.141377
         ]
       }
     },
@@ -573649,21 +572659,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11001_6585",
-        "road_length_m": 1139.5,
-        "gap_score": 14.25
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.006548,
-          26.342193
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10976_6609",
         "road_length_m": 2696.2,
         "gap_score": 9.811
@@ -577866,7 +576861,7 @@
       "properties": {
         "grid_id": "9784_5429",
         "road_length_m": 2948.6,
-        "gap_score": 27.428
+        "gap_score": 16.864
       },
       "geometry": {
         "type": "Point",
@@ -588170,14 +587165,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "9540_6003",
-        "road_length_m": 1837.6,
-        "gap_score": 11.201
+        "road_length_m": 1919.8,
+        "gap_score": 11.245
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          38.161637,
-          24.013878
+          38.161635,
+          24.013763
         ]
       }
     },
@@ -588185,14 +587180,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "9539_6003",
-        "road_length_m": 246.1,
-        "gap_score": 9.319
+        "road_length_m": 645.0,
+        "gap_score": 9.961
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          38.159235,
-          24.01372
+          38.159617,
+          24.012958
         ]
       }
     },
@@ -596781,7 +595776,7 @@
       "properties": {
         "grid_id": "11003_6570",
         "road_length_m": 2925.9,
-        "gap_score": 10.322
+        "gap_score": 10.169
       },
       "geometry": {
         "type": "Point",
@@ -596796,7 +595791,7 @@
       "properties": {
         "grid_id": "11004_6569",
         "road_length_m": 2664.2,
-        "gap_score": 16.705
+        "gap_score": 16.592
       },
       "geometry": {
         "type": "Point",
@@ -596826,7 +595821,7 @@
       "properties": {
         "grid_id": "11004_6570",
         "road_length_m": 2094.5,
-        "gap_score": 11.032
+        "gap_score": 10.915
       },
       "geometry": {
         "type": "Point",
@@ -596841,7 +595836,7 @@
       "properties": {
         "grid_id": "11002_6570",
         "road_length_m": 1016.6,
-        "gap_score": 11.635
+        "gap_score": 11.477
       },
       "geometry": {
         "type": "Point",
@@ -603229,21 +602224,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11002_6571",
-        "road_length_m": 994.4,
-        "gap_score": 7.915
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.009886,
-          26.2859
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11001_6571",
         "road_length_m": 1365.0,
         "gap_score": 9.536
@@ -603274,24 +602254,9 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11008_6571",
-        "road_length_m": 3456.6,
-        "gap_score": 12.777
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.034526,
-          26.285674
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11011_6572",
         "road_length_m": 4704.2,
-        "gap_score": 15.593
+        "gap_score": 9.496
       },
       "geometry": {
         "type": "Point",
@@ -603358,201 +602323,6 @@
         "coordinates": [
           49.547281,
           25.450483
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11004_6585",
-        "road_length_m": 2240.0,
-        "gap_score": 13.043
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.019175,
-          26.341898
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11004_6586",
-        "road_length_m": 5207.1,
-        "gap_score": 17.406
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.017513,
-          26.346017
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11004_6588",
-        "road_length_m": 1768.9,
-        "gap_score": 13.328
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.01659,
-          26.355057
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11003_6588",
-        "road_length_m": 1406.0,
-        "gap_score": 11.319
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.015143,
-          26.354236
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11003_6587",
-        "road_length_m": 955.2,
-        "gap_score": 10.893
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.01423,
-          26.350258
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11004_6587",
-        "road_length_m": 1260.5,
-        "gap_score": 14.482
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.016706,
-          26.348836
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11003_6586",
-        "road_length_m": 2546.8,
-        "gap_score": 15.649
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.014399,
-          26.345983
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11003_6585",
-        "road_length_m": 2945.9,
-        "gap_score": 14.917
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.014342,
-          26.342039
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11004_6584",
-        "road_length_m": 3329.4,
-        "gap_score": 11.016
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.018074,
-          26.338303
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11001_6586",
-        "road_length_m": 1203.1,
-        "gap_score": 11.207
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.005402,
-          26.344948
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11002_6586",
-        "road_length_m": 3107.0,
-        "gap_score": 13.625
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.010097,
-          26.34524
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11003_6584",
-        "road_length_m": 2862.4,
-        "gap_score": 9.956
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.013506,
-          26.338398
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11002_6584",
-        "road_length_m": 3017.9,
-        "gap_score": 9.947
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.010553,
-          26.338511
         ]
       }
     },
@@ -604656,7 +603426,7 @@
       "properties": {
         "grid_id": "11003_6595",
         "road_length_m": 851.7,
-        "gap_score": 30.584
+        "gap_score": 12.066
       },
       "geometry": {
         "type": "Point",
@@ -604731,7 +603501,7 @@
       "properties": {
         "grid_id": "11019_6573",
         "road_length_m": 2577.2,
-        "gap_score": 33.899
+        "gap_score": 31.446
       },
       "geometry": {
         "type": "Point",
@@ -604746,7 +603516,7 @@
       "properties": {
         "grid_id": "11017_6574",
         "road_length_m": 4652.4,
-        "gap_score": 26.737
+        "gap_score": 23.686
       },
       "geometry": {
         "type": "Point",
@@ -604761,7 +603531,7 @@
       "properties": {
         "grid_id": "11018_6573",
         "road_length_m": 1879.4,
-        "gap_score": 31.196
+        "gap_score": 28.294
       },
       "geometry": {
         "type": "Point",
@@ -604866,7 +603636,7 @@
       "properties": {
         "grid_id": "11018_6575",
         "road_length_m": 1305.3,
-        "gap_score": 23.039
+        "gap_score": 21.592
       },
       "geometry": {
         "type": "Point",
@@ -604881,7 +603651,7 @@
       "properties": {
         "grid_id": "11019_6575",
         "road_length_m": 5439.5,
-        "gap_score": 30.746
+        "gap_score": 29.543
       },
       "geometry": {
         "type": "Point",
@@ -604896,7 +603666,7 @@
       "properties": {
         "grid_id": "11019_6576",
         "road_length_m": 1040.7,
-        "gap_score": 24.176
+        "gap_score": 23.909
       },
       "geometry": {
         "type": "Point",
@@ -619886,8 +618656,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          45.869985,
-          26.361618
+          45.869929,
+          26.361646
         ]
       }
     },
@@ -620951,8 +619721,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          45.895074,
-          26.325159
+          45.895158,
+          26.325429
         ]
       }
     },
@@ -621739,156 +620509,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "10999_6593",
-        "road_length_m": 2729.4,
-        "gap_score": 17.977
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.997998,
-          26.374819
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6593",
-        "road_length_m": 3115.9,
-        "gap_score": 22.908
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.001464,
-          26.373368
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10999_6594",
-        "road_length_m": 1394.0,
-        "gap_score": 15.829
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.99838,
-          26.377356
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6592",
-        "road_length_m": 3785.8,
-        "gap_score": 21.936
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.002112,
-          26.370214
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10999_6590",
-        "road_length_m": 4080.5,
-        "gap_score": 13.623
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.998301,
-          26.362093
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6590",
-        "road_length_m": 3525.1,
-        "gap_score": 11.528
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.001314,
-          26.362151
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10998_6591",
-        "road_length_m": 2535.5,
-        "gap_score": 15.531
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.994464,
-          26.365441
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10999_6592",
-        "road_length_m": 1904.8,
-        "gap_score": 20.205
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.997998,
-          26.369132
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10998_6590",
-        "road_length_m": 1287.1,
-        "gap_score": 11.327
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.99501,
-          26.362751
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10999_6589",
-        "road_length_m": 1601.2,
-        "gap_score": 8.521
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.996566,
-          26.359273
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11005_6632",
         "road_length_m": 1650.5,
         "gap_score": 11.771
@@ -621898,81 +620518,6 @@
         "coordinates": [
           44.021319,
           26.530608
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6591",
-        "road_length_m": 5031.3,
-        "gap_score": 16.944
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.001497,
-          26.365958
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11001_6592",
-        "road_length_m": 227.3,
-        "gap_score": 14.894
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.004647,
-          26.370051
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11001_6591",
-        "road_length_m": 616.0,
-        "gap_score": 12.253
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.006032,
-          26.365492
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10997_6591",
-        "road_length_m": 1320.6,
-        "gap_score": 13.02
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.99067,
-          26.364424
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10997_6590",
-        "road_length_m": 433.8,
-        "gap_score": 10.242
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.990955,
-          26.363483
         ]
       }
     },
@@ -622026,7 +620571,7 @@
       "properties": {
         "grid_id": "11006_6598",
         "road_length_m": 693.0,
-        "gap_score": 27.83
+        "gap_score": 20.757
       },
       "geometry": {
         "type": "Point",
@@ -622041,7 +620586,7 @@
       "properties": {
         "grid_id": "11007_6597",
         "road_length_m": 651.2,
-        "gap_score": 24.991
+        "gap_score": 18.625
       },
       "geometry": {
         "type": "Point",
@@ -622056,88 +620601,13 @@
       "properties": {
         "grid_id": "11006_6597",
         "road_length_m": 1833.9,
-        "gap_score": 30.258
+        "gap_score": 20.588
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           44.026848,
           26.390348
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11006_6592",
-        "road_length_m": 2075.5,
-        "gap_score": 25.479
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.025215,
-          26.371007
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11006_6593",
-        "road_length_m": 2197.7,
-        "gap_score": 25.278
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.025208,
-          26.373676
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11005_6593",
-        "road_length_m": 1349.2,
-        "gap_score": 27.664
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.021795,
-          26.37348
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11006_6594",
-        "road_length_m": 1324.8,
-        "gap_score": 23.782
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.02543,
-          26.377351
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10997_6592",
-        "road_length_m": 2865.2,
-        "gap_score": 12.949
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.989676,
-          26.36879
         ]
       }
     },
@@ -625116,103 +623586,13 @@
       "properties": {
         "grid_id": "11007_6571",
         "road_length_m": 1447.7,
-        "gap_score": 12.487
+        "gap_score": 10.314
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           44.02981,
           26.286114
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6574",
-        "road_length_m": 3778.4,
-        "gap_score": 14.028
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.045854,
-          26.297883
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6575",
-        "road_length_m": 2678.3,
-        "gap_score": 12.135
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.041819,
-          26.301993
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11007_6572",
-        "road_length_m": 1403.2,
-        "gap_score": 8.332
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.029816,
-          26.290266
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6571",
-        "road_length_m": 1292.1,
-        "gap_score": 11.021
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.038076,
-          26.286409
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6571",
-        "road_length_m": 1853.8,
-        "gap_score": 14.066
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.041931,
-          26.285899
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6573",
-        "road_length_m": 2500.9,
-        "gap_score": 13.201
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.046039,
-          26.29413
         ]
       }
     },
@@ -628206,7 +626586,7 @@
       "properties": {
         "grid_id": "11002_6597",
         "road_length_m": 115.8,
-        "gap_score": 17.928
+        "gap_score": 5.754
       },
       "geometry": {
         "type": "Point",
@@ -628813,126 +627193,6 @@
         "coordinates": [
           42.670563,
           18.315009
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6590",
-        "road_length_m": 4931.3,
-        "gap_score": 18.593
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.042618,
-          26.361786
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6591",
-        "road_length_m": 1295.7,
-        "gap_score": 17.043
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.03375,
-          26.366783
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6591",
-        "road_length_m": 1298.5,
-        "gap_score": 15.324
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.03639,
-          26.365976
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11007_6590",
-        "road_length_m": 1786.9,
-        "gap_score": 23.929
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.030146,
-          26.362879
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6590",
-        "road_length_m": 3372.8,
-        "gap_score": 22.966
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.034389,
-          26.361695
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6590",
-        "road_length_m": 432.1,
-        "gap_score": 15.976
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.036755,
-          26.362181
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6589",
-        "road_length_m": 1718.1,
-        "gap_score": 19.452
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.033851,
-          26.357254
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11006_6589",
-        "road_length_m": 4046.2,
-        "gap_score": 23.569
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.025783,
-          26.358689
         ]
       }
     },
@@ -658069,66 +656329,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11000_6599",
-        "road_length_m": 1045.1,
-        "gap_score": 15.982
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.000635,
-          26.397243
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6598",
-        "road_length_m": 3347.5,
-        "gap_score": 18.204
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.001956,
-          26.393853
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11000_6597",
-        "road_length_m": 2755.8,
-        "gap_score": 16.096
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.000906,
-          26.389822
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10999_6598",
-        "road_length_m": 680.8,
-        "gap_score": 11.866
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.998977,
-          26.393067
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11007_6602",
         "road_length_m": 196.1,
         "gap_score": 24.897
@@ -658153,21 +656353,6 @@
         "coordinates": [
           44.024733,
           26.413536
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10998_6595",
-        "road_length_m": 2372.9,
-        "gap_score": 11.37
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.994408,
-          26.381425
         ]
       }
     },
@@ -660169,51 +658354,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11010_6570",
-        "road_length_m": 585.5,
-        "gap_score": 9.014
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.040678,
-          26.282375
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6570",
-        "road_length_m": 1110.2,
-        "gap_score": 9.841
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.037395,
-          26.281755
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6576",
-        "road_length_m": 4056.4,
-        "gap_score": 13.552
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.03443,
-          26.306174
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10850_6466",
         "road_length_m": 6540.9,
         "gap_score": 39.143
@@ -660711,13 +658851,13 @@
       "properties": {
         "grid_id": "11210_6567",
         "road_length_m": 656.7,
-        "gap_score": 8.75
+        "gap_score": 8.756
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          44.840866,
-          26.270578
+          44.840868,
+          26.270571
         ]
       }
     },
@@ -665869,21 +664009,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11000_6594",
-        "road_length_m": 466.4,
-        "gap_score": 16.365
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.001446,
-          26.378321
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12409_6348",
         "road_length_m": 204.6,
         "gap_score": 15.128
@@ -669831,7 +667956,7 @@
       "properties": {
         "grid_id": "11008_6568",
         "road_length_m": 1231.5,
-        "gap_score": 9.309
+        "gap_score": 8.769
       },
       "geometry": {
         "type": "Point",
@@ -669853,171 +667978,6 @@
         "coordinates": [
           44.034095,
           26.270094
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6570",
-        "road_length_m": 3850.3,
-        "gap_score": 13.992
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.0341,
-          26.282187
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6571",
-        "road_length_m": 1213.1,
-        "gap_score": 15.121
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.044995,
-          26.286372
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6575",
-        "road_length_m": 3191.2,
-        "gap_score": 10.111
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.034294,
-          26.302665
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6575",
-        "road_length_m": 3437.2,
-        "gap_score": 15.282
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.045344,
-          26.301386
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6576",
-        "road_length_m": 3592.0,
-        "gap_score": 11.127
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.045738,
-          26.305505
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11007_6577",
-        "road_length_m": 2678.6,
-        "gap_score": 12.448
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.030626,
-          26.310007
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6577",
-        "road_length_m": 2405.9,
-        "gap_score": 9.83
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.033414,
-          26.31046
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6576",
-        "road_length_m": 4560.2,
-        "gap_score": 12.809
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.037532,
-          26.305505
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11006_6575",
-        "road_length_m": 4302.9,
-        "gap_score": 12.153
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.026194,
-          26.302334
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11006_6576",
-        "road_length_m": 3754.6,
-        "gap_score": 11.18
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.026033,
-          26.305943
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11006_6574",
-        "road_length_m": 1491.6,
-        "gap_score": 10.631
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.025229,
-          26.298883
         ]
       }
     },
@@ -670588,21 +668548,6 @@
         "coordinates": [
           39.173912,
           21.815261
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "9780_5431",
-        "road_length_m": 2239.6,
-        "gap_score": 21.775
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          39.123528,
-          21.72478
         ]
       }
     },
@@ -692359,66 +690304,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11005_6591",
-        "road_length_m": 2430.3,
-        "gap_score": 25.313
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.021914,
-          26.366155
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11004_6591",
-        "road_length_m": 1884.3,
-        "gap_score": 21.736
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.019588,
-          26.36522
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11006_6591",
-        "road_length_m": 903.4,
-        "gap_score": 24.0
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.025872,
-          26.366138
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11004_6590",
-        "road_length_m": 1157.5,
-        "gap_score": 17.311
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.018844,
-          26.361475
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10679_4232",
         "road_length_m": 2053.3,
         "gap_score": 21.333
@@ -692443,36 +690328,6 @@
         "coordinates": [
           42.637771,
           20.03033
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11007_6589",
-        "road_length_m": 787.9,
-        "gap_score": 19.163
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.029715,
-          26.358942
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11005_6589",
-        "road_length_m": 1232.2,
-        "gap_score": 19.057
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.021941,
-          26.35773
         ]
       }
     },
@@ -693673,21 +691528,6 @@
         "coordinates": [
           39.273984,
           21.413549
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11007_6587",
-        "road_length_m": 2371.6,
-        "gap_score": 10.179
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.030058,
-          26.34987
         ]
       }
     },
@@ -705814,21 +703654,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11007_6591",
-        "road_length_m": 1015.2,
-        "gap_score": 21.809
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.028849,
-          26.36552
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11613_6256",
         "road_length_m": 861.4,
         "gap_score": 17.259
@@ -708199,21 +706024,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11001_6574",
-        "road_length_m": 800.5,
-        "gap_score": 8.641
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.005899,
-          26.297217
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11217_5113",
         "road_length_m": 881.5,
         "gap_score": 12.112
@@ -709324,105 +707134,15 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11011_6585",
-        "road_length_m": 484.4,
-        "gap_score": 13.091
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.044541,
-          26.340834
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6585",
-        "road_length_m": 306.3,
-        "gap_score": 8.117
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.039109,
-          26.342313
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6585",
-        "road_length_m": 1783.7,
-        "gap_score": 14.282
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.042589,
-          26.341135
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6584",
-        "road_length_m": 1000.3,
-        "gap_score": 10.963
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.046768,
-          26.338682
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11012_6585",
-        "road_length_m": 1731.9,
-        "gap_score": 12.623
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.049837,
-          26.340933
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11011_6586",
         "road_length_m": 1714.6,
-        "gap_score": 19.593
+        "gap_score": 8.791
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           44.046615,
           26.346471
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6586",
-        "road_length_m": 2712.3,
-        "gap_score": 15.787
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.042001,
-          26.347201
         ]
       }
     },
@@ -711313,21 +709033,6 @@
         "coordinates": [
           42.991293,
           16.585208
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11012_6576",
-        "road_length_m": 1579.7,
-        "gap_score": 9.53
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.049934,
-          26.305978
         ]
       }
     },
@@ -713623,21 +711328,6 @@
         "coordinates": [
           40.569988,
           23.868559
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6583",
-        "road_length_m": 542.4,
-        "gap_score": 12.417
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.038173,
-          26.333075
         ]
       }
     },
@@ -721849,21 +719539,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11009_6587",
-        "road_length_m": 1751.8,
-        "gap_score": 13.482
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.038221,
-          26.349898
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10528_4660",
         "road_length_m": 1567.8,
         "gap_score": 33.43
@@ -721888,21 +719563,6 @@
         "coordinates": [
           42.114628,
           18.645741
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6583",
-        "road_length_m": 1571.1,
-        "gap_score": 8.43
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.046242,
-          26.334054
         ]
       }
     },
@@ -723739,21 +721399,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11012_6584",
-        "road_length_m": 2679.4,
-        "gap_score": 10.775
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.050219,
-          26.339046
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11064_4390",
         "road_length_m": 561.1,
         "gap_score": 16.432
@@ -723808,21 +721453,6 @@
         "coordinates": [
           42.412188,
           18.693592
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11013_6584",
-        "road_length_m": 535.1,
-        "gap_score": 8.099
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.052475,
-          26.338768
         ]
       }
     },
@@ -723898,21 +721528,6 @@
         "coordinates": [
           42.94512,
           18.134804
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11013_6585",
-        "road_length_m": 370.7,
-        "gap_score": 9.567
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.052395,
-          26.340608
         ]
       }
     },
@@ -724144,21 +721759,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11009_6582",
-        "road_length_m": 2767.9,
-        "gap_score": 14.967
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.037978,
-          26.329471
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10188_5258",
         "road_length_m": 1103.4,
         "gap_score": 32.025
@@ -724183,21 +721783,6 @@
         "coordinates": [
           40.757976,
           21.033447
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6582",
-        "road_length_m": 1090.6,
-        "gap_score": 13.226
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.040958,
-          26.32956
         ]
       }
     },
@@ -728509,51 +726094,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11008_6593",
-        "road_length_m": 1623.7,
-        "gap_score": 13.464
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.034873,
-          26.373291
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6592",
-        "road_length_m": 803.2,
-        "gap_score": 9.603
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.038126,
-          26.371273
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11007_6592",
-        "road_length_m": 538.2,
-        "gap_score": 16.552
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.030491,
-          26.370406
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11335_6628",
         "road_length_m": 1440.9,
         "gap_score": 23.681
@@ -729471,7 +727011,7 @@
       "properties": {
         "grid_id": "11018_6587",
         "road_length_m": 943.6,
-        "gap_score": 31.399
+        "gap_score": 28.703
       },
       "geometry": {
         "type": "Point",
@@ -729486,7 +727026,7 @@
       "properties": {
         "grid_id": "11019_6587",
         "road_length_m": 1527.3,
-        "gap_score": 33.325
+        "gap_score": 31.793
       },
       "geometry": {
         "type": "Point",
@@ -730371,7 +727911,7 @@
       "properties": {
         "grid_id": "11007_6570",
         "road_length_m": 1554.4,
-        "gap_score": 16.663
+        "gap_score": 10.631
       },
       "geometry": {
         "type": "Point",
@@ -732493,21 +730033,6 @@
         "coordinates": [
           42.769375,
           17.03797
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10994_6605",
-        "road_length_m": 1655.6,
-        "gap_score": 33.163
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.978524,
-          26.422188
         ]
       }
     },
@@ -738454,21 +735979,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11009_6594",
-        "road_length_m": 472.3,
-        "gap_score": 8.381
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.038287,
-          26.376591
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12374_6354",
         "road_length_m": 1084.8,
         "gap_score": 31.957
@@ -739708,21 +737218,6 @@
         "coordinates": [
           45.345813,
           26.513463
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6590",
-        "road_length_m": 2338.8,
-        "gap_score": 16.61
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.045064,
-          26.361749
         ]
       }
     },
@@ -742978,21 +740473,6 @@
         "coordinates": [
           42.225866,
           17.713787
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6589",
-        "road_length_m": 8235.4,
-        "gap_score": 24.62
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.045715,
-          26.357882
         ]
       }
     },
@@ -751819,36 +749299,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11010_6589",
-        "road_length_m": 3795.8,
-        "gap_score": 21.963
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.042257,
-          26.358923
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11011_6588",
-        "road_length_m": 3456.9,
-        "gap_score": 26.158
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.046445,
-          26.355139
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11001_6509",
         "road_length_m": 666.6,
         "gap_score": 23.497
@@ -755841,7 +753291,7 @@
       "properties": {
         "grid_id": "11020_6576",
         "road_length_m": 1334.7,
-        "gap_score": 26.814
+        "gap_score": 26.7
       },
       "geometry": {
         "type": "Point",
@@ -755856,7 +753306,7 @@
       "properties": {
         "grid_id": "11020_6575",
         "road_length_m": 1414.6,
-        "gap_score": 28.643
+        "gap_score": 28.167
       },
       "geometry": {
         "type": "Point",
@@ -758271,7 +755721,7 @@
       "properties": {
         "grid_id": "10992_6609",
         "road_length_m": 144.1,
-        "gap_score": 23.882
+        "gap_score": 15.651
       },
       "geometry": {
         "type": "Point",
@@ -758286,7 +755736,7 @@
       "properties": {
         "grid_id": "10992_6610",
         "road_length_m": 268.7,
-        "gap_score": 26.374
+        "gap_score": 17.572
       },
       "geometry": {
         "type": "Point",
@@ -777889,36 +775339,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11006_6590",
-        "road_length_m": 1067.1,
-        "gap_score": 23.532
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.026033,
-          26.361648
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6588",
-        "road_length_m": 1888.0,
-        "gap_score": 17.237
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.034789,
-          26.355022
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "12281_5989",
         "road_length_m": 875.2,
         "gap_score": 31.098
@@ -777966,7 +775386,7 @@
       "properties": {
         "grid_id": "11000_6600",
         "road_length_m": 382.3,
-        "gap_score": 17.293
+        "gap_score": 11.583
       },
       "geometry": {
         "type": "Point",
@@ -778018,36 +775438,6 @@
         "coordinates": [
           44.00378,
           26.014871
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11005_6586",
-        "road_length_m": 2009.6,
-        "gap_score": 11.298
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.021245,
-          26.345358
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11005_6585",
-        "road_length_m": 894.3,
-        "gap_score": 9.996
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.020757,
-          26.341996
         ]
       }
     },
@@ -778108,81 +775498,6 @@
         "coordinates": [
           44.189365,
           25.851051
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11007_6575",
-        "road_length_m": 220.1,
-        "gap_score": 9.055
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.029726,
-          26.303393
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6583",
-        "road_length_m": 1238.5,
-        "gap_score": 11.908
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.042418,
-          26.333197
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6581",
-        "road_length_m": 2961.9,
-        "gap_score": 11.283
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.034206,
-          26.325968
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11008_6582",
-        "road_length_m": 1411.1,
-        "gap_score": 12.562
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.034021,
-          26.328477
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6584",
-        "road_length_m": 1960.4,
-        "gap_score": 14.645
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.041982,
-          26.337893
         ]
       }
     },
@@ -778423,51 +775738,6 @@
         "coordinates": [
           45.131292,
           23.609095
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11010_6587",
-        "road_length_m": 1128.0,
-        "gap_score": 15.479
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.040774,
-          26.350757
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6588",
-        "road_length_m": 606.6,
-        "gap_score": 14.193
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.037308,
-          26.353239
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11009_6586",
-        "road_length_m": 2766.9,
-        "gap_score": 10.357
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.037713,
-          26.345791
         ]
       }
     },
@@ -778954,30 +776224,15 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11288_6613",
-        "road_length_m": 1756.0,
-        "gap_score": 33.883
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          45.154563,
-          26.454426
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11294_6605",
         "road_length_m": 1122.7,
-        "gap_score": 14.922
+        "gap_score": 14.682
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          45.177917,
-          26.422704
+          45.17773,
+          26.42256
         ]
       }
     },
@@ -788689,21 +785944,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11006_6587",
-        "road_length_m": 682.4,
-        "gap_score": 11.506
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.024821,
-          26.351108
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "10945_6480",
         "road_length_m": 127.4,
         "gap_score": 14.579
@@ -796219,21 +793459,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11005_6588",
-        "road_length_m": 2496.1,
-        "gap_score": 18.777
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.022158,
-          26.35439
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "9811_5370",
         "road_length_m": 251.1,
         "gap_score": 7.361
@@ -799594,21 +796819,6 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11002_6585",
-        "road_length_m": 2773.1,
-        "gap_score": 13.735
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.009772,
-          26.341387
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "9828_5362",
         "road_length_m": 2361.2,
         "gap_score": 35.068
@@ -801366,7 +798576,7 @@
       "properties": {
         "grid_id": "11016_6589",
         "road_length_m": 896.8,
-        "gap_score": 26.344
+        "gap_score": 18.871
       },
       "geometry": {
         "type": "Point",
@@ -801471,7 +798681,7 @@
       "properties": {
         "grid_id": "11014_6589",
         "road_length_m": 2084.2,
-        "gap_score": 24.182
+        "gap_score": 11.943
       },
       "geometry": {
         "type": "Point",
@@ -802791,7 +800001,7 @@
       "properties": {
         "grid_id": "11013_6586",
         "road_length_m": 743.2,
-        "gap_score": 15.95
+        "gap_score": 9.376
       },
       "geometry": {
         "type": "Point",
@@ -803631,7 +800841,7 @@
       "properties": {
         "grid_id": "11006_6600",
         "road_length_m": 383.3,
-        "gap_score": 27.795
+        "gap_score": 26.367
       },
       "geometry": {
         "type": "Point",
@@ -803661,7 +800871,7 @@
       "properties": {
         "grid_id": "11007_6599",
         "road_length_m": 1389.0,
-        "gap_score": 32.945
+        "gap_score": 29.996
       },
       "geometry": {
         "type": "Point",
@@ -803676,7 +800886,7 @@
       "properties": {
         "grid_id": "11005_6599",
         "road_length_m": 322.5,
-        "gap_score": 27.105
+        "gap_score": 19.212
       },
       "geometry": {
         "type": "Point",
@@ -825701,8 +822911,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          45.79684,
-          26.009318
+          45.796808,
+          26.009289
         ]
       }
     },
@@ -825800,14 +823010,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "9538_6004",
-        "road_length_m": 960.9,
-        "gap_score": 10.279
+        "road_length_m": 961.5,
+        "gap_score": 10.276
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          38.15416,
-          24.018308
+          38.154157,
+          24.018309
         ]
       }
     },
@@ -852606,7 +849816,7 @@
       "properties": {
         "grid_id": "9779_5432",
         "road_length_m": 353.0,
-        "gap_score": 12.306
+        "gap_score": 7.978
       },
       "geometry": {
         "type": "Point",
@@ -852621,7 +849831,7 @@
       "properties": {
         "grid_id": "9779_5433",
         "road_length_m": 296.3,
-        "gap_score": 10.84
+        "gap_score": 9.778
       },
       "geometry": {
         "type": "Point",
@@ -854660,14 +851870,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "9924_6153",
-        "road_length_m": 3177.2,
-        "gap_score": 36.255
+        "road_length_m": 2175.2,
+        "gap_score": 34.739
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          39.697751,
-          24.614652
+          39.697195,
+          24.615019
         ]
       }
     },
@@ -854690,14 +851900,29 @@
       "type": "Feature",
       "properties": {
         "grid_id": "9924_6151",
-        "road_length_m": 8802.7,
+        "road_length_m": 8803.0,
         "gap_score": 40.331
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          39.697082,
-          24.606299
+          39.697107,
+          24.606348
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "grid_id": "9925_6152",
+        "road_length_m": 866.3,
+        "gap_score": 31.057
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.700885,
+          24.611587
         ]
       }
     },
@@ -862161,13 +859386,13 @@
       "properties": {
         "grid_id": "11286_6601",
         "road_length_m": 18505.3,
-        "gap_score": 35.669
+        "gap_score": 36.155
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          45.146544,
-          26.404619
+          45.146199,
+          26.404518
         ]
       }
     },
@@ -874039,6 +871264,21 @@
     {
       "type": "Feature",
       "properties": {
+        "grid_id": "9547_5999",
+        "road_length_m": 362.7,
+        "gap_score": 9.06
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          38.191731,
+          23.996392
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "grid_id": "11331_6707",
         "road_length_m": 77.7,
         "gap_score": 21.41
@@ -881630,14 +878870,14 @@
       "type": "Feature",
       "properties": {
         "grid_id": "12409_6710",
-        "road_length_m": 454.1,
-        "gap_score": 28.473
+        "road_length_m": 369.3,
+        "gap_score": 27.646
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          49.638938,
-          26.843716
+          49.639003,
+          26.843724
         ]
       }
     },
@@ -895011,7 +892251,7 @@
       "properties": {
         "grid_id": "10999_6599",
         "road_length_m": 1286.0,
-        "gap_score": 14.929
+        "gap_score": 8.924
       },
       "geometry": {
         "type": "Point",
@@ -895024,75 +892264,15 @@
     {
       "type": "Feature",
       "properties": {
-        "grid_id": "11001_6598",
-        "road_length_m": 2758.9,
-        "gap_score": 22.334
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.005695,
-          26.394208
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "10999_6596",
-        "road_length_m": 423.9,
-        "gap_score": 11.883
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          43.998604,
-          26.385314
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "grid_id": "11001_6599",
         "road_length_m": 3306.1,
-        "gap_score": 23.67
+        "gap_score": 10.657
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
           44.005069,
           26.398038
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11005_6590",
-        "road_length_m": 725.4,
-        "gap_score": 20.36
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.023123,
-          26.3617
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "grid_id": "11004_6589",
-        "road_length_m": 1200.9,
-        "gap_score": 14.878
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          44.017601,
-          26.358999
         ]
       }
     },
@@ -898198,6 +895378,21 @@
         "coordinates": [
           46.744941,
           24.500187
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "grid_id": "9337_7813",
+        "road_length_m": 96.7,
+        "gap_score": 22.288
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.350232,
+          31.253948
         ]
       }
     }
