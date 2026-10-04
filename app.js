@@ -90,21 +90,17 @@ const RELIGION_COLORS = {
   'other': '#ffd700'
 };
 
-// Arabic translations for metadata
-const RELIGION_TRANSLATIONS = {
-  'muslim': 'مسلم (مسجد)',
-  'christian': 'مسيحي',
-  'unknown': 'غير محدد',
-  'other': 'ديانات أخرى'
-};
+// Localized labels for religion=* / denomination=* values (js/translations.js);
+// unknown values are shown as tagged.
+function religionLabel(value) {
+  const label = t(`rel_${value}`);
+  return label === `rel_${value}` ? value : label;
+}
 
-const DENOM_TRANSLATIONS = {
-  'sunni': 'أهل السنة والجماعة (سني)',
-  'shia': 'شيعي',
-  'unknown': 'غير معروف / غير محدد',
-  'ahmadia': 'أحمدية',
-  'ismailia': 'إسماعيلية'
-};
+function denomLabel(value) {
+  const label = t(`denom_${value}`);
+  return label === `denom_${value}` ? value : label;
+}
 
 // Small utility: delay invoking fn until `ms` after the last call.
 // Keeps search/pan/zoom smooth by avoiding per-keystroke/per-frame recomputes.
@@ -207,7 +203,7 @@ function dayIndex(isoString) {
 
 // Render a day-index back to a localized short date for slider labels.
 function formatDay(day) {
-  return new Date(day * 86400000).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(day * 86400000).toLocaleDateString(currentLang === 'ar' ? 'ar-SA' : 'en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 // Escape user-supplied text (OSM names) before injecting into popup HTML.
@@ -349,7 +345,7 @@ function getQualityIssues(props) {
       issues.push({
         id: 'qibla_deviation',
         title_ar: `🕋 انحراف حاد عن القبلة (${props.ml_anomaly.qibla_dev}° — سمت القبلة ${props.ml_anomaly.qibla_az}° مقابل ${props.ml_anomaly.bldg_az}° لمحور المبنى)`,
-        title_en: `🕋 Severe Qibla Misalignment (${props.ml_anomaly.qibla_dev}° deviation from Kaaba)`
+        title_en: `🕋 Severe Qibla deviation (${props.ml_anomaly.qibla_dev}°: Qibla bearing ${props.ml_anomaly.qibla_az}° vs building axis ${props.ml_anomaly.bldg_az}°)`
       });
     }
   }
@@ -407,13 +403,13 @@ function updateImprovementIssueCounts() {
   Object.keys(counts).forEach(key => {
     const el = document.getElementById(`count-improve-${key}`);
     if (el) {
-      el.textContent = counts[key].toLocaleString('ar-SA');
+      el.textContent = fmtNum(counts[key]);
     }
   });
 
   const totalBadge = document.getElementById('quality-total-issues-badge');
   if (totalBadge) {
-    totalBadge.textContent = `${counts.all.toLocaleString('ar-SA')} مكان يحتاج تدقيق`;
+    totalBadge.textContent = t('issuesNeedReview', { n: fmtNum(counts.all) });
   }
 }
 
@@ -428,13 +424,13 @@ function editInJOSM(lat, lon, props) {
   fetch(url)
     .then(res => {
       if (res.ok) {
-        showToast('تم إرسال الموقع ومعرّف المعلم إلى JOSM بنجاح!');
+        showToast(t('josmSent'));
       } else {
-        showToast('فشل JOSM في تحميل المعلم. تأكد من تفعيل Remote Control.', 'error');
+        showToast(t('josmLoadFailed'), 'error');
       }
     })
     .catch(err => {
-      showToast('تعذر الاتصال بـ JOSM. يرجى تشغيل JOSM وتفعيل التحكم عن بعد (Remote Control) في الإعدادات.', 'error');
+      showToast(t('josmUnreachable'), 'error');
     });
 }
 
@@ -448,13 +444,13 @@ function openAreaInJOSM() {
   fetch(url)
     .then(res => {
       if (res.ok) {
-        showToast('تم إرسال النطاق الحالي إلى JOSM. يمكنك الآن إضافة معلم المسجد.');
+        showToast(t('josmAreaSent'));
       } else {
-        showToast('فشل JOSM في تحميل النطاق. تأكد من تفعيل Remote Control.', 'error');
+        showToast(t('josmAreaFailed'), 'error');
       }
     })
     .catch(err => {
-      showToast('تعذر الاتصال بـ JOSM. يرجى تشغيل JOSM وتفعيل التحكم عن بعد (Remote Control) في الإعدادات.', 'error');
+      showToast(t('josmUnreachable'), 'error');
     });
 }
 
@@ -507,7 +503,7 @@ function setSuggestionsVisible(visible) {
 
   const label = document.getElementById('suggestions-switch-label');
   const originalLabel = label ? label.innerText : '';
-  if (label) label.innerText = 'جارٍ تحميل 53,000+ اقتراح...';
+  if (label) label.innerText = t('sugLoading');
 
   fetchJson('suggested_mosques_sa.geojson')
     .then(data => {
@@ -519,15 +515,15 @@ function setSuggestionsVisible(visible) {
       const countUnnamed = meta.unnamed_suggestions || (countAll - countNamed);
 
       if (badge) {
-        badge.innerText = `${countAll.toLocaleString('ar-SA')} مقترح`;
+        badge.innerText = t('sugBadge', { n: fmtNum(countAll) });
         badge.style.display = 'inline-block';
       }
       const elAll = document.getElementById('sug-count-all');
       const elNamed = document.getElementById('sug-count-named');
       const elUnnamed = document.getElementById('sug-count-unnamed');
-      if (elAll) elAll.innerText = countAll.toLocaleString('ar-SA');
-      if (elNamed) elNamed.innerText = countNamed.toLocaleString('ar-SA');
-      if (elUnnamed) elUnnamed.innerText = countUnnamed.toLocaleString('ar-SA');
+      if (elAll) elAll.innerText = fmtNum(countAll);
+      if (elNamed) elNamed.innerText = fmtNum(countNamed);
+      if (elUnnamed) elUnnamed.innerText = fmtNum(countUnnamed);
 
       suggestionsLayer = L.markerClusterGroup({
         showCoverageOnHover: false,
@@ -544,7 +540,7 @@ function setSuggestionsVisible(visible) {
           else size = 52;
 
           return L.divIcon({
-            html: `<div class="suggestion-cluster" style="width: ${size}px; height: ${size}px; font-size: ${size > 40 ? 12 : 11}px;"><span>${childCount.toLocaleString('ar-SA')}</span></div>`,
+            html: `<div class="suggestion-cluster" style="width: ${size}px; height: ${size}px; font-size: ${size > 40 ? 12 : 11}px;"><span>${fmtNum(childCount)}</span></div>`,
             className: 'marker-cluster-custom',
             iconSize: new L.Point(size, size)
           });
@@ -580,12 +576,12 @@ function setSuggestionsVisible(visible) {
       }
       if (subcontrols) subcontrols.style.display = 'flex';
 
-      showToast(`تم تحميل ${countAll.toLocaleString('ar-SA')} مسجداً مقترحاً من ويكي بيانات بنجاح!`);
+      showToast(t('sugLoaded', { n: fmtNum(countAll) }));
       updateSuggestionsViewportCount();
     })
     .catch(err => {
       console.error('Error loading suggestions:', err);
-      showToast('تعذر تحميل ملف اقتراحات المساجد (suggested_mosques_sa.geojson)', 'error');
+      showToast(t('sugLoadFailed'), 'error');
       if (toggle) toggle.checked = false;
       if (subcontrols) subcontrols.style.display = 'none';
     })
@@ -637,56 +633,57 @@ function updateSuggestionsViewportCount() {
       inView++;
     }
   }
-  countEl.innerText = inView.toLocaleString('ar-SA');
+  countEl.innerText = fmtNum(inView);
 }
 
 function buildSuggestionPopup(props, lat, lon) {
   const isUnnamed = props.is_unnamed;
-  const displayName = props.name_ar || props.name_en || 'مسجد بدون اسم محدد';
-  const nearest = props.nearest_osm_m == null ? 'أكثر من 1 كم' : `${props.nearest_osm_m.toLocaleString('ar-SA')} م`;
+  const displayName = (currentLang === 'en' ? props.name_en || props.name_ar : props.name_ar || props.name_en) || t('sugUnnamed');
+  const subtitle = currentLang === 'en' ? props.name_ar : props.name_en;
+  const nearest = props.nearest_osm_m == null ? t('sugOverKm') : t('sugMetres', { n: fmtNum(props.nearest_osm_m) });
   const idUrl = `https://www.openstreetmap.org/edit?editor=id#map=19/${lat}/${lon}`;
 
   return `
-    <div class="suggestion-popup" dir="rtl">
+    <div class="suggestion-popup" dir="${currentLang === 'ar' ? 'rtl' : 'ltr'}">
       <div class="suggestion-popup-header">
         <h3 class="suggestion-title">🕌 ${escapeHtml(displayName)}</h3>
-        ${props.name_en && props.name_ar ? `<div class="suggestion-subtitle">${escapeHtml(props.name_en)}</div>` : ''}
+        ${props.name_en && props.name_ar ? `<div class="suggestion-subtitle">${escapeHtml(subtitle)}</div>` : ''}
       </div>
 
       <div>
         ${isUnnamed 
-          ? `<span class="badge-sug-generic">⚠️ اسم عام / غير محدد - تحقق ميدانياً</span>` 
-          : `<span class="badge-sug-verified">✓ اسم معتمد في ويكي بيانات</span>`
+          ? `<span class="badge-sug-generic">${t('sugGeneric')}</span>`
+          : `<span class="badge-sug-verified">${t('sugVerified')}</span>`
         }
       </div>
 
       <div class="suggestion-meta-list">
         <div class="suggestion-meta-item">
-          <span class="suggestion-meta-label">معرف ويكي بيانات:</span>
+          <span class="suggestion-meta-label">${t('sugQid')}</span>
           <span class="suggestion-meta-val"><a href="https://www.wikidata.org/wiki/${escapeHtml(props.qid)}" target="_blank" rel="noopener noreferrer">${escapeHtml(props.qid)} ↗</a></span>
         </div>
         <div class="suggestion-meta-item">
-          <span class="suggestion-meta-label">أقرب مكان عبادة بـ OSM:</span>
+          <span class="suggestion-meta-label">${t('sugNearest')}</span>
           <span class="suggestion-meta-val">${nearest}</span>
         </div>
         <div class="suggestion-meta-item">
-          <span class="suggestion-meta-label">الإحداثيات:</span>
+          <span class="suggestion-meta-label">${t('sugCoords')}</span>
           <span class="suggestion-meta-val" dir="ltr">${lat.toFixed(5)}, ${lon.toFixed(5)}</span>
         </div>
       </div>
 
       <div class="suggestion-actions">
-        <button type="button" class="btn-sug-action btn-sug-satellite" data-sug-action="satellite" data-qid="${escapeHtml(props.qid)}" title="معاينة فورية للمبنى أو القبة عبر الأقمار الصناعية">
-          🛰️ معاينة بالأقمار الصناعية (Esri)
+        <button type="button" class="btn-sug-action btn-sug-satellite" data-sug-action="satellite" data-qid="${escapeHtml(props.qid)}" title="${t('sugSatelliteTitle')}">
+          ${t('sugSatellite')}
         </button>
-        <button type="button" class="btn-sug-action btn-sug-copy" data-sug-action="copy" data-qid="${escapeHtml(props.qid)}" title="نسخ وسوم المسجد الجاهزة للحافظة">
-          📋 نسخ الوسوم
+        <button type="button" class="btn-sug-action btn-sug-copy" data-sug-action="copy" data-qid="${escapeHtml(props.qid)}" title="${t('sugCopyTitle')}">
+          ${t('sugCopy')}
         </button>
-        <a href="${idUrl}" target="_blank" rel="noopener noreferrer" class="btn-sug-action btn-sug-id" title="فتح المحرر في متصفح الويب">
-          ✏️ فتح في iD
+        <a href="${idUrl}" target="_blank" rel="noopener noreferrer" class="btn-sug-action btn-sug-id" title="${t('sugIdTitle')}">
+          ${t('sugId')}
         </a>
-        <button type="button" class="btn-sug-action btn-sug-josm" data-sug-action="josm" data-qid="${escapeHtml(props.qid)}" title="إرسال نقطة المسجد مباشرة لمحرر JOSM">
-          ⚡ إضافة في JOSM
+        <button type="button" class="btn-sug-action btn-sug-josm" data-sug-action="josm" data-qid="${escapeHtml(props.qid)}" title="${t('sugJosmTitle')}">
+          ${t('sugJosm')}
         </button>
       </div>
     </div>`;
@@ -719,7 +716,7 @@ function previewSuggestionSatellite(lat, lon) {
     satChip.classList.add('active');
   }
   map.setView([lat, lon], 18, { animate: true });
-  showToast('تم التبديل لخريطة الأقمار الصناعية والتقريب لمعاينة المسجد.');
+  showToast(t('sugSatelliteToast'));
 }
 
 function copySuggestionTags(qid) {
@@ -745,10 +742,10 @@ function copySuggestionTags(qid) {
   const text = lines.join('\n');
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text)
-      .then(() => showToast('تم نسخ الوسوم بنجاح إلى الحافظة! جاهزة للصق في المحرر.'))
-      .catch(() => showToast('تعذر النسخ للحافظة تلقائياً.', 'error'));
+      .then(() => showToast(t('tagsCopied')))
+      .catch(() => showToast(t('copyFailed'), 'error'));
   } else {
-    showToast('المتصفح لا يدعم النسخ التلقائي للحافظة.', 'error');
+    showToast(t('copyUnsupported'), 'error');
   }
 }
 
@@ -768,7 +765,7 @@ function addSuggestionInJOSM(qid) {
   }
   const addUrl = `http://127.0.0.1:8111/add_node?lon=${lon}&lat=${lat}&addtags=${encodeURIComponent(tags)}`;
 
-  showToast('جارٍ التواصل مع JOSM لتحميل المنطقة وإضافة المسجد...');
+  showToast(t('sugJosmWorking'));
   fetch(loadUrl)
     .then(res => {
       if (!res.ok) throw new Error('Load failed');
@@ -777,13 +774,13 @@ function addSuggestionInJOSM(qid) {
     .then(() => fetch(addUrl))
     .then(res => {
       if (res.ok) {
-        showToast('تمت إضافة نقطة المسجد في JOSM بنجاح! راجع الوسوم وموقع المبنى قبل الرفع.');
+        showToast(t('sugJosmAdded'));
       } else {
-        showToast('فشل JOSM في إضافة النقطة. تأكد من تفعيل "Create new objects" في إعدادات Remote Control.', 'error');
+        showToast(t('sugJosmAddFailed'), 'error');
       }
     })
     .catch(() => {
-      showToast('تعذر الاتصال بـ JOSM. يرجى تشغيل JOSM وتفعيل Remote Control في الإعدادات.', 'error');
+      showToast(t('josmUnreachable'), 'error');
     });
 }
 
@@ -907,6 +904,11 @@ function initSidebarToggle() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  onLanguageChange(refreshLanguageDependentUI);
+  if (currentLang !== 'ar') setLanguage(currentLang);
+  document.getElementById('btn-toggle-lang').addEventListener('click', () => {
+    setLanguage(currentLang === 'ar' ? 'en' : 'ar');
+  });
   initMap();
   setupEventListeners();
   setupKeyboardShortcuts();
@@ -1059,7 +1061,7 @@ function updateCartoBadgeStatus() {
 
   if (cartoKey) {
     if (btn) btn.classList.add('active-key');
-    if (badgeText) badgeText.innerText = 'CARTO (مفعّل)';
+    if (badgeText) badgeText.innerText = t('cartoBadgeOn');
     if (clearBtn) clearBtn.style.display = 'block';
     if (statusEl) {
       statusEl.className = 'carto-status-box active';
@@ -1067,11 +1069,11 @@ function updateCartoBadgeStatus() {
       if (dot) dot.className = 'status-dot green';
     }
     if (statusText) {
-      statusText.innerText = 'مفتاح CARTO مفعّل بنجاح. يتم استخدام خرائط CARTO الرسمية بدون أي علامة مائية.';
+      statusText.innerText = t('cartoStatusOn');
     }
   } else {
     if (btn) btn.classList.remove('active-key');
-    if (badgeText) badgeText.innerText = 'مفتاح CARTO';
+    if (badgeText) badgeText.innerText = t('cartoBadgeOff');
     if (clearBtn) clearBtn.style.display = 'none';
     if (statusEl) {
       statusEl.className = 'carto-status-box default';
@@ -1079,7 +1081,7 @@ function updateCartoBadgeStatus() {
       if (dot) dot.className = 'status-dot neutral';
     }
     if (statusText) {
-      statusText.innerText = 'الخرائط الافتراضية نشطة (Esri Canvas - بدون علامات مائية وبدون مفتاح).';
+      statusText.innerText = t('cartoStatusOff');
     }
   }
 }
@@ -1121,12 +1123,12 @@ function setupCartoModalEvents() {
         localStorage.setItem('carto_api_key', key);
         reloadBasemapLayers();
         modal.classList.add('hidden');
-        showToast('تم تفعيل خرائط CARTO بالمفتاح بنجاح!');
+        showToast(t('cartoEnabled'));
       } else {
         localStorage.removeItem('carto_api_key');
         reloadBasemapLayers();
         modal.classList.add('hidden');
-        showToast('تم اعتماد خرائط Esri الافتراضية بدون مفتاح.');
+        showToast(t('cartoDefault'));
       }
     });
   }
@@ -1137,7 +1139,7 @@ function setupCartoModalEvents() {
       if (inputEl) inputEl.value = '';
       reloadBasemapLayers();
       modal.classList.add('hidden');
-      showToast('تمت استعادة خرائط Esri الافتراضية بدون علامات مائية.');
+      showToast(t('cartoRestored'));
     });
   }
 }
@@ -1242,7 +1244,7 @@ function renderDataUpdatedLabel() {
   const el = document.getElementById('data-updated');
   if (!el) return;
   const date = dataSummary.pbf_date || (dataSummary.updated_at || '').slice(0, 10);
-  el.textContent = date ? `بيانات OSM بتاريخ ${date}` : '';
+  el.textContent = date ? t('dataUpdated', { date }) : '';
   el.style.display = date ? '' : 'none';
 }
 
@@ -1280,7 +1282,7 @@ function loadData() {
   })
   .catch(error => {
     console.error('Error loading GeoJSON datasets:', error);
-    showLoadingError('فشل في تحميل بيانات الخريطة. يرجى التأكد من تشغيل خادم محلي (مثل: python -m http.server) وفتح الصفحة عبر http://');
+    showLoadingError(t('loadError'));
   });
 }
 
@@ -1567,24 +1569,29 @@ function markerIcon(markerClass) {
   return MARKER_ICONS[markerClass];
 }
 
+// Display name in the UI language (the Arabic name when no name:en exists).
+function placeName(props) {
+  return currentLang === 'en' ? props.name_en || props.name : props.name;
+}
+
 function buildPlacePopup(props, mode) {
   if (mode === 'improve') {
     const issues = getIssues(props);
     return `
-      <div style="font-family: var(--font-body); text-align: right; padding: 2px;">
-        <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(props.name)}</h4>
+      <div style="font-family: var(--font-body); text-align: start; padding: 2px;">
+        <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(placeName(props))}</h4>
         <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; background: rgba(255, 59, 48, 0.1); font-weight: 600; color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.2); display: inline-block; margin-top: 4px;">
-          ⚠️ لديه ${issues.length} مشكلة جودة
+          ${t('popupIssueCount', { n: fmtNum(issues.length) })}
         </span>
       </div>
     `;
   }
   return `
-    <div style="font-family: var(--font-body); text-align: right; padding: 2px;">
-      <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(props.name)}</h4>
-      <p style="margin: 0 0 5px 0; font-size: 11px; color: #666; direction: ltr; text-align: right;">${props.name_en !== props.name ? escapeHtml(props.name_en) : ''}</p>
+    <div style="font-family: var(--font-body); text-align: start; padding: 2px;">
+      <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(placeName(props))}</h4>
+      <p style="margin: 0 0 5px 0; font-size: 11px; color: #666;">${props.name_en !== props.name ? escapeHtml(currentLang === 'en' ? props.name : props.name_en) : ''}</p>
       <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; background: #eee; font-weight: 600; color: #333;">
-        ${escapeHtml(RELIGION_TRANSLATIONS[props.religion] || props.religion)}
+        ${escapeHtml(religionLabel(props.religion))}
       </span>
     </div>
   `;
@@ -1701,18 +1708,16 @@ function showDetails(props, lat, lon) {
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 100);
 
-  document.getElementById('details-name-ar').innerText = props.name || 'غير مسمى';
+  document.getElementById('details-name-ar').innerText = props.name || t('unnamed');
   document.getElementById('details-name-en').innerText = props.name_en || 'Unnamed';
   
   const relSpan = document.getElementById('details-religion');
-  const arReligion = RELIGION_TRANSLATIONS[props.religion] || props.religion;
-  relSpan.innerText = arReligion.toUpperCase();
+  relSpan.innerText = religionLabel(props.religion);
   relSpan.style.color = RELIGION_COLORS[props.religion] || RELIGION_COLORS.unknown;
   
-  const arDenom = DENOM_TRANSLATIONS[props.denomination] || props.denomination;
-  document.getElementById('details-denom').innerText = props.denomination !== 'unknown' ? arDenom : 'غير محدد';
+  document.getElementById('details-denom').innerText = props.denomination !== 'unknown' ? denomLabel(props.denomination) : t('unspecified');
   
-  document.getElementById('details-city').innerText = props.addr_city !== '' ? props.addr_city : 'المملكة العربية السعودية';
+  document.getElementById('details-city').innerText = props.addr_city || t('saudiArabia');
   document.getElementById('details-coords').innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
   // Merged places are a building outline plus the POI node inside it.
   document.getElementById('details-osm-id').innerText = `${osmTypeOf(props)}/${props.osm_id}` +
@@ -1724,7 +1729,7 @@ function showDetails(props, lat, lon) {
   const guestToolsNotice = document.getElementById('details-guest-tools-notice');
 
   if (isOsmAnonymized) {
-    userLink.innerText = 'مساهم OSM (سجل دخولك)';
+    userLink.innerText = t('guestContributor');
     userLink.href = '#';
     userLink.style.pointerEvents = 'auto';
     userLink.style.opacity = '0.85';
@@ -1736,9 +1741,9 @@ function showDetails(props, lat, lon) {
       if (authOverlay) authOverlay.classList.remove('hidden');
     };
 
-    document.getElementById('details-uid').innerText = 'محجوب بموجب GDPR';
+    document.getElementById('details-uid').innerText = t('hiddenGdpr');
 
-    changesetLink.innerText = 'محجوب بموجب GDPR';
+    changesetLink.innerText = t('hiddenGdpr');
     changesetLink.href = '#';
     changesetLink.style.pointerEvents = 'none';
     changesetLink.style.opacity = '0.6';
@@ -1747,7 +1752,7 @@ function showDetails(props, lat, lon) {
     if (guestToolsNotice) guestToolsNotice.style.display = 'flex';
   } else {
     userLink.onclick = null;
-    userLink.innerText = props.last_edited_by || 'مجهول';
+    userLink.innerText = props.last_edited_by || t('anonymous');
     userLink.href = props.last_edited_by ? `https://www.openstreetmap.org/user/${encodeURIComponent(props.last_edited_by)}` : '#';
     userLink.style.pointerEvents = 'auto';
     userLink.style.opacity = '1';
@@ -1805,7 +1810,7 @@ function showDetails(props, lat, lon) {
   }
 
   document.getElementById('details-edited-at').innerText = props.edited_at
-    ? new Date(props.edited_at).toLocaleString('ar-SA')
+    ? fmtDate(props.edited_at, true)
     : '-';
 
   // Update Qibla row in details table
@@ -1817,19 +1822,19 @@ function showDetails(props, lat, lon) {
       const qAz = props.ml_anomaly.qibla_az;
       const bAz = props.ml_anomaly.bldg_az;
       let badgeColor = '#34c759';
-      let badgeText = 'دقيق جداً';
+      let badgeText = t('qiblaVeryAccurate');
       if (dev >= currentQiblaDevThreshold) {
         badgeColor = '#ff3b30';
-        badgeText = 'انحراف حاد';
+        badgeText = t('qiblaSevere');
       } else if (dev > 10) {
         badgeColor = '#ff9500';
-        badgeText = 'انحراف طفيف';
+        badgeText = t('qiblaSlight');
       }
       qiblaVal.innerHTML = `
         <span style="display: inline-block; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 11px; background: ${badgeColor}20; color: ${badgeColor}; border: 1px solid ${badgeColor}40; margin-left: 6px;">
           ${dev}° (${badgeText})
         </span>
-        <span style="font-size: 11px; color: #777;">القبلة: ${qAz}° | المبنى: ${bAz}°</span>
+        <span style="font-size: 11px; color: #777;">${t('qiblaAxes', { q: qAz, b: bAz })}</span>
       `;
       qiblaRow.style.display = 'flex';
     } else {
@@ -1843,7 +1848,7 @@ function showDetails(props, lat, lon) {
   const issuesList = document.getElementById('details-issues-list');
   
   if (issues.length > 0) {
-    issuesList.innerHTML = issues.map(i => `<li>${escapeHtml(i.title_ar)}</li>`).join('');
+    issuesList.innerHTML = issues.map(i => `<li>${escapeHtml(currentLang === 'en' ? i.title_en : i.title_ar)}</li>`).join('');
     issuesBox.style.display = 'block';
   } else {
     issuesBox.style.display = 'none';
@@ -1870,8 +1875,8 @@ function updateDashboardUI() {
 
   if (currentMode === 'poi') {
     // Restore POI Mode controls
-    totalCountLabel.innerText = "إجمالي الأماكن";
-    visibleCountLabel.innerText = "في النطاق المرئي";
+    totalCountLabel.innerText = t('labelTotalPlaces');
+    visibleCountLabel.innerText = t('labelVisiblePlaces');
     searchSection.style.display = 'block';
     filterSection.style.display = 'block';
     improveFilterSection.style.display = 'none';
@@ -1880,8 +1885,8 @@ function updateDashboardUI() {
     gapJosmBox.style.display = 'none';
   } else if (currentMode === 'improve') {
     // Quality Improvement Mode controls
-    totalCountLabel.innerText = "أماكن تحتاج تحسين";
-    visibleCountLabel.innerText = "تحتاج تحسين بالنطاق";
+    totalCountLabel.innerText = t('labelTotalImprove');
+    visibleCountLabel.innerText = t('labelVisibleImprove');
     searchSection.style.display = 'block';
     filterSection.style.display = 'none';
     improveFilterSection.style.display = 'block';
@@ -1900,8 +1905,8 @@ function updateDashboardUI() {
     }
   } else {
     // Adjust layout for Gap Mode
-    totalCountLabel.innerText = "الفجوات المكتشفة";
-    visibleCountLabel.innerText = "الفجوات في النطاق";
+    totalCountLabel.innerText = t('labelTotalGaps');
+    visibleCountLabel.innerText = t('labelVisibleGaps');
     searchSection.style.display = 'none';
     filterSection.style.display = 'none';
     improveFilterSection.style.display = 'none';
@@ -1940,8 +1945,8 @@ function updateStats() {
     });
   }
 
-  document.getElementById('total-count').innerText = totalCount.toLocaleString();
-  document.getElementById('visible-count').innerText = visibleCount.toLocaleString();
+  document.getElementById('total-count').innerText = fmtNum(totalCount);
+  document.getElementById('visible-count').innerText = fmtNum(visibleCount);
 }
 
 // Combines search query and religion category filters (POI mode only)
@@ -1951,6 +1956,8 @@ function filterData() {
   if (currentMode === 'gap') {
     updateMapLayers();
     updateStats();
+    updateReviewNavUI();
+    updatePermalinkSoon();
     return;
   }
 
@@ -2023,6 +2030,44 @@ function filterData() {
   updateStats();
   rebuildReviewQueue();
   updatePermalinkSoon();
+}
+
+// Number of checks per category tab, derived from the issue buttons
+// themselves so adding a check never leaves a stale hard-coded count.
+function updateCategoryTabCounts() {
+  const improveItems = [...document.querySelectorAll('#improve-filters .improve-item')];
+  document.querySelectorAll('.improve-category-tabs .category-tab').forEach(tab => {
+    const category = tab.getAttribute('data-category');
+    const n = category === 'all'
+      ? improveItems.length
+      : improveItems.filter(item => item.getAttribute('data-category') === category).length;
+    const countEl = document.getElementById(`cat-count-${category}`);
+    if (countEl) countEl.textContent = fmtNum(n);
+  });
+}
+
+// Re-renders everything built in JavaScript after a language switch; static
+// text is swapped by setLanguage() itself.
+function refreshLanguageDependentUI() {
+  updateCategoryTabCounts();
+  renderDataUpdatedLabel();
+  updateUserWidgetUI();
+  updateCartoBadgeStatus();
+  if (!allPlaces.length) return; // data not loaded yet
+  document.getElementById('date-from-val').innerText = formatDay(currentDateFrom);
+  document.getElementById('date-to-val').innerText = formatDay(currentDateTo);
+  updateImprovementIssueCounts();
+  updateDashboardUI();
+  if (selectedPlace) showDetails(selectedPlace.properties, selectedPlace.lat, selectedPlace.lon);
+  if (suggestionsAllFeatures.length) {
+    const named = suggestionsAllFeatures.filter(f => !f.properties.is_unnamed).length;
+    const badge = document.getElementById('suggestions-badge');
+    if (badge) badge.innerText = t('sugBadge', { n: fmtNum(suggestionsAllFeatures.length) });
+    document.getElementById('sug-count-all').innerText = fmtNum(suggestionsAllFeatures.length);
+    document.getElementById('sug-count-named').innerText = fmtNum(named);
+    document.getElementById('sug-count-unnamed').innerText = fmtNum(suggestionsAllFeatures.length - named);
+    updateSuggestionsViewportCount();
+  }
 }
 
 // Wire up events for buttons, chips, search inputs, and range sliders
@@ -2120,16 +2165,7 @@ function setupEventListeners() {
   const categoryTabs = document.querySelectorAll('.improve-category-tabs .category-tab');
   const improveItems = document.querySelectorAll('#improve-filters .improve-item');
 
-  // Number of checks per category tab, derived from the issue buttons
-  // themselves so adding a check never leaves a stale hard-coded count.
-  categoryTabs.forEach(tab => {
-    const category = tab.getAttribute('data-category');
-    const n = category === 'all'
-      ? improveItems.length
-      : [...improveItems].filter(item => item.getAttribute('data-category') === category).length;
-    const countEl = document.getElementById(`cat-count-${category}`);
-    if (countEl) countEl.textContent = n.toLocaleString('ar-SA');
-  });
+  updateCategoryTabCounts();
 
   categoryTabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -2458,14 +2494,14 @@ function setupEventListeners() {
         // Find text label and swap momentarily
         const btnText = copyUriBtn.querySelector('span');
         const originalText = btnText.innerText;
-        btnText.innerText = 'تم النسخ!';
-        showToast('تم نسخ عنوان العودة (Redirect URI) إلى الحافظة.');
+        btnText.innerText = t('copied');
+        showToast(t('redirectCopied'));
         setTimeout(() => {
           btnText.innerText = originalText;
         }, 2000);
       }).catch(err => {
         console.error('Failed to copy Redirect URI:', err);
-        showToast('فشل في نسخ عنوان العودة تلقائياً. يرجى نسخه يدوياً.', 'error');
+        showToast(t('redirectCopyFailed'), 'error');
       });
     });
   }
@@ -2597,8 +2633,8 @@ function openNoteComposer(lat, lon) {
   const token = localStorage.getItem('osm_access_token');
   const displayName = localStorage.getItem('osm_user_display_name');
   attributionEl.innerText = (token && displayName)
-    ? `سيتم نشر الملاحظة باسم: ${displayName}`
-    : 'سيتم نشر الملاحظة كزائر مجهول (بدون تسجيل دخول).';
+    ? t('notePostedAs', { name: displayName })
+    : t('notePostedAnon');
 
   overlay.classList.remove('hidden');
   textInput.focus();
@@ -2621,14 +2657,14 @@ function buildNoteText() {
   if (activeNotePreset === 'worship') {
     const name = document.getElementById('note-worship-name').value.trim();
     const religion = document.getElementById('note-worship-religion').value.trim();
-    const lines = ['يوجد هنا مكان عبادة غير موجود على الخريطة.'];
-    if (name) lines.push(`الاسم: ${name}`);
-    if (religion) lines.push(`الديانة: ${religion}`);
+    const lines = [t('noteWorshipBody')];
+    if (name) lines.push(t('noteNameLine', { v: name }));
+    if (religion) lines.push(t('noteReligionLine', { v: religion }));
     body = lines.join('\n');
   } else if (activeNotePreset === 'fixme') {
     const fixme = document.getElementById('note-fixme-text').value.trim();
     if (!fixme) {
-      showToast('يرجى وصف المشكلة قبل الإرسال.', 'error');
+      showToast(t('noteFixmeRequired'), 'error');
       return null;
     }
     body = `fixme: ${fixme}`;
@@ -2636,11 +2672,11 @@ function buildNoteText() {
     const poiName = document.getElementById('note-gone-name').value.trim();
     const poiTypes = document.getElementById('note-gone-types').value.trim();
     if (!poiName) {
-      showToast('يرجى إدخال اسم المعلم قبل الإرسال.', 'error');
+      showToast(t('noteGoneNameRequired'), 'error');
       return null;
     }
     const lines = [
-      'المعلم غير موجود على أرض الواقع رغم ظهوره على الخريطة (قد تكون البيانات قديمة).',
+      t('noteGoneBody'),
       `POI name: ${poiName}`
     ];
     if (poiTypes) lines.push(`POI types: ${poiTypes}`);
@@ -2650,7 +2686,7 @@ function buildNoteText() {
     const textInput = document.getElementById('note-text-input');
     body = textInput ? textInput.value.trim() : '';
     if (!body) {
-      showToast('يرجى كتابة نص الملاحظة قبل الإرسال.', 'error');
+      showToast(t('noteTextRequired'), 'error');
       return null;
     }
   }
@@ -2693,13 +2729,13 @@ async function submitPendingOsmNote() {
     renderNoteMarker(noteFeature);
 
     const noteId = noteFeature.properties ? noteFeature.properties.id : undefined;
-    showToast('تم إرسال الملاحظة بنجاح!', 'success', {
-      link: { href: `https://www.openstreetmap.org/note/${encodeURIComponent(noteId)}`, text: 'عرض الملاحظة' }
+    showToast(t('noteSent'), 'success', {
+      link: { href: `https://www.openstreetmap.org/note/${encodeURIComponent(noteId)}`, text: t('noteView') }
     });
     closeNoteComposer();
   } catch (err) {
     console.error('Failed to submit OSM note:', err);
-    showToast('فشل في إرسال الملاحظة إلى OpenStreetMap: ' + err.message, 'error');
+    showToast(t('noteFailed', { msg: err.message }), 'error');
   } finally {
     if (submitBtn) submitBtn.disabled = false;
   }
@@ -2725,9 +2761,9 @@ function renderNoteMarker(noteFeature) {
   const marker = L.marker([lat, lon], { icon });
   const noteUrl = `https://www.openstreetmap.org/note/${props.id}`;
   marker.bindPopup(`
-    <div style="font-family: var(--font-body); text-align: right; padding: 2px; max-width: 220px;">
+    <div style="font-family: var(--font-body); text-align: start; padding: 2px; max-width: 220px;">
       <p style="margin: 0 0 6px 0; font-size: 12px; color: #333; white-space: pre-wrap;">${escapeHtml(commentText)}</p>
-      <a href="${noteUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 11px;">فتح الملاحظة على OSM</a>
+      <a href="${noteUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 11px;">${t('noteOpenOnOsm')}</a>
     </div>
   `, { closeButton: false });
 
@@ -2949,23 +2985,23 @@ function updateUserWidgetUI() {
   
   if (widget) {
     if (token) {
-      const displayName = localStorage.getItem('osm_user_display_name') || 'مستخدم OSM';
+      const displayName = localStorage.getItem('osm_user_display_name') || t('osmUser');
       if (nameEl) nameEl.innerText = displayName;
-      if (statusEl) statusEl.innerHTML = `مرحباً، <strong id="user-display-name">${escapeHtml(displayName)}</strong>`;
-      if (roleEl) roleEl.innerText = 'مساهم في OpenStreetMap';
+      if (statusEl) statusEl.innerHTML = t('welcomeUser', { name: escapeHtml(displayName) });
+      if (roleEl) roleEl.innerText = t('osmContributor');
       if (logoutBtn) {
-        logoutBtn.innerText = 'تسجيل خروج';
+        logoutBtn.innerText = t('logout');
         logoutBtn.className = 'osm-logout-btn';
-        logoutBtn.title = 'تسجيل الخروج';
+        logoutBtn.title = t('logoutTitle');
       }
       widget.style.display = 'flex';
     } else if (isOsmAnonymized) {
-      if (statusEl) statusEl.innerHTML = `<span style="color: var(--color-text-muted);">تصفح كـ <strong>زائر (بيانات مجهلة)</strong></span>`;
-      if (roleEl) roleEl.innerText = 'سجل دخولك لعرض المطورين والتعديل';
+      if (statusEl) statusEl.innerHTML = t('browsingAsGuest');
+      if (roleEl) roleEl.innerText = t('guestRole');
       if (logoutBtn) {
-        logoutBtn.innerText = 'تسجيل دخول';
+        logoutBtn.innerText = t('login');
         logoutBtn.className = 'osm-login-btn-small';
-        logoutBtn.title = 'تسجيل الدخول باستخدام OSM';
+        logoutBtn.title = t('loginTitle');
       }
       widget.style.display = 'flex';
     } else {

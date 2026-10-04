@@ -2658,3 +2658,66 @@ kbd {
   text-align: center;
   color: var(--color-text);
 }
+
+/* Login modal: environment / client ID behind an "advanced" disclosure */
+.auth-advanced {
+  margin-bottom: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+.auth-advanced summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.auth-advanced[open] summary {
+  margin-bottom: 10px;
+}
+
+/* ===== English (LTR) overrides =====
+   The layout was designed RTL-first; these flip the rules that hard-code a
+   side. The floating sidebar intentionally stays on the right. */
+[dir="ltr"] .search-input {
+  padding: 12px 16px 12px 42px;
+}
+
+[dir="ltr"] .search-icon {
+  right: auto;
+  left: 14px;
+}
+
+[dir="ltr"] .details-title-ar,
+[dir="ltr"] .switch-label,
+[dir="ltr"] .improve-hero-card,
+[dir="ltr"] .improve-item,
+[dir="ltr"] .issues-list li,
+[dir="ltr"] .suggestion-popup,
+[dir="ltr"] .suggestion-subtitle {
+  text-align: left;
+}
+
+[dir="ltr"] .issues-list li {
+  padding-right: 0;
+  padding-left: 14px;
+}
+
+[dir="ltr"] .issues-list li::before {
+  right: auto;
+  left: 0;
+}
+
+[dir="ltr"] .toast-notification,
+[dir="ltr"] .auth-card,
+[dir="ltr"] .suggestion-popup {
+  direction: ltr;
+}
+
+[dir="ltr"] .auth-card select,
+[dir="ltr"] .auth-card textarea,
+[dir="ltr"] .auth-card input {
+  text-align: left !important;
+  text-align-last: left !important;
+}

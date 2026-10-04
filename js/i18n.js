@@ -1,13 +1,18 @@
 // Bilingual UI (Arabic default, English toggle), modelled on the osm x wikidata
 // project's translations.js / setLanguage().
 //
-// Static text lives in index.html in Arabic and is marked with data-i18n
-// (innerHTML), data-i18n-placeholder, data-i18n-title or data-i18n-aria. When
-// switching to English the Arabic original is kept on the element and the
-// English string from TRANSLATIONS.en is shown; switching back restores it.
-// Strings built in JavaScript use t(key, vars), which needs both languages.
+// Static text stays in Arabic in index.html. Its English lives in
+// js/translations_static.js keyed by the Arabic text itself, and
+// applyStaticTranslations() swaps text nodes and placeholder/title/aria-label
+// attributes in place, so the markup needs no per-element keys. Strings built
+// in JavaScript use t(key, vars), registered with both languages.
 
 const TRANSLATIONS = { ar: {}, en: {} };
+const STATIC_EN = {};
+
+function addStaticTranslations(entries) {
+  Object.assign(STATIC_EN, entries);
+}
 
 // Registers strings: addTranslations({ key: ['عربي', 'English'], ... }).
 function addTranslations(entries) {
@@ -53,19 +58,60 @@ function onLanguageChange(fn) {
   languageListeners.push(fn);
 }
 
-function applyStaticTranslations() {
+const collapseSpace = str => str.replace(/\s+/g, ' ').trim();
+const TRANSLATED_ATTRS = ['placeholder', 'title', 'aria-label'];
+// node -> { ar, en } and element -> { attr: { ar, en } }, remembered the first
+// time an Arabic original is seen so switching back restores it exactly.
+const textOriginals = new WeakMap();
+const attrOriginals = new WeakMap();
+
+// Returns { ar, en } for an Arabic string with a known translation (keeping
+// the surrounding whitespace), or null.
+function staticPair(value) {
+  const key = collapseSpace(value);
+  const en = key && STATIC_EN[key];
+  if (!en) return null;
+  const lead = value.match(/^\s*/)[0];
+  const trail = value.match(/\s*$/)[0];
+  return { ar: value, en: lead + en + trail };
+}
+
+function applyStaticTranslations(root = document.body) {
   const en = currentLang === 'en';
-  const swap = (el, attr, key, setter) => {
-    const store = `i18nAr${attr}`;
-    if (el.dataset[store] === undefined) el.dataset[store] = attr === 'Html' ? el.innerHTML : (el.getAttribute(setter) || '');
-    const value = en && TRANSLATIONS.en[key] !== undefined ? TRANSLATIONS.en[key] : el.dataset[store];
-    if (attr === 'Html') el.innerHTML = value;
-    else el.setAttribute(setter, value);
-  };
-  document.querySelectorAll('[data-i18n]').forEach(el => swap(el, 'Html', el.dataset.i18n));
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => swap(el, 'Placeholder', el.dataset.i18nPlaceholder, 'placeholder'));
-  document.querySelectorAll('[data-i18n-title]').forEach(el => swap(el, 'Title', el.dataset.i18nTitle, 'title'));
-  document.querySelectorAll('[data-i18n-aria]').forEach(el => swap(el, 'Aria', el.dataset.i18nAria, 'aria-label'));
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => (n.parentElement && n.parentElement.closest('#map, script, style')
+      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT)
+  });
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    let rec = textOriginals.get(node);
+    // Text replaced by JavaScript since we last saw it: start over from the new value.
+    if (rec && node.nodeValue !== rec.ar && node.nodeValue !== rec.en) rec = null;
+    if (!rec) {
+      rec = staticPair(node.nodeValue);
+      if (!rec) continue;
+      textOriginals.set(node, rec);
+    }
+    const value = en ? rec.en : rec.ar;
+    if (node.nodeValue !== value) node.nodeValue = value;
+  }
+
+  root.querySelectorAll(TRANSLATED_ATTRS.map(a => `[${a}]`).join(',')).forEach(el => {
+    if (el.parentElement && el.parentElement.closest('#map')) return; // Leaflet's own UI
+    const recs = attrOriginals.get(el) || {};
+    TRANSLATED_ATTRS.forEach(attr => {
+      const current = el.getAttribute(attr);
+      if (current === null) return;
+      let rec = recs[attr];
+      if (rec && current !== rec.ar && current !== rec.en) rec = null;
+      if (!rec) {
+        rec = staticPair(current);
+        if (!rec) return;
+        recs[attr] = rec;
+      }
+      el.setAttribute(attr, en ? rec.en : rec.ar);
+    });
+    attrOriginals.set(el, recs);
+  });
 }
 
 function setLanguage(lang) {

@@ -28,7 +28,7 @@
           <h1>خارطة أماكن العبادة</h1>
           <div class="header-actions">
             <button type="button" id="btn-toggle-lang" class="header-action-btn" lang="en">English</button>
-            <button type="button" id="btn-shortcuts" class="header-action-btn" title="اختصارات لوحة المفاتيح (?)" aria-label="اختصارات لوحة المفاتيح">⌨️</button>
+            <button type="button" id="btn-shortcuts" class="header-action-btn" title="اختصارات لوحة المفاتيح (?)" aria-label="اختصارات لوحة المفاتيح">?</button>
           </div>
         </div>
         <p class="subtitle">عرض تفاعلي للتوزيع الجغرافي ونقاط الكثافة وفجوات التغطية لأماكن العبادة في المملكة العربية السعودية. تم تحليل البيانات خارج نطاق الإنترنت بالاعتماد على قاعدة بيانات OSM للخليج العربي.</p>
@@ -689,7 +689,7 @@
         <div class="auth-header">
           <div class="auth-icon">🔐</div>
           <h2>التحقق من الهوية (OSM Auth)</h2>
-          <p>تحتوي قاعدة البيانات على بيانات مساهمي الخرائط (GDPR). بموجب تراخيص Geofabrik، يقتصر عرض هذه البيانات المفصلة على مساهمي OpenStreetMap فقط.</p>
+          <p>سجّل الدخول بحساب OpenStreetMap لعرض بيانات المساهمين (محجوبة للزوار بموجب GDPR وتراخيص Geofabrik) ولإصلاح الوسوم مباشرة من الخارطة.</p>
         </div>
         
         <!-- Tabs Header -->
@@ -701,6 +701,8 @@
         <div class="auth-body">
           <!-- Login Tab Content -->
           <div id="tab-login" class="tab-content">
+            <details class="auth-advanced">
+              <summary>إعدادات متقدمة (بيئة العمل ومعرّف العميل)</summary>
             <div class="client-id-config">
               <label for="osm-environment">بيئة العمل (OpenStreetMap Environment):</label>
               <select id="osm-environment" class="auth-input" style="width: 100%; text-align: right; text-align-last: right; padding-right: 12px; font-family: var(--font-body); cursor: pointer;">
@@ -711,7 +713,7 @@
 
             <div class="client-id-config">
               <label for="osm-client-id">معرّف العميل (Client ID):</label>
-              <input type="text" id="osm-client-id" class="auth-input" placeholder="أدخل Client ID الخاص بك..." />
+              <input type="text" id="osm-client-id" class="auth-input" placeholder="اتركه فارغاً لاستخدام المعرّف المدمج" dir="ltr" />
             </div>
 
             <div class="client-id-config" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 14px; border-radius: 12px; gap: 6px;">
@@ -728,6 +730,7 @@
               <div id="osm-redirect-uri-display" style="font-family: monospace; font-size: 11.5px; color: var(--color-primary); user-select: all; text-align: left; direction: ltr; overflow-x: auto; white-space: nowrap; padding-bottom: 2px;">loading...</div>
               <p class="input-help">يجب تطابق هذا العنوان تماماً مع إعدادات التطبيق في OpenStreetMap.</p>
             </div>
+            </details>
 
             <button id="btn-osm-login" class="auth-submit-btn">
               <span>تسجيل الدخول باستخدام حساب OSM</span>
@@ -755,7 +758,7 @@
           <div id="tab-guide" class="tab-content hidden">
             <div class="guide-container">
               <p class="guide-intro">
-                تحتاج إلى تسجيل هذا الموقع كـ "تطبيق مستهلك" (OAuth 2.0) في حسابك على OpenStreetMap للحصول على معرّف العميل (Client ID). اتبع الخطوات البسيطة التالية:
+                يعمل تسجيل الدخول مباشرة بمعرّف التطبيق المدمج. اتبع هذه الخطوات فقط إذا كنت تشغّل نسخة خاصة من الموقع (على نطاق آخر أو محلياً) وتحتاج معرّف عميل (Client ID) خاصاً بك:
               </p>
               <div class="guide-steps">
                 <div class="guide-step">
@@ -786,8 +789,9 @@
                 <div class="guide-step">
                   <span class="step-num">4</span>
                   <div class="step-text">
-                    في قسم الصلاحيات (Scopes)، حدد الصلاحيتين التاليتين:
+                    في قسم الصلاحيات (Scopes)، حدد الصلاحيات التالية:
                     <br><strong>☑ Read user preferences (قراءة تفضيلات المستخدم)</strong>
+                    <br><strong>☑ Modify the map (تعديل الخارطة - write_api)</strong>
                     <br><strong>☑ Create notes (إنشاء ملاحظات - write_notes)</strong>
                   </div>
                 </div>
@@ -984,6 +988,8 @@
   
   <!-- App JS -->
   <script src="js/i18n.js?v=2"></script>
+  <script src="js/translations.js?v=2"></script>
+  <script src="js/translations_static.js?v=2"></script>
   <script src="js/arabic.js?v=2"></script>
   <script src="js/review.js?v=2"></script>
   <script src="js/exporters.js?v=2"></script>
