@@ -2721,3 +2721,138 @@ kbd {
   text-align: left !important;
   text-align-last: left !important;
 }
+
+/* ===== Quick fixes / edit dialog / batch ===== */
+.quick-fixes-box {
+  margin-top: 14px;
+}
+
+.quick-fix-hint {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.quick-fix-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quick-fix-btn {
+  background: rgba(0, 255, 135, 0.06);
+  border: 1px solid rgba(0, 255, 135, 0.3);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-accent);
+  cursor: pointer;
+  text-align: start;
+  transition: all 0.2s ease;
+}
+
+.quick-fix-btn:hover {
+  background: rgba(0, 255, 135, 0.14);
+}
+
+.edit-changes-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.edit-diff {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 255, 135, 0.2);
+  color: var(--color-accent);
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  text-align: left;
+}
+
+.edit-comment {
+  resize: vertical;
+  text-align: left !important;
+  font-family: var(--font-body);
+}
+
+.edit-comment-counter {
+  align-self: flex-end;
+}
+
+.auth-submit-btn:disabled,
+.auth-skip-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.batch-dock {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1500;
+  padding: 10px 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 255, 135, 0.45);
+  background: rgba(13, 15, 23, 0.9);
+  color: var(--color-accent);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+}
+
+.batch-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+
+.batch-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.history-list li {
+  justify-content: flex-start;
+}
+
+.batch-progress {
+  position: relative;
+  height: 22px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.batch-progress-bar {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 0;
+  background: rgba(0, 255, 135, 0.3);
+  transition: width 0.2s ease;
+}
+
+.batch-progress span {
+  position: relative;
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  line-height: 22px;
+}

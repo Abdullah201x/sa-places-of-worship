@@ -27,6 +27,7 @@
           <div class="logo-glow"></div>
           <h1>خارطة أماكن العبادة</h1>
           <div class="header-actions">
+            <button type="button" id="btn-edit-history" class="header-action-btn">سجل تعديلاتي</button>
             <button type="button" id="btn-toggle-lang" class="header-action-btn" lang="en">English</button>
             <button type="button" id="btn-shortcuts" class="header-action-btn" title="اختصارات لوحة المفاتيح (?)" aria-label="اختصارات لوحة المفاتيح">?</button>
           </div>
@@ -610,6 +611,9 @@
             </ul>
           </div>
           
+          <!-- Quick tag fixes through the OSM API (js/editing.js) -->
+          <div id="details-quick-fixes" class="mapper-tools-box quick-fixes-box" style="display: none;"></div>
+
           <!-- Mapper Editing Tools -->
           <div id="details-mapper-tools" class="mapper-tools-box">
             <h3 class="mapper-tools-title">🛠️ أدوات تعديل ومساهمة الخرائط</h3>
@@ -964,6 +968,12 @@
       </div>
     </div>
 
+    <!-- Edit / batch / history dialogs (content rendered by js/editing.js) -->
+    <div id="edit-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
+    <div id="batch-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
+    <div id="history-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
+    <button type="button" id="batch-dock" class="batch-dock" style="display: none;"></button>
+
     <!-- Loading / Error Overlay -->
     <div id="loading-overlay" role="status" aria-live="polite">
       <div class="loading-box">
@@ -993,6 +1003,8 @@
   <script src="js/arabic.js?v=2"></script>
   <script src="js/review.js?v=2"></script>
   <script src="js/exporters.js?v=2"></script>
+  <script src="js/osm_api.js?v=2"></script>
+  <script src="js/editing.js?v=2"></script>
   <script src="app.js?v=2"></script>
 </body>
 </html>

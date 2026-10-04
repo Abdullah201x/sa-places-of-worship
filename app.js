@@ -5,28 +5,8 @@ let basemaps = {};
 let currentBasemap = null;
 let currentBasemapKey = 'dark';
 
-// OSM OAuth 2.0 State Variables
-let OSM_ENVIRONMENT = localStorage.getItem('osm_oauth_environment') || 'production';
-let OSM_CLIENT_ID = localStorage.getItem('osm_oauth_client_id') || '';
-// Automatically resolve Redirect URI based on the current window location (without parameters)
-const OSM_REDIRECT_URI = window.location.origin + window.location.pathname;
+// Login, OAuth and API editing live in js/osm_api.js (OsmApi).
 let isOsmAnonymized = true;
-
-let OSM_AUTH_URL = '';
-let OSM_TOKEN_URL = '';
-let OSM_USER_DETAILS_URL = '';
-let OSM_API_BASE = '';
-
-function updateOsmUrls() {
-  const isDev = OSM_ENVIRONMENT === 'dev';
-  const base = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://www.openstreetmap.org';
-  const apiBase = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://api.openstreetmap.org';
-  OSM_AUTH_URL = `${base}/oauth2/authorize`;
-  OSM_TOKEN_URL = `${base}/oauth2/token`;
-  OSM_USER_DETAILS_URL = `${apiBase}/api/0.6/user/details.json`;
-  OSM_API_BASE = apiBase;
-}
-updateOsmUrls();
 
 // OSM Notes State
 let addNoteMode = false;
@@ -459,7 +439,7 @@ function openAreaInJOSM() {
 function updateIdEditorAreaLink() {
   const idBtn = document.getElementById('btn-open-area-id');
   if (idBtn && map) {
-    const isDev = OSM_ENVIRONMENT === 'dev';
+    const isDev = OsmApi.environment() === 'dev';
     const base = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://www.openstreetmap.org';
     const center = map.getCenter();
     const zoom = Math.max(16, Math.round(map.getZoom()));
@@ -914,7 +894,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupKeyboardShortcuts();
   initSidebarToggle();
   // Handle OAuth callback first, then load the data
-  handleOAuthCallback().then(() => {
+  setupEditing();
+  OsmApi.handleCallback().then(() => {
     loadData();
   });
 });
@@ -1275,7 +1256,7 @@ function loadData() {
     pendingAnomalyData = anomalyData;
 
     // Check if user is logged in via OSM OAuth; default directly to guest mode if not
-    checkAuthStatus().then(isAuthenticated => {
+    OsmApi.checkAuth().then(isAuthenticated => {
       isOsmAnonymized = !isAuthenticated;
       initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData);
     });
@@ -1700,6 +1681,7 @@ function showDetails(props, lat, lon) {
   const panel = document.getElementById('details-panel');
   panel.style.display = 'block';
   renderReviewActions();
+  renderQuickFixes(props);
   updatePermalinkSoon();
 
   // Ensure sidebar is expanded so user sees the details immediately
@@ -1772,7 +1754,7 @@ function showDetails(props, lat, lon) {
   // Update mapper editing tools (always available in both guest and authenticated modes)
   if (mapperTools) mapperTools.style.display = 'block';
   const type = osmTypeOf(props);
-  const isDev = OSM_ENVIRONMENT === 'dev';
+  const isDev = OsmApi.environment() === 'dev';
   const osmBase = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://www.openstreetmap.org';
 
   const viewOsmBtn = document.getElementById('btn-view-osm');
@@ -2422,7 +2404,7 @@ function setupEventListeners() {
     logoutBtn.addEventListener('click', () => {
       const token = localStorage.getItem('osm_access_token');
       if (token) {
-        logoutOSM();
+        OsmApi.logout();
       } else {
         const authOverlay = document.getElementById('osm-auth-overlay');
         if (authOverlay) {
@@ -2490,7 +2472,7 @@ function setupEventListeners() {
   const copyUriBtn = document.getElementById('btn-copy-redirect-uri');
   if (copyUriBtn) {
     copyUriBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(OSM_REDIRECT_URI).then(() => {
+      navigator.clipboard.writeText(OsmApi.redirectUri()).then(() => {
         // Find text label and swap momentarily
         const btnText = copyUriBtn.querySelector('span');
         const originalText = btnText.innerText;
@@ -2530,18 +2512,19 @@ function setupEventListeners() {
 
   // Pre-fill fields if saved
   const envSelect = document.getElementById('osm-environment');
-  if (envSelect && OSM_ENVIRONMENT) {
-    envSelect.value = OSM_ENVIRONMENT;
+  if (envSelect) {
+    envSelect.value = OsmApi.environment();
   }
 
   const clientIdInput = document.getElementById('osm-client-id');
-  if (clientIdInput && OSM_CLIENT_ID) {
-    clientIdInput.value = OSM_CLIENT_ID;
+  // Only a custom client ID is shown; empty means the built-in one.
+  if (clientIdInput) {
+    clientIdInput.value = localStorage.getItem('osm_oauth_client_id') || '';
   }
 
   const redirectUriDisplay = document.getElementById('osm-redirect-uri-display');
   if (redirectUriDisplay) {
-    redirectUriDisplay.innerText = OSM_REDIRECT_URI;
+    redirectUriDisplay.innerText = OsmApi.redirectUri();
   }
 
   // 7a. Suggested Additions (Wikidata mosques missing in OSM) Toggle & Chips
@@ -2717,7 +2700,7 @@ async function submitPendingOsmNote() {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const url = `${OSM_API_BASE}/api/0.6/notes.json?lat=${lat}&lon=${lon}&text=${encodeURIComponent(text)}`;
+    const url = `${OsmApi.urls().api}/api/0.6/notes.json?lat=${lat}&lon=${lon}&text=${encodeURIComponent(text)}`;
     const response = await fetch(url, { method: 'POST', headers });
 
     if (!response.ok) {
@@ -2780,7 +2763,7 @@ async function loadNearbyNotes() {
   const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
 
   try {
-    const response = await fetch(`${OSM_API_BASE}/api/0.6/notes.json?bbox=${bbox}&limit=100&closed=7`);
+    const response = await fetch(`${OsmApi.urls().api}/api/0.6/notes.json?bbox=${bbox}&limit=100&closed=7`);
     if (!response.ok) return;
 
     const data = await response.json();
@@ -2792,146 +2775,22 @@ async function loadNearbyNotes() {
 }
 
 // ==========================================
-// OpenStreetMap OAuth 2.0 PKCE Helper Code
+// OpenStreetMap login (flow in js/osm_api.js)
 // ==========================================
 
-function generateRandomString(length) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  let result = '';
-  const randomValues = new Uint32Array(length);
-  crypto.getRandomValues(randomValues);
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(randomValues[i] % chars.length);
-  }
-  return result;
-}
-
-async function sha256(plain) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(plain);
-  return crypto.subtle.digest('SHA-256', data);
-}
-
-function base64urlencode(a) {
-  let str = "";
-  const bytes = new Uint8Array(a);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    str += String.fromCharCode(bytes[i]);
-  }
-  return btoa(str)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-async function generateChallenge(verifier) {
-  const hashed = await sha256(verifier);
-  return base64urlencode(hashed);
-}
-
-async function redirectToOSM() {
+// Saves the advanced settings from the login dialog, then starts the PKCE flow.
+function redirectToOSM() {
   const envSelect = document.getElementById('osm-environment');
-  if (envSelect) {
-    OSM_ENVIRONMENT = envSelect.value;
-    localStorage.setItem('osm_oauth_environment', OSM_ENVIRONMENT);
+  if (envSelect) localStorage.setItem('osm_oauth_environment', envSelect.value);
+  const clientId = document.getElementById('osm-client-id').value.trim();
+  if (clientId) {
+    localStorage.setItem('osm_oauth_client_id', clientId);
+  } else {
+    localStorage.removeItem('osm_oauth_client_id');
   }
-
-  const clientIdInput = document.getElementById('osm-client-id').value.trim();
-  if (!clientIdInput) {
-    showToast('الرجاء إدخال معرّف العميل (Client ID) للاستمرار.', 'error');
-    return;
-  }
-  
-  OSM_CLIENT_ID = clientIdInput;
-  localStorage.setItem('osm_oauth_client_id', OSM_CLIENT_ID);
-
-  updateOsmUrls();
-  
-  const codeVerifier = generateRandomString(64);
-  sessionStorage.setItem('osm_oauth_code_verifier', codeVerifier);
-  
-  const codeChallenge = await generateChallenge(codeVerifier);
-  const state = generateRandomString(16);
-  sessionStorage.setItem('osm_oauth_state', state);
-  
-  const url = `${OSM_AUTH_URL}?response_type=code` +
-              `&client_id=${OSM_CLIENT_ID}` +
-              `&redirect_uri=${encodeURIComponent(OSM_REDIRECT_URI)}` +
-              `&scope=${encodeURIComponent('read_prefs write_notes')}` +
-              `&code_challenge=${codeChallenge}` +
-              `&code_challenge_method=S256` +
-              `&state=${state}`;
-              
-  window.location.href = url;
-}
-
-async function handleOAuthCallback() {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-  const state = params.get('state');
-  
-  if (code && state) {
-    // Save saved settings back to state in case page reloads
-    OSM_ENVIRONMENT = localStorage.getItem('osm_oauth_environment') || 'production';
-    OSM_CLIENT_ID = localStorage.getItem('osm_oauth_client_id') || '';
-    updateOsmUrls();
-    
-    const cleanUrl = window.location.origin + window.location.pathname;
-    window.history.replaceState({}, document.title, cleanUrl);
-
-    const savedState = sessionStorage.getItem('osm_oauth_state');
-    if (state !== savedState) {
-      showToast('خطأ في التحقق من حالة الطلب (State Mismatch). يرجى المحاولة مجدداً.', 'error');
-      return;
-    }
-    
-    const codeVerifier = sessionStorage.getItem('osm_oauth_code_verifier');
-    if (!codeVerifier) {
-      showToast('مفقود رمز التحقق (Code Verifier). يرجى المحاولة مجدداً.', 'error');
-      return;
-    }
-    
-    sessionStorage.removeItem('osm_oauth_state');
-    sessionStorage.removeItem('osm_oauth_code_verifier');
-    
-    try {
-      showLoadingText('جارٍ تأكيد الهوية وتبادل الرموز مع OSM...');
-      
-      const payload = {
-        client_id: OSM_CLIENT_ID,
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: OSM_REDIRECT_URI,
-        code_verifier: codeVerifier
-      };
-
-      const response = await fetch(OSM_TOKEN_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams(payload)
-      });
-      
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Token exchange failed: ${errText}`);
-      }
-      
-      const data = await response.json();
-      if (data.access_token) {
-        localStorage.setItem('osm_access_token', data.access_token);
-        if (data.scope) {
-          localStorage.setItem('osm_granted_scope', data.scope);
-        }
-        showToast('تم تسجيل الدخول بنجاح عبر OpenStreetMap!');
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('فشل في تسجيل الدخول عبر OpenStreetMap: ' + err.message, 'error');
-    }
-  }
+  OsmApi.startLogin().then(started => {
+    if (!started) document.querySelector('#osm-auth-overlay .auth-advanced')?.setAttribute('open', '');
+  });
 }
 
 function showLoadingText(message) {
@@ -2942,36 +2801,6 @@ function showLoadingText(message) {
     overlay.classList.remove('error');
   }
   if (text) text.innerText = message;
-}
-
-async function checkAuthStatus() {
-  const token = localStorage.getItem('osm_access_token');
-  if (!token) return false;
-  
-  try {
-    OSM_ENVIRONMENT = localStorage.getItem('osm_oauth_environment') || 'production';
-    updateOsmUrls();
-    
-    const response = await fetch(OSM_USER_DETAILS_URL, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (data.user && data.user.display_name) {
-        localStorage.setItem('osm_user_display_name', data.user.display_name);
-        return true;
-      }
-    } else {
-      localStorage.removeItem('osm_access_token');
-      localStorage.removeItem('osm_user_display_name');
-    }
-  } catch (err) {
-    console.error('Error verifying OSM token:', err);
-  }
-  return false;
 }
 
 function updateUserWidgetUI() {
@@ -3008,13 +2837,4 @@ function updateUserWidgetUI() {
       widget.style.display = 'none';
     }
   }
-}
-
-function logoutOSM() {
-  localStorage.removeItem('osm_access_token');
-  localStorage.removeItem('osm_user_display_name');
-  localStorage.removeItem('osm_granted_scope');
-  sessionStorage.removeItem('osm_auth_skipped');
-  showToast('تم تسجيل الخروج بنجاح.');
-  window.location.reload();
 }
