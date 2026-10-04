@@ -356,6 +356,22 @@ function getQualityIssues(props) {
   return issues;
 }
 
+// getQualityIssues() depends on the size/Qibla thresholds; cache its result
+// per place and bump issuesVersion whenever a threshold changes, so counts,
+// filtering, popups and the details panel don't recompute it 14k times each.
+let issuesVersion = 0;
+function getIssues(props) {
+  if (props._issuesVersion !== issuesVersion) {
+    props._issues = getQualityIssues(props);
+    props._issuesVersion = issuesVersion;
+  }
+  return props._issues;
+}
+
+function invalidateIssues() {
+  issuesVersion++;
+}
+
 // Calculate and update the dynamic counts badge for each quality issue filter
 function updateImprovementIssueCounts() {
   if (!allPlaces || allPlaces.length === 0) return;
@@ -368,7 +384,7 @@ function updateImprovementIssueCounts() {
   });
 
   for (let i = 0; i < allPlaces.length; i++) {
-    const issues = getQualityIssues(allPlaces[i].properties);
+    const issues = getIssues(allPlaces[i].properties);
     if (issues.length > 0) {
       counts.all++;
       for (let j = 0; j < issues.length; j++) {
@@ -576,7 +592,7 @@ function applySuggestionsFilter() {
   if (!suggestionsLayer) return;
   suggestionsLayer.clearLayers();
 
-  const searchQuery = (currentSearchQuery || '').toLowerCase().trim();
+  const searchQuery = ArabicText.normalize(currentSearchQuery, true);
 
   const filteredMarkers = suggestionsMarkers.filter(m => {
     const props = m._sugProperties;
@@ -584,12 +600,10 @@ function applySuggestionsFilter() {
     if (currentSuggestionFilter === 'unnamed' && !props.is_unnamed) return false;
 
     if (searchQuery) {
-      const ar = (props.name_ar || '').toLowerCase();
-      const en = (props.name_en || '').toLowerCase();
-      const qid = (props.qid || '').toLowerCase();
-      if (!ar.includes(searchQuery) && !en.includes(searchQuery) && !qid.includes(searchQuery)) {
-        return false;
+      if (props._searchKey === undefined) {
+        props._searchKey = ArabicText.normalize(`${props.name_ar || ''} ${props.name_en || ''} ${props.qid || ''}`, true);
       }
+      if (!props._searchKey.includes(searchQuery)) return false;
     }
     return true;
   });
@@ -1523,6 +1537,70 @@ const GapGradientLayer = L.GridLayer.extend({
   }
 });
 
+// One shared icon per marker class instead of a new divIcon per place.
+const MARKER_ICONS = {};
+function markerIcon(markerClass) {
+  if (!MARKER_ICONS[markerClass]) {
+    MARKER_ICONS[markerClass] = L.divIcon({
+      html: '<div class="custom-marker-inner"></div>',
+      className: `custom-marker ${markerClass}`,
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
+    });
+  }
+  return MARKER_ICONS[markerClass];
+}
+
+function buildPlacePopup(props, mode) {
+  if (mode === 'improve') {
+    const issues = getIssues(props);
+    return `
+      <div style="font-family: var(--font-body); text-align: right; padding: 2px;">
+        <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(props.name)}</h4>
+        <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; background: rgba(255, 59, 48, 0.1); font-weight: 600; color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.2); display: inline-block; margin-top: 4px;">
+          ⚠️ لديه ${issues.length} مشكلة جودة
+        </span>
+      </div>
+    `;
+  }
+  return `
+    <div style="font-family: var(--font-body); text-align: right; padding: 2px;">
+      <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(props.name)}</h4>
+      <p style="margin: 0 0 5px 0; font-size: 11px; color: #666; direction: ltr; text-align: right;">${props.name_en !== props.name ? escapeHtml(props.name_en) : ''}</p>
+      <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; background: #eee; font-weight: 600; color: #333;">
+        ${escapeHtml(RELIGION_TRANSLATIONS[props.religion] || props.religion)}
+      </span>
+    </div>
+  `;
+}
+
+// Markers are built once per place and mode and then reused: filtering only
+// changes which of them are handed to the cluster layer. Popup content is
+// generated when opened, so issue counts always reflect current thresholds.
+function getPlaceMarker(f) {
+  const mode = currentMode === 'improve' ? 'improve' : 'poi';
+  f._markers = f._markers || {};
+  if (f._markers[mode]) return f._markers[mode];
+
+  const [lon, lat] = f.geometry.coordinates;
+  const props = f.properties;
+  let markerClass = 'unknown';
+  if (mode === 'improve') {
+    markerClass = 'improve';
+  } else {
+    if (props.religion === 'muslim') markerClass = 'muslim';
+    if (props.religion === 'christian') markerClass = 'christian';
+  }
+
+  const marker = L.marker([lat, lon], { icon: markerIcon(markerClass) });
+  marker.bindPopup(() => buildPlacePopup(props, mode), { closeButton: false });
+  marker.on('click', () => {
+    showDetails(props, lat, lon);
+  });
+  f._markers[mode] = marker;
+  return marker;
+}
+
 // Re-generate Heatmap and Marker Clusters based on selected mode
 function updateMapLayers() {
   // 1. Remove previous heatmap & clusters
@@ -1541,60 +1619,9 @@ function updateMapLayers() {
 
     filteredPlaces.forEach(f => {
       const coords = f.geometry.coordinates;
-      const lon = coords[0];
-      const lat = coords[1];
-      const props = f.properties;
-      
       // Standard heatmap coordinates (lat, lon, weight)
-      heatPoints.push([lat, lon, 1.0]);
-
-      // Custom marker icon creation
-      let markerClass = 'unknown';
-      if (currentMode === 'improve') {
-        markerClass = 'improve';
-      } else {
-        if (props.religion === 'muslim') markerClass = 'muslim';
-        if (props.religion === 'christian') markerClass = 'christian';
-      }
-
-      const customIcon = L.divIcon({
-        html: '<div class="custom-marker-inner"></div>',
-        className: `custom-marker ${markerClass}`,
-        iconSize: [12, 12],
-        iconAnchor: [6, 6]
-      });
-
-      const marker = L.marker([lat, lon], { icon: customIcon });
-      
-      let popupContent = '';
-      if (currentMode === 'improve') {
-        const issues = getQualityIssues(props);
-        popupContent = `
-          <div style="font-family: var(--font-body); text-align: right; padding: 2px;">
-            <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(props.name)}</h4>
-            <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; background: rgba(255, 59, 48, 0.1); font-weight: 600; color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.2); display: inline-block; margin-top: 4px;">
-              ⚠️ لديه ${issues.length} مشكلة جودة
-            </span>
-          </div>
-        `;
-      } else {
-        popupContent = `
-          <div style="font-family: var(--font-body); text-align: right; padding: 2px;">
-            <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(props.name)}</h4>
-            <p style="margin: 0 0 5px 0; font-size: 11px; color: #666; direction: ltr; text-align: right;">${props.name_en !== props.name ? escapeHtml(props.name_en) : ''}</p>
-            <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; background: #eee; font-weight: 600; color: #333;">
-              ${RELIGION_TRANSLATIONS[props.religion] || props.religion}
-            </span>
-          </div>
-        `;
-      }
-      marker.bindPopup(popupContent, { closeButton: false });
-
-      marker.on('click', () => {
-        showDetails(props, lat, lon);
-      });
-
-      markers.push(marker);
+      heatPoints.push([coords[1], coords[0], 1.0]);
+      markers.push(getPlaceMarker(f));
     });
 
     // Render heatmap (different gradients for POI vs Improve)
@@ -1792,7 +1819,7 @@ function showDetails(props, lat, lon) {
   }
 
   // Update quality issues warning box
-  const issues = getQualityIssues(props);
+  const issues = getIssues(props);
   const issuesBox = document.getElementById('details-quality-issues');
   const issuesList = document.getElementById('details-issues-list');
   
@@ -1865,8 +1892,7 @@ function updateDashboardUI() {
     updateIdEditorAreaLink();
   }
 
-  updateMapLayers();
-  updateStats();
+  filterData();
 }
 
 // Calculate and update metrics matching filters and map bounds
@@ -1899,26 +1925,31 @@ function updateStats() {
 }
 
 // Combines search query and religion category filters (POI mode only)
+// Rebuilds filteredPlaces and the map layers for the current mode (the single
+// entry point for any change to filters, thresholds or mode).
 function filterData() {
-  if (currentMode === 'gap') return;
+  if (currentMode === 'gap') {
+    updateMapLayers();
+    updateStats();
+    return;
+  }
 
-  const searchInput = currentSearchQuery.toLowerCase().trim();
-  
+  // Normalized so diacritics, alef/taa-marbuta variants and جامع/مسجد don't
+  // matter ("الجامع الكبير" finds "المسجد الكبير").
+  const searchInput = ArabicText.normalize(currentSearchQuery, true);
+
   filteredPlaces = allPlaces.filter(f => {
     const props = f.properties;
-    
+
     // 1. Check search box keyword
     let matchesSearch = true;
     if (searchInput) {
-      const name = (props.name || '').toLowerCase();
-      const nameEn = (props.name_en || '').toLowerCase();
-      const city = (props.addr_city || '').toLowerCase();
-      const id = String(props.osm_id);
-
-      matchesSearch = name.includes(searchInput) ||
-                      nameEn.includes(searchInput) ||
-                      city.includes(searchInput) ||
-                      id.includes(searchInput);
+      if (props._searchKey === undefined) {
+        props._searchKey = ArabicText.normalize(
+          [props.name, props.name_en, props.addr_city].filter(Boolean).join(' '), true
+        ) + ' ' + props.osm_id + (props.poi_node_id ? ' ' + props.poi_node_id : '');
+      }
+      matchesSearch = props._searchKey.includes(searchInput);
     }
 
     // 2. Check last-modified date range
@@ -1943,7 +1974,7 @@ function filterData() {
       }
       return matchesReligion && matchesSearch && matchesDate;
     } else if (currentMode === 'improve') {
-      const issues = getQualityIssues(props);
+      const issues = getIssues(props);
       if (issues.length === 0) return false;
 
       let matchesImprovement = false;
@@ -1980,7 +2011,6 @@ function setupEventListeners() {
     document.getElementById('mode-improve').classList.remove('active');
     e.target.classList.add('active');
     currentMode = 'poi';
-    filterData();
     updateDashboardUI();
   });
 
@@ -1998,7 +2028,6 @@ function setupEventListeners() {
     e.target.classList.add('active');
     currentMode = 'improve';
     updateImprovementIssueCounts();
-    filterData();
     updateDashboardUI();
   });
 
@@ -2128,6 +2157,7 @@ function setupEventListeners() {
 
     if (validMin) currentSizeMinM2 = minVal;
     if (validMax) currentSizeMaxM2 = maxVal;
+    invalidateIssues();
 
     updateImprovementIssueCounts();
     debouncedSizeFilter();
@@ -2143,6 +2173,7 @@ function setupEventListeners() {
     sizeMaxInput.classList.remove('invalid');
     currentSizeMinM2 = SIZE_MIN_AREA_DEFAULT;
     currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
+    invalidateIssues();
     updateImprovementIssueCounts();
     filterData();
   });
@@ -2160,6 +2191,7 @@ function setupEventListeners() {
     const num = parseFloat(val);
     if (!isNaN(num) && num >= 1 && num <= 45) {
       currentQiblaDevThreshold = num;
+      invalidateIssues();
       if (qiblaSlider) qiblaSlider.value = num;
       if (qiblaInput) qiblaInput.value = num;
       const label = document.getElementById('qibla-threshold-label');
