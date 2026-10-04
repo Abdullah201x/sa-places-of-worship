@@ -10,13 +10,14 @@ addTranslations({
   authSuccess: ['تم تسجيل الدخول بنجاح عبر OpenStreetMap!', 'Logged in with OpenStreetMap.'],
   authFailed: ['فشل في تسجيل الدخول عبر OpenStreetMap: {msg}', 'OpenStreetMap login failed: {msg}'],
   authLoggedOut: ['تم تسجيل الخروج بنجاح.', 'Logged out.'],
+  authHttpsRequired: ['يتطلب تسجيل الدخول عبر OpenStreetMap اتصالاً آمناً (HTTPS). شغّل الخادم المحلي بالأمر: python serve_ssl.py ثم افتح https://localhost:8000/', 'OpenStreetMap login requires HTTPS. Run the local server with: python serve_ssl.py and open https://localhost:8000/'],
+  authFileProtocol: ['لا يمكن تسجيل الدخول عبر فتح الملف مباشرة (file://). شغّل الموقع عبر خادم محلي آمن أو GitHub Pages.', 'Login is not supported over file://. Please serve via a local HTTPS server or GitHub Pages.'],
 });
 
 // OAuth2 application registered on openstreetmap.org for this site (public
 // PKCE client, scopes read_prefs write_api write_notes, redirect URI
-// https://abdullah201x.github.io/sa-places-of-worship/). Leave empty to
-// require a client ID in the login dialog's advanced settings.
-const DEFAULT_OSM_CLIENT_ID = '';
+// https://abdullah201x.github.io/sa-places-of-worship/).
+const DEFAULT_OSM_CLIENT_ID = '66V3GYmV7X9ZP9zIimXwk1Pi-R2YWBLz2peCFLjcImE';
 
 const OSM_SCOPES = 'read_prefs write_api write_notes';
 const CHANGESET_CREATED_BY = 'Saudi Places of Worship Map (https://abdullah201x.github.io/sa-places-of-worship)';
@@ -83,6 +84,14 @@ const OsmApi = {
   },
 
   async startLogin() {
+    if (window.location.protocol === 'file:') {
+      showToast(t('authFileProtocol'), 'error');
+      return false;
+    }
+    if (window.location.protocol === 'http:') {
+      showToast(t('authHttpsRequired'), 'warning');
+      return false;
+    }
     const clientId = this.clientId();
     if (!clientId) {
       showToast(t('authNeedClientId'), 'error');
@@ -150,6 +159,7 @@ const OsmApi = {
       if (!data.access_token) throw new Error('no access_token in response');
       localStorage.setItem('osm_access_token', data.access_token);
       localStorage.setItem('osm_granted_scope', data.scope || OSM_SCOPES);
+      await this.checkAuth();
       showToast(t('authSuccess'));
     } catch (err) {
       console.error(err);

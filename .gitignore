@@ -14,3 +14,7 @@ venv/
 # Partial writes from common.write_json
 .tmp_*.json
 .pytest_cache/
+
+# Local SSL certificates for HTTPS testing
+cert.pem
+key.pem

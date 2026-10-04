@@ -68,6 +68,16 @@ above, and commits only the generated data files when validation passes.
 
 Tests: `pytest`.
 
+## Running locally
+
+Because OpenStreetMap OAuth2 strictly enforces **HTTPS** for all redirect URIs (even on `localhost`), run the included SSL development server:
+
+```bash
+python serve_ssl.py
+```
+
+Then open `https://localhost:8000/` in your browser. (Accept the local development certificate on first visit).
+
 Notes:
 - The Saudi Arabia boundary uses OSM relation id **307584**.
 - A tagged POI node inside a mosque building outline is merged into that

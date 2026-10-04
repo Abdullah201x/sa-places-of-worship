@@ -2524,7 +2524,11 @@ function setupEventListeners() {
 
   const redirectUriDisplay = document.getElementById('osm-redirect-uri-display');
   if (redirectUriDisplay) {
-    redirectUriDisplay.innerText = OsmApi.redirectUri();
+    if (window.location.protocol === 'http:') {
+      redirectUriDisplay.innerHTML = `${escapeHtml(OsmApi.redirectUri())} <span style="color:#ffb03a; font-size:11px; display:block; margin-top:3px;">⚠️ يتطلب OpenStreetMap بروتوكول HTTPS. شغّل: python serve_ssl.py</span>`;
+    } else {
+      redirectUriDisplay.innerText = OsmApi.redirectUri();
+    }
   }
 
   // 7a. Suggested Additions (Wikidata mosques missing in OSM) Toggle & Chips

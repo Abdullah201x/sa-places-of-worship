@@ -717,7 +717,7 @@
 
             <div class="client-id-config">
               <label for="osm-client-id">معرّف العميل (Client ID):</label>
-              <input type="text" id="osm-client-id" class="auth-input" placeholder="اتركه فارغاً لاستخدام المعرّف المدمج" dir="ltr" />
+              <input type="text" id="osm-client-id" class="auth-input" placeholder="المعرّف المدمج: 66V3GYmV... (اتركه فارغاً للافتراضي)" dir="ltr" />
             </div>
 
             <div class="client-id-config" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 14px; border-radius: 12px; gap: 6px;">
@@ -732,7 +732,7 @@
                 </button>
               </div>
               <div id="osm-redirect-uri-display" style="font-family: monospace; font-size: 11.5px; color: var(--color-primary); user-select: all; text-align: left; direction: ltr; overflow-x: auto; white-space: nowrap; padding-bottom: 2px;">loading...</div>
-              <p class="input-help">يجب تطابق هذا العنوان تماماً مع إعدادات التطبيق في OpenStreetMap.</p>
+              <p class="input-help">يجب تطابق هذا العنوان تماماً مع إعدادات التطبيق في OpenStreetMap (مع https:// دائماً).</p>
             </div>
             </details>
 
@@ -784,9 +784,14 @@
                   <div class="step-text">
                     املأ البيانات بالتالي:
                     <ul class="guide-sublist">
-                      <li><strong>الاسم (Name):</strong> خارطة أماكن العبادة</li>
-                      <li><strong>رابط العودة (Redirect URI):</strong> انسخ الرابط المعروض في تبويب تسجيل الدخول وصقه هنا تماماً.</li>
-                      <li><strong>تطبيق سري (Confidential application):</strong> <span style="color: #ffb03a;">تأكد من عدم تحديد هذا الخيار</span> — هذا التطبيق يعتمد على PKCE ولا يستخدم أو يدعم رمزاً سرياً (Client Secret).</li>
+                      <li><strong>الاسم (Name):</strong> خارطة أماكن العبادة (أو اسم تطبيقك الحالي)</li>
+                      <li><strong>روابط العودة (Redirect URIs):</strong> يقبل OpenStreetMap روابط متعددة (سطر لكل رابط). انسخ والصق الروابط التالية:
+                        <pre style="background: rgba(0,0,0,0.35); padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 11px; direction: ltr; text-align: left; margin: 6px 0; color: var(--color-primary); overflow-x: auto; line-height: 1.6;">https://abdullah201x.github.io/sa-places-of-worship/
+https://localhost:8000/
+https://127.0.0.1:8000/</pre>
+                        <p class="input-help" style="margin-top: 4px;">ملاحظة هامة: إذا كان لديك تطبيق مسجل بالفعل (مثل تطبيق <code>osm x wikidata</code>)، يكفيك الدخول وتعديل حقل Redirect URIs بإضافة رابط هذا الموقع، دون الحاجة لإنشاء تطبيق جديد.</p>
+                      </li>
+                      <li><strong>تطبيق سري (Confidential application):</strong> <span style="color: #ffb03a;">تأكد من عدم تحديد هذا الخيار</span> — هذا التطبيق يعتمد على PKCE ولا يستخدم رمزاً سرياً (Client Secret).</li>
                     </ul>
                   </div>
                 </div>
