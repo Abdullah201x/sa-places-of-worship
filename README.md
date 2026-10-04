@@ -2,136 +2,159 @@
 
 An interactive, offline-processed map of places of worship across Saudi Arabia,
 plus a "coverage gaps" analysis highlighting inhabited grid cells (by road
-density) that contain **zero** places of worship.
+density) that contain **zero** places of worship, and a data-improvement mode
+for finding and fixing OpenStreetMap tagging problems.
 
-The front-end is a static Leaflet dashboard (Arabic, RTL). All heavy data
-processing happens ahead of time in Python from an OpenStreetMap `.pbf` extract.
+The front-end is a static Leaflet dashboard (Arabic RTL by default, with an
+English toggle). All heavy data processing happens ahead of time in Python from
+an OpenStreetMap `.pbf` extract.
+
+Live site: <https://abdullah201x.github.io/sa-places-of-worship>
 
 ## Contents
 
 | File | Purpose |
 |------|---------|
-| [extract_sa_boundary.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_sa_boundary.py) | Builds the Saudi Arabia boundary polygon from OSM. |
-| [extract_places.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_places.py) | Extracts all `amenity=place_of_worship` features inside the boundary. |
-| [calculate_gaps.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_gaps.py) | Grids the country and flags road-populated cells with no worship place. |
-| [import_wikidata_suggestions.py](file:///c:/Users/abdul/Desktop/GCC20260707/import_wikidata_suggestions.py) | Builds `suggested_mosques_sa.geojson`: Wikidata mosques missing from OSM (from the osm x wikidata project's `data/sa.json`), shown as an optional "suggested additions" layer. |
-| [calculate_mosque_sizes.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_mosque_sizes.py) | Independent, separately-scheduled script (e.g. weekly) that flags mosque building footprints that are unusually small/large. |
-| [detect_geometry_anomalies.py](file:///c:/Users/abdul/Desktop/GCC20260707/detect_geometry_anomalies.py) | Machine Learning (Isolation Forest) script detecting distorted, over-noded, or anomalous mosque building outlines. |
-| [ML_ROADMAP.md](file:///c:/Users/abdul/Desktop/GCC20260707/ML_ROADMAP.md) | Comprehensive Machine Learning roadmap & vision for spatial analytics and quality assurance. |
-| [index.html](file:///c:/Users/abdul/Desktop/GCC20260707/index.html) / [app.js](file:///c:/Users/abdul/Desktop/GCC20260707/app.js) / [index.css](file:///c:/Users/abdul/Desktop/GCC20260707/index.css) | The Leaflet dashboard front-end. |
-| `*.geojson` | Generated data consumed by the front-end. |
+| [common.py](common.py) | Shared pipeline helpers: PBF lookup, centroids, Arabic name normalization, atomic JSON writes, `summary.json`. |
+| [extract_sa_boundary.py](extract_sa_boundary.py) | Builds the Saudi Arabia boundary polygon from OSM. |
+| [extract_places.py](extract_places.py) | Extracts places of worship (nodes, ways and multipolygon relations) inside the boundary, merging POI nodes into the building outline they sit in. |
+| [calculate_gaps.py](calculate_gaps.py) | Grids the country and flags road-populated cells far from any place of worship. |
+| [calculate_mosque_sizes.py](calculate_mosque_sizes.py) | Footprint area of every mosque outline (size outliers are judged in the browser). |
+| [detect_geometry_anomalies.py](detect_geometry_anomalies.py) | Isolation Forest model flagging distorted / over-noded outlines, plus each building's Qibla deviation. |
+| [import_wikidata_suggestions.py](import_wikidata_suggestions.py) | Wikidata mosques missing from OSM, from the [osm x wikidata](https://github.com/Abdullah201x/osm-x-wikidata) project's `data/sa.json`. |
+| [validate_data.py](validate_data.py) | Blocks publishing when a dataset is missing, unreadable, or shrank by more than 20%. |
+| [index.html](index.html) / [app.js](app.js) / [index.css](index.css) | The Leaflet dashboard. |
+| [js/](js) | Front-end modules: `i18n.js` + `translations*.js` (Arabic/English), `arabic.js` (name normalization), `review.js` (review queue, marks, permalinks, shortcuts), `exporters.js` (CSV, MapRoulette, JOSM, Overpass), `osm_api.js` (OAuth + API 0.6 editing), `editing.js` (quick fixes, batch, history). |
+| [tests/](tests) | pytest tests for the shared helpers. |
+| [ML_ROADMAP.md](ML_ROADMAP.md) | Machine learning roadmap (Arabic). |
+
+Generated data (committed, consumed by the front-end):
+
+| File | Contents |
+|------|----------|
+| `summary.json` | Counts per dataset, the OSM extract date, and `updated_at` (used by the front-end as the cache version). |
+| `places_of_worship_sa.geojson` | One point per place of worship. |
+| `worship_gaps_sa.json` | Compact gap grid: `{grid_size, cells: [[gx, gy, road_length_m, gap_score], ...]}`. |
+| `mosque_sizes.json`, `mosque_anomalies.json` | Per-way footprint area / ML anomaly scores and Qibla deviation. |
+| `suggested_mosques_sa.geojson` | Wikidata suggestions layer. |
+| `sa_boundary.geojson` | Country boundary. |
 
 ## Prerequisites
 
 - Python 3.9+
-- Python packages:
-
-  ```bash
-  pip install osmium shapely
-  ```
-
-- Exactly one OSM `.pbf` extract covering Saudi Arabia, saved in this folder
-  (e.g. a GCC-states extract from Geofabrik). The scripts auto-detect it by
-  globbing for `*.osm.pbf`, so no filename is hardcoded — just drop in the
-  new extract and remove the old one when updating data.
+- `pip install -r requirements.txt`
+- An OSM `.pbf` extract covering Saudi Arabia (e.g. Geofabrik's GCC states).
+  The scripts look for it in `$OSM_PBF`, then this folder, then the sibling
+  `../update osm` folder used by the master updater; the newest `*.pbf` wins.
 
 ## Data pipeline
 
-Run the scripts **in this order** (each reads the previous step's output). All
-paths are resolved relative to the script location, so no arguments are needed:
+Run the scripts **in this order** (each reads the previous step's output):
 
 ```bash
-python extract_sa_boundary.py         # -> sa_boundary.geojson
-python extract_places.py              # -> places_of_worship_sa.geojson
-python calculate_gaps.py              # -> worship_gaps_sa.geojson
-python import_wikidata_suggestions.py # -> suggested_mosques_sa.geojson (reads osm x wikidata data/sa.json)
+python extract_sa_boundary.py          # -> sa_boundary.geojson
+python extract_places.py               # -> places_of_worship_sa.geojson
+python calculate_gaps.py               # -> worship_gaps_sa.json
+python calculate_mosque_sizes.py       # -> mosque_sizes.json
+python detect_geometry_anomalies.py    # -> mosque_anomalies.json
+python import_wikidata_suggestions.py  # -> suggested_mosques_sa.geojson (reads osm x wikidata data/sa.json)
+python validate_data.py                # exits non-zero if anything looks wrong
 ```
 
-Separately, `calculate_mosque_sizes.py` re-scans the `.pbf` for mosque building
-footprints and flags size outliers. It's independent of the pipeline above —
-it doesn't read or write any of its output files — so it can be run on its
-own cadence (e.g. weekly via cron), since building footprints change far less
-often than day-to-day tagging:
+Every script writes minified JSON atomically and records its counts in
+`summary.json`. In day-to-day use the master updater
+(`../update osm/update_projects.py`) downloads the extract, runs all of the
+above, and commits only the generated data files when validation passes.
 
-```bash
-python calculate_mosque_sizes.py   # -> mosque_sizes.json
-```
+Tests: `pytest`.
 
 Notes:
-- The Saudi Arabia boundary uses OSM relation id **307584**
-  ([extract_sa_boundary.py](file:///c:/Users/abdul/Desktop/GCC20260707/extract_sa_boundary.py)).
+- The Saudi Arabia boundary uses OSM relation id **307584**.
+- A tagged POI node inside a mosque building outline is merged into that
+  building (the building keeps its geometry, the node's name/amenity/religion
+  fill in). When both carry `amenity=place_of_worship` the place gets a
+  "mapped twice" issue.
 - The gap grid uses ~0.004° cells (~440 m, close to typical neighborhood
-  mosque spacing). A cell qualifies as a candidate when it contains at least
-  2 distinct drivable ways (so a single road passing through empty land
-  doesn't count as inhabited). A candidate cell is then flagged as a "gap"
-  based on its actual distance to the nearest place of worship (via a
-  `shapely` STRtree nearest-neighbor query), not just whether one exists
-  somewhere in the same cell. Cells within walking distance (750 m) of a
-  mosque are excluded; gap intensity scales with both how far the nearest
-  mosque actually is and the cell's total drivable road **length** (summed
-  per cell, with through-traffic classes like motorway/trunk/primary
-  downweighted). Length is used instead of a raw way count for this
-  intensity score because OSM fragments ways into many short segments
-  wherever a tag changes (speed limit, lanes, name), which otherwise
-  inflates apparent density in cities without indicating more residents
-  ([calculate_gaps.py](file:///c:/Users/abdul/Desktop/GCC20260707/calculate_gaps.py)).
+  mosque spacing). A cell is a candidate when it contains at least 2 distinct
+  drivable ways, and a gap when the nearest place of worship (STRtree query)
+  is more than 750 m away. Gap intensity scales with that distance and with
+  the cell's drivable road **length** (through-traffic classes downweighted),
+  which, unlike a way count, isn't inflated by OSM splitting ways at every tag
+  change.
+- The ML anomaly flag is the Isolation Forest verdict only; Qibla deviation is
+  a separate check with its own (adjustable) threshold.
 
 ## Running the front-end
 
-The app loads GeoJSON via `fetch`, which requires HTTP (it will **not** work by
-opening `index.html` directly over `file://`). Serve the folder locally:
+The app loads data via `fetch`, so it must be served over HTTP:
 
 ```bash
 python -m http.server 8000
 ```
 
-Then open <http://localhost:8000/> in a browser.
+Then open <http://localhost:8000/>.
 
-## Dataset Updates & Statistics
+### OSM login
 
-The database is updated with the latest OpenStreetMap data:
-- **Total Places of Worship:** 12,992
-- **Active Coverage Gaps:** 60,324
-
+Login uses OAuth 2.0 with PKCE. Set `DEFAULT_OSM_CLIENT_ID` in
+[js/osm_api.js](js/osm_api.js) to the client ID of an application registered
+on openstreetmap.org with the redirect URI
+`https://abdullah201x.github.io/sa-places-of-worship/` (and
+`http://localhost:8000/` for local testing), as a public (non-confidential)
+client with the scopes *Read user preferences*, *Modify the map* and *Create
+notes*. Until then, or for a self-hosted copy, a client ID can be entered in
+the login dialog under "advanced settings".
 
 ## Front-end features
 
 - **كثافة الأماكن (POI density):** heatmap + clustered markers, filterable by
-  religion, searchable by name/city/OSM id.
-- **فجوات التغطية (Coverage gaps):** negative heatmap of underserved cells.
-- **تحسين البيانات (Data Quality / Improvement Mode):** Flags mapping issues on the map, helping contributors identify and correct errors. It checks for:
-  1. **Missing Amenity tag**: `building=mosque` without `amenity=place_of_worship`.
-  2. **Generic Name**: Empty name or default placeholder (e.g., "مسجد" or "Mosque").
-  3. **Missing English Translation**: Missing `name:en` or identical to Arabic.
-  4. **Missing Denomination**: Muslim mosques with unspecified sect/denomination.
-  5. **Unusual Building Size**: Mosque building footprint is unusually small or large (computed weekly by `calculate_mosque_sizes.py`), suggesting a mis-mapped outline.
-  6. **Stale Data**: Still at `version=1` and not edited in 5+ years — never revisited since first mapped.
-  7. **Generic Building Tag (`building=yes`)**: Mosque building tagged as `building=yes` instead of `building=mosque`.
-  8. **Mapped as a Node**: Place of worship represented as a single point (`geom_type=Point`) rather than an area/way — ideally a mosque's footprint is traced as a building outline so its true size and shape appear on the map.
-  9. **ML Spatial Geometry Anomaly (`ml_geometry_anomaly`)**: Unsupervised machine learning ([detect_geometry_anomalies.py](file:///c:/Users/abdul/Desktop/GCC20260707/detect_geometry_anomalies.py)) using Isolation Forest to flag multi-dimensional shape distortions, CAD import artifacts, over-noded polygons (e.g., 800+ nodes), or low-compactness outlines.
-  10. **Qibla Orientation Misalignment (`qibla_deviation`)**: Flags mosque building outlines whose principal architectural orientation axis deviates by $\ge 20^\circ$ (user-adjustable) from the geodesic Great-Circle azimuth to the Holy Kaaba in Makkah, with sorting from least accurate to most accurate.
-- **محرر OSM المدمج (OSM Editor Integration):**
-  - Integrated OpenStreetMap authentication via OAuth 2.0 (supports production and development environment logins) to verify user accounts.
-  - Direct integration with **iD Editor (Web)** to edit the current map view area.
-  - Direct integration with **JOSM** via remote control port (8111) to load and zoom to specific nodes/ways for immediate tagging fixes.
-- **مؤشر اتجاه القبلة (Qibla Compass):** An overlay tool displaying a Qibla compass pointer in the center of the map to verify mosque orientation.
-- **ملاحظات OSM (OSM Notes):** Add [OpenStreetMap Notes](https://wiki.openstreetmap.org/wiki/Notes) directly from the map — either by toggling Add Note mode and clicking a location, or via the "Add note here" shortcut on a place's detail panel. Works both for signed-in OSM users (attributed, requires the `write_notes` OAuth scope) and anonymous visitors with no OSM account (posted anonymously, as supported natively by the Notes API). Existing open notes in view are shown while Add Note mode is active to avoid duplicates.
-  - **Structured presets:** besides free text, the composer offers quick templates for "there's a place of worship here" (missing from the map), a terse `fixme:` report, and a "place is gone" report — mirroring the structured-note conventions used by real OSM clients like StreetComplete and MAPS.ME.
-  - **Auto-signature:** every submitted note, preset or free text, is signed `via خارطة أماكن العبادة (https://abdullah201x.github.io/sa-places-of-worship) #sa-worship-map`, the same convention StreetComplete/MAPS.ME use to identify their notes to mappers — and it doubles as promotion for this site.
-- **خرائط الأساس (Basemaps & CARTO Support):**
-  - High-performance, keyless dark and light basemaps powered by **Esri Canvas** (`World_Dark_Gray` and `World_Light_Gray`), providing a clean, watermark-free view out of the box with zero configuration required.
-  - Also includes **Esri World Imagery** (Satellite) with automatic overzoom discovery, and **Esri World Street Map**.
-  - **CARTO Basemaps API Key Support:** For users who prefer official CARTO Dark Matter or Positron tiles, a dedicated settings modal allows entering a free CARTO API key (obtained in 1 minute from [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey)), instantly unlocking CARTO tiles without the watermark notice.
-- **اقتراحات ويكي بيانات للإضافة (Wikidata Mosque Suggestions Layer):**
-  - Displays over 53,000+ Wikidata mosques missing in OSM (spatial distance > 100m from any existing OSM place of worship).
-  - **Cleaned Mosque Names:** Automatically strips Wikidata batch-ingestion serial suffixes (e.g., ` 1`, ` 5`), preserving 47,400+ genuine Arabic mosque names and flagging truly generic/unnamed items.
-  - **False Positive Elimination:** Strips non-mosque entities (universities, stadiums, neighborhoods, hospitals) that erroneously received `Q32815` in Wikidata.
-  - **Interactive Mapper Actions:**
-    - **معاينة بالأقمار الصناعية (Satellite Preview):** Instant one-click switch to high-resolution Esri Satellite imagery zoomed to zoom level 18, allowing mappers to visually verify the mosque building, dome, or minaret.
-    - **نسخ الوسوم المقترحة (Copy Tags):** One-click copy of standard OpenStreetMap tags (`amenity=place_of_worship`, `religion=muslim`, `name`, `name:ar`, `name:en`, `wikidata=Q...`).
-    - **فتح في iD (Open in iD):** Opens the web editor directly at the exact coordinates.
-    - **إضافة في JOSM (Add in JOSM):** Remote Control integration that creates the node with pre-filled tags and coordinates.
-  - Sub-filters by name status (الكل / مسماة / عامة وبدون اسم) and live in-viewport count.
-- Adjustable heatmap radius/blur, live in-viewport counts.
-
-
+  religion and last-edit date. Search ignores diacritics and spelling variants
+  (أ/ا, ة/ه, ى/ي) and treats جامع and مسجد as the same word.
+- **فجوات التغطية (Coverage gaps):** continuous gradient of underserved cells,
+  with buttons to open the current view in iD or JOSM to add a mosque.
+- **تحسين البيانات (Data improvement):** flags mapping issues:
+  1. **Missing amenity tag:** `building=mosque` without `amenity=place_of_worship`.
+  2. **Generic name:** empty, or only generic words ("مسجد", "الجامع", "مصلى", "Mosque", numbers).
+  3. **Missing English name:** no `name:en`, or identical to the Arabic name.
+  4. **Missing denomination** for Muslim places of worship.
+  5. **Unusual building size** (adjustable limits).
+  6. **Stale data:** still `version=1` after 5+ years.
+  7. **`building=yes`** on a mosque instead of `building=mosque`.
+  8. **Mapped as a node** instead of a building outline.
+  9. **ML geometry anomaly** (Isolation Forest).
+  10. **Qibla misalignment:** building axis deviating from the great-circle
+      bearing to the Kaaba by at least an adjustable threshold (default 20°).
+  11. **Mapped twice:** building and a point inside it both tagged as the place of worship.
+- **Review workflow:**
+  - `N` / `P` step through the current list (the Qibla list by severity,
+    everything else nearest-first from the map view).
+  - Mark places *fixed* (`F`) or *skipped* (`S`); marked places are hidden and
+    left out of the counts until newer OSM data arrives.
+  - Optional "visible area only" issue counts.
+  - Keyboard shortcuts (`?` lists them).
+- **Permalinks:** the URL keeps the mode, issue filter, religion filter,
+  search, map view, selected place and language, so a view can be shared.
+- **Exports of the current list:** CSV (UTF-8 BOM, opens correctly in Excel),
+  MapRoulette challenge GeoJSON with per-task instructions, loading the
+  visible places into JOSM, and an Overpass Turbo query for tag-based checks.
+- **In-app fixes (OSM API 0.6):** after logging in, tag-based issues (missing
+  amenity, `building=yes`, missing `name:en`, missing denomination) can be
+  fixed from the details panel. Every edit shows the tag diff and an editable
+  changeset comment and source, checks that the object hasn't changed since
+  the data was published, and uploads in a changeset that is always closed.
+  Individually reviewed fixes can be queued and uploaded together in one
+  changeset; there is no bulk "fix all". A local "My edits" history keeps the
+  changesets made from this browser (CSV/JSON export).
+- **JOSM / iD integration:** open any place in iD, or load and select it
+  (building and merged POI node) in JOSM via Remote Control.
+- **مؤشر اتجاه القبلة (Qibla compass)** overlay at the map centre.
+- **ملاحظات OSM (OSM Notes):** add notes from the map, signed in or
+  anonymously, with presets (missing place of worship, fixme, place is gone);
+  every note is signed `via خارطة أماكن العبادة (...) #sa-worship-map`.
+- **Basemaps:** keyless Esri dark/light/streets/satellite (satellite clipped to
+  the country, with automatic maximum-zoom discovery), or CARTO with a free key.
+- **اقتراحات ويكي بيانات (Wikidata suggestions):** Wikidata mosques more than
+  100 m from any OSM place of worship, with cleaned names, non-mosque and
+  landform false positives removed, satellite preview, tag copy, and one-click
+  add in iD or JOSM.
+- **العربية / English:** the whole interface switches language and direction.
