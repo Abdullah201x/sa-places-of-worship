@@ -10,3 +10,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Partial writes from common.write_json
+.tmp_*.json
+.pytest_cache/

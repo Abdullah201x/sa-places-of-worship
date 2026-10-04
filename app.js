@@ -73,7 +73,7 @@ let currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
 const QIBLA_DEV_DEFAULT = 20.0;
 let currentQiblaDevThreshold = QIBLA_DEV_DEFAULT;
 let currentQiblaSort = 'least_accurate'; // 'least_accurate' or 'most_accurate'
-let currentQiblaNavIndex = 0;
+let currentQiblaNavIndex = -1;
 
 // Map configuration
 const MAP_INITIAL_CENTER = [24.0, 45.0]; // Centered on Saudi Arabia
@@ -220,6 +220,19 @@ function escapeHtml(str) {
   }[ch]));
 }
 
+// Returns the URL only if it uses http(s); blocks javascript: and similar schemes.
+function safeUrl(url) {
+  const s = String(url || '').trim();
+  return /^https?:\/\//i.test(s) ? s : '';
+}
+
+// OSM element type ('node' | 'way' | 'relation') for a place's properties.
+function osmTypeOf(props) {
+  if (props.geom_type === 'Point') return 'node';
+  if (props.geom_type === 'Relation') return 'relation';
+  return 'way';
+}
+
 // Detect mapping issues for a feature based on its tags
 function getQualityIssues(props) {
   const issues = [];
@@ -233,9 +246,8 @@ function getQualityIssues(props) {
     });
   }
   
-  // 2. Missing specific name (empty or placeholder like "Mosque", "Place of Worship", "مسجد")
-  const cleanName = (props.name_original || '').trim();
-  if (!cleanName || cleanName === 'Mosque' || cleanName === 'Place of Worship' || cleanName === 'مسجد') {
+  // 2. Missing specific name (empty, or only generic words like "مسجد", "الجامع", "مصلى", "Mosque")
+  if (ArabicText.isGenericMosqueName(props.name_original)) {
     issues.push({
       id: 'missing_name',
       title_ar: 'اسم المسجد مفقود أو افتراضي (مثال: "مسجد")',
@@ -316,7 +328,17 @@ function getQualityIssues(props) {
     issues.push({
       id: 'ml_geometry_anomaly',
       title_ar: `🤖 شذوذ هندسي (ذكاء اصطناعي): ${props.ml_anomaly.diagnosis}`,
-      title_en: `🤖 ML Geometry Anomaly: ${props.ml_anomaly.diagnosis}`
+      title_en: `🤖 ML Geometry Anomaly: ${props.ml_anomaly.diagnosis_en || props.ml_anomaly.diagnosis}`
+    });
+  }
+
+  // 11. Mapped twice: the building outline and a point inside it both carry
+  // amenity=place_of_worship (merged into one place by extract_places.py).
+  if (props.duplicate_poi) {
+    issues.push({
+      id: 'duplicate_poi',
+      title_ar: 'مكرر: المبنى ونقطة داخله كلاهما موسوم كدار عبادة — يُفضّل نقل الوسوم إلى المبنى وحذف النقطة',
+      title_en: 'Mapped twice: both the building and a point inside it are tagged as the place of worship'
     });
   }
 
@@ -338,20 +360,12 @@ function getQualityIssues(props) {
 function updateImprovementIssueCounts() {
   if (!allPlaces || allPlaces.length === 0) return;
 
-  const counts = {
-    all: 0,
-    missing_amenity: 0,
-    missing_name: 0,
-    missing_name_en: 0,
-    missing_denom: 0,
-    size_too_small: 0,
-    size_too_large: 0,
-    stale_data: 0,
-    building_yes: 0,
-    mapped_as_node: 0,
-    ml_geometry_anomaly: 0,
-    qibla_deviation: 0
-  };
+  // One badge per filter button in index.html; counts start at zero so a
+  // check with no hits shows 0 rather than a stale value.
+  const counts = { all: 0 };
+  document.querySelectorAll('[data-improve]').forEach(btn => {
+    counts[btn.getAttribute('data-improve')] = 0;
+  });
 
   for (let i = 0; i < allPlaces.length; i++) {
     const issues = getQualityIssues(allPlaces[i].properties);
@@ -381,10 +395,12 @@ function updateImprovementIssueCounts() {
 }
 
 // Send load_and_zoom request to JOSM Remote Control port (8111)
-function editInJOSM(lat, lon, osmId, geomType) {
-  const type = geomType === 'Point' ? 'node' : 'way';
+function editInJOSM(lat, lon, props) {
+  // Merged places select both the building and the POI node inside it.
+  const select = [`${osmTypeOf(props)}${props.osm_id}`];
+  if (props.poi_node_id) select.push(`node${props.poi_node_id}`);
   const delta = 0.0015;
-  const url = `http://127.0.0.1:8111/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}&select=${type}${osmId}`;
+  const url = `http://127.0.0.1:8111/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}&select=${select.join(',')}`;
 
   fetch(url)
     .then(res => {
@@ -470,11 +486,7 @@ function setSuggestionsVisible(visible) {
   const originalLabel = label ? label.innerText : '';
   if (label) label.innerText = 'جارٍ تحميل 53,000+ اقتراح...';
 
-  fetch(`suggested_mosques_sa.geojson?t=${Date.now()}`)
-    .then(r => {
-      if (!r.ok) throw new Error('Failed to load suggestions');
-      return r.json();
-    })
+  fetchJson('suggested_mosques_sa.geojson')
     .then(data => {
       suggestionsAllFeatures = data.features || [];
       const meta = data.metadata || {};
@@ -643,21 +655,39 @@ function buildSuggestionPopup(props, lat, lon) {
       </div>
 
       <div class="suggestion-actions">
-        <button type="button" class="btn-sug-action btn-sug-satellite" onclick="previewSuggestionSatellite(${lat}, ${lon}); return false;" title="معاينة فورية للمبنى أو القبة عبر الأقمار الصناعية">
+        <button type="button" class="btn-sug-action btn-sug-satellite" data-sug-action="satellite" data-qid="${escapeHtml(props.qid)}" title="معاينة فورية للمبنى أو القبة عبر الأقمار الصناعية">
           🛰️ معاينة بالأقمار الصناعية (Esri)
         </button>
-        <button type="button" class="btn-sug-action btn-sug-copy" onclick="copySuggestionTags('${escapeHtml(props.qid)}'); return false;" title="نسخ وسوم المسجد الجاهزة للحافظة">
+        <button type="button" class="btn-sug-action btn-sug-copy" data-sug-action="copy" data-qid="${escapeHtml(props.qid)}" title="نسخ وسوم المسجد الجاهزة للحافظة">
           📋 نسخ الوسوم
         </button>
         <a href="${idUrl}" target="_blank" rel="noopener noreferrer" class="btn-sug-action btn-sug-id" title="فتح المحرر في متصفح الويب">
           ✏️ فتح في iD
         </a>
-        <button type="button" class="btn-sug-action btn-sug-josm" onclick="addSuggestionInJOSM('${escapeHtml(props.qid)}'); return false;" title="إرسال نقطة المسجد مباشرة لمحرر JOSM">
+        <button type="button" class="btn-sug-action btn-sug-josm" data-sug-action="josm" data-qid="${escapeHtml(props.qid)}" title="إرسال نقطة المسجد مباشرة لمحرر JOSM">
           ⚡ إضافة في JOSM
         </button>
       </div>
     </div>`;
 }
+
+// Popup buttons carry data-sug-action/data-qid instead of inline onclick
+// strings, so popup HTML never has to embed values inside JavaScript.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-sug-action]');
+  if (!btn) return;
+  e.preventDefault();
+  const qid = btn.getAttribute('data-qid');
+  const action = btn.getAttribute('data-sug-action');
+  if (action === 'copy') {
+    copySuggestionTags(qid);
+  } else if (action === 'josm') {
+    addSuggestionInJOSM(qid);
+  } else if (action === 'satellite') {
+    const s = suggestionsByQid[qid];
+    if (s) previewSuggestionSatellite(s.lat, s.lon);
+  }
+});
 
 function previewSuggestionSatellite(lat, lon) {
   if (!map) return;
@@ -737,17 +767,30 @@ function addSuggestionInJOSM(qid) {
 }
 
 
-// Show animated non-blocking toast notification
-function showToast(message, type = 'success') {
+// Show animated non-blocking toast notification. The message is plain text
+// (it can contain server error text); pass { link: { href, text } } to append a link.
+function showToast(message, type = 'success', options = {}) {
   // Remove existing toast if any
   const existingToast = document.querySelector('.toast-notification');
   if (existingToast) {
     existingToast.remove();
   }
-  
+
   const toast = document.createElement('div');
   toast.className = `toast-notification ${type}`;
-  toast.innerHTML = `<span>${message}</span>`;
+  const span = document.createElement('span');
+  span.textContent = message;
+  const href = options.link && safeUrl(options.link.href);
+  if (href) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.className = 'toast-link';
+    a.textContent = options.link.text;
+    span.append(' ', a);
+  }
+  toast.appendChild(span);
   document.body.appendChild(toast);
   
   // Trigger slide-out and removal
@@ -1153,27 +1196,47 @@ function initMap() {
   map.on('move', updateQiblaCompass);
 }
 
+// summary.json is tiny and always fetched fresh; its updated_at is then used
+// as the version for the big data files, so browsers cache them until the
+// pipeline publishes new data instead of re-downloading ~20 MB every visit.
+let dataSummary = {};
+let dataVersion = String(Date.now());
+
+function fetchJson(path, required = true) {
+  const req = fetch(`${path}?v=${encodeURIComponent(dataVersion)}`).then(r => {
+    if (!r.ok) throw new Error(`Failed to load ${path} (HTTP ${r.status})`);
+    return r.json();
+  });
+  return required ? req : req.catch(() => ({}));
+}
+
+// Shows which OSM extract the published data was built from.
+function renderDataUpdatedLabel() {
+  const el = document.getElementById('data-updated');
+  if (!el) return;
+  const date = dataSummary.pbf_date || (dataSummary.updated_at || '').slice(0, 10);
+  el.textContent = date ? `بيانات OSM بتاريخ ${date}` : '';
+  el.style.display = date ? '' : 'none';
+}
+
 function loadData() {
-  const cacheBuster = `?t=${Date.now()}`;
-  Promise.all([
-    fetch(`places_of_worship_sa.geojson${cacheBuster}`).then(r => {
-      if (!r.ok) throw new Error('Failed to load places of worship');
-      return r.json();
-    }),
-    fetch(`worship_gaps_sa.geojson${cacheBuster}`).then(r => {
-      if (!r.ok) throw new Error('Failed to load coverage gaps');
-      return r.json();
-    }),
-    fetch(`sa_boundary.geojson${cacheBuster}`).then(r => {
-      if (!r.ok) throw new Error('Failed to load Saudi boundary');
-      return r.json();
-    }),
-    // Best-effort: computed on its own schedule (e.g. weekly) by
-    // calculate_mosque_sizes.py, may not exist yet or may be mid-refresh.
-    fetch(`mosque_sizes.json${cacheBuster}`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-    // Best-effort: ML spatial anomaly detection (detect_geometry_anomalies.py)
-    fetch(`mosque_anomalies.json${cacheBuster}`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
-  ])
+  fetch('summary.json', { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : {}))
+    .catch(() => ({}))
+    .then(summary => {
+      dataSummary = summary || {};
+      if (dataSummary.updated_at) dataVersion = dataSummary.updated_at;
+      renderDataUpdatedLabel();
+      return Promise.all([
+        fetchJson('places_of_worship_sa.geojson'),
+        fetchJson('worship_gaps_sa.json'),
+        fetchJson('sa_boundary.geojson'),
+        // Best-effort: building footprint areas (calculate_mosque_sizes.py)
+        fetchJson('mosque_sizes.json', false),
+        // Best-effort: ML spatial anomaly detection (detect_geometry_anomalies.py)
+        fetchJson('mosque_anomalies.json', false)
+      ]);
+    })
   .then(([poiData, gapData, boundaryData, sizeData, anomalyData]) => {
     // Store data in pending variables
     pendingPoiData = poiData;
@@ -1200,8 +1263,11 @@ function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyDa
   // keyed by osm_id; features with no entry simply have no size data. The
   // too_small/too_large classification itself is computed dynamically in
   // getQualityIssues() against the user-adjustable currentSizeMinM2/MaxM2.
+  // Both files are keyed by way id, so only ways may look them up (a relation
+  // or node with the same numeric id is a different object).
   if (sizeData) {
     allPlaces.forEach(f => {
+      if (f.properties.geom_type !== 'Polygon') return;
       const sizeInfo = sizeData[f.properties.osm_id];
       if (sizeInfo) {
         f.properties.size_area_m2 = sizeInfo.area_m2;
@@ -1212,6 +1278,7 @@ function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyDa
   // Merge in ML geometry anomalies (Isolation Forest from detect_geometry_anomalies.py)
   if (anomalyData) {
     allPlaces.forEach(f => {
+      if (f.properties.geom_type !== 'Polygon') return;
       const anomInfo = anomalyData[String(f.properties.osm_id)];
       if (anomInfo) {
         f.properties.ml_anomaly = anomInfo;
@@ -1221,7 +1288,7 @@ function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyDa
   filteredPlaces = [...allPlaces];
   updateImprovementIssueCounts();
 
-  allGaps = gapData.features;
+  allGaps = parseGapGrid(gapData);
   filteredGaps = [...allGaps];
 
   // Reconfigure Esri Satellite as a BoundaryCanvas layer restricted to the Saudi Arabia boundary
@@ -1303,7 +1370,7 @@ function toggleLayersByZoom() {
 // scattered dots rather than a smooth field - once the grid spacing exceeds
 // the blob radius on screen, which is exactly what happens when zoomed into
 // dense cities to inspect detail.
-const GAP_GRID_SIZE_DEG = 0.004;
+let GAP_GRID_SIZE_DEG = 0.004; // overridden by worship_gaps_sa.json's grid_size
 const GAP_GRADIENT_STOPS = [
   { stop: 0.0, color: [63, 43, 150] },   // Deep Indigo
   { stop: 0.5, color: [168, 192, 255] }, // Soft Lilac
@@ -1328,17 +1395,30 @@ function gapScoreToColor(t) {
   return GAP_GRADIENT_STOPS[GAP_GRADIENT_STOPS.length - 1].color;
 }
 
+// worship_gaps_sa.json stores one [gx, gy, road_length_m, gap_score] row per
+// cell; a cell's position is implied by its grid index, so expand each row to
+// a small object with the cell-centre coordinates used for viewport counts.
+function parseGapGrid(gapData) {
+  if (gapData.grid_size) GAP_GRID_SIZE_DEG = gapData.grid_size;
+  const g = GAP_GRID_SIZE_DEG;
+  return (gapData.cells || []).map(([gx, gy, roadLength, score]) => ({
+    gx, gy,
+    lat: (gy + 0.5) * g,
+    lon: (gx + 0.5) * g,
+    road_length_m: roadLength,
+    gap_score: score
+  }));
+}
+
 // Builds a sparse Map<"x,y", gap_score> from the gap grid's own cell
-// coordinates (grid_id already encodes them), so interpolation always lines
-// up with the real analysis grid regardless of zoom.
-function buildGapScoreLookup(gapFeatures) {
+// coordinates, so interpolation always lines up with the real analysis grid
+// regardless of zoom.
+function buildGapScoreLookup(gapCells) {
   const scoreByCell = new Map();
   let maxScore = 0;
-  gapFeatures.forEach(f => {
-    const [gx, gy] = f.properties.grid_id.split('_').map(Number);
-    const score = f.properties.gap_score;
-    scoreByCell.set(gx + ',' + gy, score);
-    if (score > maxScore) maxScore = score;
+  gapCells.forEach(c => {
+    scoreByCell.set(c.gx + ',' + c.gy, c.gap_score);
+    if (c.gap_score > maxScore) maxScore = c.gap_score;
   });
   return { scoreByCell, maxScore };
 }
@@ -1395,9 +1475,12 @@ const GapGradientLayer = L.GridLayer.extend({
 
   // Bilinear interpolation between the 4 grid cells surrounding (lon, lat),
   // so color is continuous across the real analysis grid at any zoom.
+  // Cell (gx, gy) spans [gx*G, (gx+1)*G) (calculate_gaps.py uses int(lon/G)),
+  // so its value sits at the cell centre: shift by half a cell before
+  // interpolating, otherwise the whole field is offset ~220 m south-west.
   _interpolate: function (lon, lat) {
-    const fx = lon / GAP_GRID_SIZE_DEG;
-    const fy = lat / GAP_GRID_SIZE_DEG;
+    const fx = lon / GAP_GRID_SIZE_DEG - 0.5;
+    const fy = lat / GAP_GRID_SIZE_DEG - 0.5;
     const x0 = Math.floor(fx), y0 = Math.floor(fy);
     const tx = fx - x0, ty = fy - y0;
 
@@ -1585,7 +1668,9 @@ function showDetails(props, lat, lon) {
   
   document.getElementById('details-city').innerText = props.addr_city !== '' ? props.addr_city : 'المملكة العربية السعودية';
   document.getElementById('details-coords').innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-  document.getElementById('details-osm-id').innerText = props.osm_id;
+  // Merged places are a building outline plus the POI node inside it.
+  document.getElementById('details-osm-id').innerText = `${osmTypeOf(props)}/${props.osm_id}` +
+    (props.poi_node_id ? ` + node/${props.poi_node_id}` : '');
 
   const userLink = document.getElementById('details-user');
   const changesetLink = document.getElementById('details-changeset');
@@ -1635,7 +1720,7 @@ function showDetails(props, lat, lon) {
 
   // Update mapper editing tools (always available in both guest and authenticated modes)
   if (mapperTools) mapperTools.style.display = 'block';
-  const type = (props.geom_type === 'Polygon' || props.geom_type === 'MultiPolygon' || props.geom_type === 'way') ? 'way' : 'node';
+  const type = osmTypeOf(props);
   const isDev = OSM_ENVIRONMENT === 'dev';
   const osmBase = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://www.openstreetmap.org';
 
@@ -1658,7 +1743,7 @@ function showDetails(props, lat, lon) {
     const newJosmBtn = josmBtn.cloneNode(true);
     josmBtn.parentNode.replaceChild(newJosmBtn, josmBtn);
     newJosmBtn.addEventListener('click', () => {
-      editInJOSM(lat, lon, props.osm_id, props.geom_type);
+      editInJOSM(lat, lon, props);
     });
   }
 
@@ -1802,11 +1887,8 @@ function updateStats() {
     });
   } else {
     totalCount = filteredGaps.length;
-    filteredGaps.forEach(f => {
-      const coords = f.geometry.coordinates;
-      const lat = coords[1];
-      const lon = coords[0];
-      if (bounds.contains([lat, lon])) {
+    filteredGaps.forEach(c => {
+      if (bounds.contains([c.lat, c.lon])) {
         visibleCount++;
       }
     });
@@ -1987,6 +2069,17 @@ function setupEventListeners() {
   const categoryTabs = document.querySelectorAll('.improve-category-tabs .category-tab');
   const improveItems = document.querySelectorAll('#improve-filters .improve-item');
 
+  // Number of checks per category tab, derived from the issue buttons
+  // themselves so adding a check never leaves a stale hard-coded count.
+  categoryTabs.forEach(tab => {
+    const category = tab.getAttribute('data-category');
+    const n = category === 'all'
+      ? improveItems.length
+      : [...improveItems].filter(item => item.getAttribute('data-category') === category).length;
+    const countEl = document.getElementById(`cat-count-${category}`);
+    if (countEl) countEl.textContent = n.toLocaleString('ar-SA');
+  });
+
   categoryTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       categoryTabs.forEach(t => {
@@ -2069,7 +2162,9 @@ function setupEventListeners() {
       currentQiblaDevThreshold = num;
       if (qiblaSlider) qiblaSlider.value = num;
       if (qiblaInput) qiblaInput.value = num;
-      currentQiblaNavIndex = 0;
+      const label = document.getElementById('qibla-threshold-label');
+      if (label) label.textContent = `≥ ${num}°`;
+      currentQiblaNavIndex = -1;
       updateImprovementIssueCounts();
       debouncedQiblaFilter();
     }
@@ -2089,7 +2184,7 @@ function setupEventListeners() {
   if (qiblaSortSelect) {
     qiblaSortSelect.addEventListener('change', (e) => {
       currentQiblaSort = e.target.value;
-      currentQiblaNavIndex = 0;
+      currentQiblaNavIndex = -1;
       filterData();
     });
   }
@@ -2526,7 +2621,9 @@ async function submitPendingOsmNote() {
     renderNoteMarker(noteFeature);
 
     const noteId = noteFeature.properties ? noteFeature.properties.id : undefined;
-    showToast(`تم إرسال الملاحظة بنجاح! <a href="https://www.openstreetmap.org/note/${noteId}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">عرض الملاحظة</a>`);
+    showToast('تم إرسال الملاحظة بنجاح!', 'success', {
+      link: { href: `https://www.openstreetmap.org/note/${encodeURIComponent(noteId)}`, text: 'عرض الملاحظة' }
+    });
     closeNoteComposer();
   } catch (err) {
     console.error('Failed to submit OSM note:', err);
@@ -2815,16 +2912,21 @@ function logoutOSM() {
 }
 
 // Qibla Outlier Navigation & UI Updater
+// currentQiblaNavIndex is -1 until the first press, so "next" starts at the
+// first (most severe) entry instead of skipping it.
 function navigateQiblaMosque(direction) {
   if (!filteredPlaces || filteredPlaces.length === 0) return;
-  currentQiblaNavIndex = (currentQiblaNavIndex + direction + filteredPlaces.length) % filteredPlaces.length;
+  const n = filteredPlaces.length;
+  currentQiblaNavIndex = currentQiblaNavIndex < 0
+    ? (direction > 0 ? 0 : n - 1)
+    : (currentQiblaNavIndex + direction + n) % n;
   const target = filteredPlaces[currentQiblaNavIndex];
   if (!target || !target.geometry) return;
   const lat = target.geometry.coordinates[1];
   const lon = target.geometry.coordinates[0];
 
   map.flyTo([lat, lon], Math.max(map.getZoom(), 18), { duration: 0.8 });
-  showPlaceDetails(target.properties, lat, lon);
+  showDetails(target.properties, lat, lon);
   updateQiblaNavUI();
 }
 
@@ -2832,12 +2934,13 @@ function updateQiblaNavUI() {
   const counterEl = document.getElementById('qibla-nav-counter');
   if (!counterEl) return;
   if (currentMode === 'improve' && currentImprovementFilter === 'qibla_deviation' && filteredPlaces.length > 0) {
-    if (currentQiblaNavIndex >= filteredPlaces.length) currentQiblaNavIndex = 0;
+    if (currentQiblaNavIndex >= filteredPlaces.length) currentQiblaNavIndex = -1;
     const currentPlace = filteredPlaces[currentQiblaNavIndex];
     const dev = currentPlace?.properties?.ml_anomaly?.qibla_dev;
     const devStr = dev !== undefined ? ` (${dev}°)` : '';
     const sortPrefix = currentQiblaSort === 'least_accurate' ? 'الأقل دقة' : 'الأكثر دقة';
-    counterEl.innerText = `${sortPrefix} [${currentQiblaNavIndex + 1} من ${filteredPlaces.length}]${devStr}`;
+    const position = currentQiblaNavIndex < 0 ? '–' : currentQiblaNavIndex + 1;
+    counterEl.innerText = `${sortPrefix} [${position} من ${filteredPlaces.length}]${devStr}`;
   } else {
     counterEl.innerText = `إجمالي المنحرفة: ${filteredPlaces.length}`;
   }

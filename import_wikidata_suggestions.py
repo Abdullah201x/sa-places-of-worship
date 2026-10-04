@@ -27,6 +27,11 @@ import re
 import sys
 from collections import defaultdict
 
+from common import (RE_MOSQUE_NAME, RE_MOSQUE_NAME_EN, configure_utf8_output,
+                    is_generic_mosque_name, update_summary, write_json)
+
+configure_utf8_output()
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PLACES_PATH = os.path.join(BASE_DIR, "places_of_worship_sa.geojson")
 OUTPUT_PATH = os.path.join(BASE_DIR, "suggested_mosques_sa.geojson")
@@ -37,16 +42,17 @@ P31_MOSQUE = "Q32815"
 
 GRID_DEG = 0.01  # ~1.1 km grid cell for spatial indexing
 
-GENERIC_NAMES = {
-    "مسجد", "جامع", "مصلى", "محراب", "روضة",
-    "mosque", "masjid", "masjid mosque", "jami", "jame", "prayer room", "musalla"
-}
-
 # Regex for non-mosque false positives in Wikidata that erroneously got Q32815
 NON_MOSQUE_PATTERNS = [
     re.compile(r"^(جامعة|كلية|مستشفى|مدرسة|ملعب|مطار|شارع|طريق|حي|بلدية|إمارة|مركز شرطة)\s", re.I),
     re.compile(r"^(University|College|Hospital|School|Stadium|Airport)\b", re.I),
 ]
+
+# Natural features (GeoNames-style imports) whose names merely contain a
+# mosque word, e.g. "فيضة ام مسجد" (a depression called Umm Masjid).
+LANDFORM_PREFIX = re.compile(
+    r"^(فيضة|فيضه|شعيب|شعيبة|وادي|جبل|خشم|ريع|قلت|نفود|عرق|حزم|ضلع|نقرة|خبراء|خبرا|روضة)\s"
+)
 
 DISAMBIG_REGEX = re.compile(r"\s+[0-9٠-٩]+$")
 
@@ -57,8 +63,6 @@ def find_source(base_dir=None):
     candidates = [
         os.path.abspath(os.path.join(base_dir, "..", "osm x wikidata", "data", "sa.json")),
         os.path.abspath(os.path.join(base_dir, "..", "osm-x-wikidata", "data", "sa.json")),
-        r"C:\Users\abdul\Desktop\osm x wikidata\data\sa.json",
-        r"C:\Users\abdul\Desktop\osm-x-wikidata\data\sa.json",
     ]
     for c in candidates:
         if os.path.exists(c):
@@ -74,22 +78,20 @@ def distance_m(lat1, lon1, lat2, lon2):
 
 
 def is_non_mosque_entity(name_ar, name_en):
-    """Filters out non-mosque entities like universities, stadiums, hospitals,
-    and neighborhoods that were mistakenly tagged with P31:Q32815 in Wikidata."""
-    for name in (name_ar, name_en):
-        if not name:
-            continue
-        n = name.strip()
-        # If it specifically contains mosque terms in a mosque context, keep it
-        if re.search(r"مسجد|مصلى|جامع\s+(?!الملك|الإمام|الأميرة|الرياض|شقراء|سليمان|الفيصل|عفت|طيبة)", n):
-            continue
-        for pat in NON_MOSQUE_PATTERNS:
-            if pat.search(n):
-                return True
-        # Pure natural feature (e.g. "فيضة ...")
-        if n.startswith("فيضة ") and not any(k in n for k in ("مسجد", "جامع", "مصلى")):
-            return True
-    return False
+    """Filters out non-mosque entities (landforms, universities, stadiums,
+    hospitals, neighborhoods...) that were mistakenly given P31:Q32815 in Wikidata."""
+    names = [n.strip() for n in (name_ar, name_en) if n and n.strip()]
+
+    # Landforms first: a mosque word inside a landform's name is just part of
+    # its place name, so it must not count as evidence of a mosque.
+    if any(LANDFORM_PREFIX.match(n) for n in names):
+        return True
+
+    # A whole-word mosque term (not جامعة) in either label means a mosque.
+    if any(RE_MOSQUE_NAME.search(n) or RE_MOSQUE_NAME_EN.search(n) for n in names):
+        return False
+
+    return any(pat.search(n) for pat in NON_MOSQUE_PATTERNS for n in names)
 
 
 def clean_name(raw_name):
@@ -141,7 +143,7 @@ def main():
     with open(PLACES_PATH, "r", encoding="utf-8") as f:
         places = json.load(f)["features"]
 
-    print("Building spatial grid for 13,000+ OSM places...")
+    print(f"Building spatial grid for {len(places):,} OSM places...")
     grid = build_grid(places)
 
     missing = [i for i in items if i[3] == CAT_WORSHIP and i[4] == STATUS_MISSING and i[7] == P31_MOSQUE]
@@ -169,8 +171,8 @@ def main():
         clean_ar = clean_name(name_ar_raw)
         clean_en = clean_name(name_en_raw)
 
-        has_valid_ar = clean_ar and clean_ar.lower() not in GENERIC_NAMES
-        has_valid_en = clean_en and clean_en.lower() not in GENERIC_NAMES
+        has_valid_ar = not is_generic_mosque_name(clean_ar)
+        has_valid_en = not is_generic_mosque_name(clean_en)
 
         is_unnamed = not (has_valid_ar or has_valid_en)
         if is_unnamed:
@@ -204,8 +206,12 @@ def main():
         "features": features
     }
 
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        json.dump(collection, f, ensure_ascii=False, separators=(",", ":"))
+    write_json(OUTPUT_PATH, collection)
+    update_summary("suggestions", {
+        "count": len(features),
+        "named": named_count,
+        "unnamed": unnamed_count,
+    })
 
     print(f"Wikidata mosques missing in OSM: {len(missing):,}")
     print(f"Dropped non-mosque entities: {dropped_non_mosque:,}")

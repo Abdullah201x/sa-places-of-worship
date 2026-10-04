@@ -10,47 +10,24 @@ How it works:
 4. Output a ranked list of suspicious mosques with direct OpenStreetMap links for verification and fixing.
 """
 
-import os
-import sys
-import glob
-import json
 import math
+import os
 import time
 
-# Ensure UTF-8 output in Windows terminal for Arabic characters
-if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-        sys.stderr.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
-
-import osmium
-from shapely.geometry import shape, Point, Polygon
-from shapely.prepared import prep
 import numpy as np
+import osmium
+from shapely.geometry import Point, Polygon
 from sklearn.ensemble import IsolationForest
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+from common import (BASE_DIR, axis_deviation, calculate_qibla_azimuth, configure_utf8_output,
+                    find_pbf, is_worship_tagged, load_boundary, ring_centroid, to_metres,
+                    update_summary, write_json)
 
-# Equirectangular scaling around KSA's ~24 deg N latitude for fast local metric calculations
-REF_LAT_RAD = math.radians(24.0)
-M_PER_DEG_LAT = 110_574.0
-M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
+configure_utf8_output()
 
-# Coordinates of the Holy Kaaba in Makkah
-KAABA_LAT = 21.422487
-KAABA_LON = 39.826206
-
-
-def calculate_qibla_azimuth(lat, lon):
-    """Calculates forward geodesic azimuth from (lat, lon) to the Holy Kaaba."""
-    lat1, lon1 = math.radians(lat), math.radians(lon)
-    lat2, lon2 = math.radians(KAABA_LAT), math.radians(KAABA_LON)
-    dlon = lon2 - lon1
-    y = math.sin(dlon) * math.cos(lat2)
-    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
-    return (math.degrees(math.atan2(y, x)) + 360.0) % 360.0
+# Default alert threshold, used only for the console summary. The dashboard
+# applies its own user-adjustable threshold to qibla_dev.
+QIBLA_ALERT_DEG = 20.0
 
 
 def get_building_azimuth_and_deviation(poly, qibla_deg):
@@ -78,31 +55,11 @@ def get_building_azimuth_and_deviation(poly, qibla_deg):
     best_dev = 999.0
     best_angle = edges[0][0]
     for angle, length in edges:
-        diff = abs(angle - (qibla_deg % 180.0))
-        diff_90 = diff % 90.0
-        dev = min(diff_90, 90.0 - diff_90)
+        dev = axis_deviation(angle, qibla_deg)
         if dev < best_dev:
             best_dev = dev
             best_angle = angle
     return round(best_angle, 1), round(best_dev, 1)
-
-
-def find_pbf(base_dir=None):
-    if base_dir is None:
-        base_dir = BASE_DIR
-    search_dirs = [
-        base_dir,
-        os.path.abspath(os.path.join(base_dir, "..", "update osm")),
-        r"C:\Users\abdul\Desktop\update osm",
-    ]
-    for d in search_dirs:
-        if os.path.exists(d):
-            matches = glob.glob(os.path.join(d, "*.osm.pbf")) + glob.glob(os.path.join(d, "*.pbf"))
-            seen = set()
-            unique = [m for m in matches if not (m in seen or seen.add(m))]
-            if unique:
-                return unique[0]
-    sys.exit("No .osm.pbf or .pbf file found.")
 
 
 class MosqueFeatureExtractor(osmium.SimpleHandler):
@@ -122,68 +79,62 @@ class MosqueFeatureExtractor(osmium.SimpleHandler):
         if tags.get('place_of_worship') == 'musalla':
             return  # Musallas are legitimately huge open-air prayer grounds
 
-        amenity = tags.get('amenity')
-        building = tags.get('building')
-        if not (amenity in ('place_of_worship', 'mosque') or building == 'mosque'):
+        if not is_worship_tagged(tags):
             return
 
         try:
-            nodes = w.nodes
-            n_nodes = len(nodes)
-            if n_nodes < 4:
-                return
-
-            sum_lat = sum(n.lat for n in nodes)
-            sum_lon = sum(n.lon for n in nodes)
-            centroid_lat = sum_lat / n_nodes
-            centroid_lon = sum_lon / n_nodes
-
-            # Boundary filter
-            if not (self.minx <= centroid_lon <= self.maxx and self.miny <= centroid_lat <= self.maxy):
-                return
-            if not self.boundary_prep.contains(Point(centroid_lon, centroid_lat)):
-                return
-
-            # Projected coordinates in meters
-            ring_m = [(n.lon * M_PER_DEG_LON, n.lat * M_PER_DEG_LAT) for n in nodes]
-            poly = Polygon(ring_m)
-            area_m2 = poly.area
-            perimeter_m = poly.length
-
-            if area_m2 <= 0 or perimeter_m <= 0:
-                return
-
-            # FEATURE 1: Area (m2)
-            # FEATURE 2: Perimeter (m)
-            # FEATURE 3: Polsby-Popper Compactness (4 * pi * Area / Perimeter^2)
-            #   - Neat circle = 1.0, square = ~0.78, elongated/irregular shapes < 0.3
-            compactness = (4.0 * math.pi * area_m2) / (perimeter_m ** 2)
-
-            # FEATURE 4: Node Count (vertex complexity)
-            # FEATURE 5: Area per Node (ratio)
-            area_per_node = area_m2 / n_nodes
-
-            # FEATURE 6: Qibla Azimuth & Principal Building Axis Deviation
-            qibla_az = calculate_qibla_azimuth(centroid_lat, centroid_lon)
-            bldg_az, qibla_dev = get_building_azimuth_and_deviation(poly, qibla_az)
-
-            name = tags.get('name', tags.get('name:ar', tags.get('name:en', 'Unnamed Mosque')))
-
-            self.records.append({
-                "osm_id": w.id,
-                "name": name,
-                "centroid": (round(centroid_lat, 6), round(centroid_lon, 6)),
-                "area_m2": round(area_m2, 1),
-                "perimeter_m": round(perimeter_m, 1),
-                "compactness": round(compactness, 4),
-                "node_count": n_nodes,
-                "area_per_node": round(area_per_node, 1),
-                "qibla_azimuth": round(qibla_az, 1),
-                "building_azimuth": bldg_az,
-                "qibla_dev": qibla_dev if qibla_dev is not None else 0.0,
-            })
+            coords = [(n.lon, n.lat) for n in w.nodes]
         except osmium.InvalidLocationError:
-            pass
+            return
+        n_nodes = len(coords)
+        if n_nodes < 4:
+            return
+
+        centroid_lon, centroid_lat = ring_centroid(coords)
+
+        # Boundary filter
+        if not (self.minx <= centroid_lon <= self.maxx and self.miny <= centroid_lat <= self.maxy):
+            return
+        if not self.boundary_prep.contains(Point(centroid_lon, centroid_lat)):
+            return
+
+        # Projected coordinates in meters
+        poly = Polygon(to_metres(coords))
+        area_m2 = poly.area
+        perimeter_m = poly.length
+
+        if area_m2 <= 0 or perimeter_m <= 0:
+            return
+
+        # FEATURE 1: Area (m2)
+        # FEATURE 2: Perimeter (m)
+        # FEATURE 3: Polsby-Popper Compactness (4 * pi * Area / Perimeter^2)
+        #   - Neat circle = 1.0, square = ~0.78, elongated/irregular shapes < 0.3
+        compactness = (4.0 * math.pi * area_m2) / (perimeter_m ** 2)
+
+        # FEATURE 4: Node Count (vertex complexity)
+        # FEATURE 5: Area per Node (ratio)
+        area_per_node = area_m2 / n_nodes
+
+        # FEATURE 6: Qibla Azimuth & Principal Building Axis Deviation
+        qibla_az = calculate_qibla_azimuth(centroid_lat, centroid_lon)
+        bldg_az, qibla_dev = get_building_azimuth_and_deviation(poly, qibla_az)
+
+        name = tags.get('name', tags.get('name:ar', tags.get('name:en', 'Unnamed Mosque')))
+
+        self.records.append({
+            "osm_id": w.id,
+            "name": name,
+            "centroid": (round(centroid_lat, 6), round(centroid_lon, 6)),
+            "area_m2": round(area_m2, 1),
+            "perimeter_m": round(perimeter_m, 1),
+            "compactness": round(compactness, 4),
+            "node_count": n_nodes,
+            "area_per_node": round(area_per_node, 1),
+            "qibla_azimuth": round(qibla_az, 1),
+            "building_azimuth": bldg_az,
+            "qibla_dev": qibla_dev if qibla_dev is not None else 0.0,
+        })
 
 
 def train_anomaly_detector(records, contamination=0.015):
@@ -230,8 +181,10 @@ def train_anomaly_detector(records, contamination=0.015):
 
     for i, r in enumerate(records):
         r["anomaly_score"] = round(float(raw_scores[i]), 4)
-        # Marked as anomaly if model says -1 OR if Qibla deviation >= 20.0 degrees (default alert threshold)
-        r["is_anomaly"] = bool(predictions[i] == -1 or r["qibla_dev"] >= 20.0)
+        # Model verdict only. Qibla misalignment is reported as its own issue
+        # in the dashboard (with a user-adjustable threshold), so folding it in
+        # here would list the same buildings under two filters.
+        r["is_anomaly"] = bool(predictions[i] == -1)
 
     # Sort so the most severe anomalies appear first
     anomalies = [r for r in records if r["is_anomaly"]]
@@ -241,39 +194,45 @@ def train_anomaly_detector(records, contamination=0.015):
 
 
 def diagnose_anomaly(r):
-    """Provides a human-readable explanation of why this mosque was flagged."""
+    """Human-readable (Arabic, English) explanation of why a footprint was flagged."""
     reasons = []
 
-    # Qibla orientation check (Default 20.0 deg)
+    # Qibla deviation is one of the model's features, so mention it when it
+    # likely contributed. Severe cases are also a separate dashboard issue.
     q_dev = r.get("qibla_dev", 0.0)
-    if q_dev >= 20.0:
-        reasons.append(f"انحراف حاد عن القبلة ({q_dev}° — سمت القبلة {r.get('qibla_azimuth')}° مقابل {r.get('building_azimuth')}° لمحور المبنى)")
+    if q_dev >= QIBLA_ALERT_DEG:
+        reasons.append((f"انحراف حاد عن القبلة ({q_dev}° — سمت القبلة {r.get('qibla_azimuth')}° مقابل {r.get('building_azimuth')}° لمحور المبنى)",
+                        f"severe Qibla deviation ({q_dev}°: Qibla bearing {r.get('qibla_azimuth')}° vs building axis {r.get('building_azimuth')}°)"))
     elif q_dev >= 15.0:
-        reasons.append(f"انحراف ملحوظ عن القبلة ({q_dev}°)")
+        reasons.append((f"انحراف ملحوظ عن القبلة ({q_dev}°)", f"noticeable Qibla deviation ({q_dev}°)"))
 
     if r["node_count"] > 100:
-        reasons.append(f"عدد عقد مفرط جداً ({r['node_count']} عقدة — رسم تفصيلي معقد أو استيراد CAD)")
+        reasons.append((f"عدد عقد مفرط جداً ({r['node_count']} عقدة — رسم تفصيلي معقد أو استيراد CAD)",
+                        f"excessive node count ({r['node_count']} nodes: over-detailed drawing or CAD import)"))
     elif r["node_count"] > 40 and r["area_m2"] < 1500:
-        reasons.append(f"كثافة عقد عالية بالنسبة للمساحة ({r['node_count']} عقدة لمساحة {r['area_m2']} م²)")
+        reasons.append((f"كثافة عقد عالية بالنسبة للمساحة ({r['node_count']} عقدة لمساحة {r['area_m2']} م²)",
+                        f"high node density for its size ({r['node_count']} nodes for {r['area_m2']} m²)"))
 
     if r["compactness"] < 0.35:
-        reasons.append(f"شكل غير متناسق أو مفرط الاستطالة (Compactness={r['compactness']:.2f})")
+        reasons.append((f"شكل غير متناسق أو مفرط الاستطالة (Compactness={r['compactness']:.2f})",
+                        f"irregular or very elongated shape (compactness={r['compactness']:.2f})"))
     elif r["compactness"] < 0.45 and r["node_count"] > 25:
-        reasons.append(f"محيط متعرج كثير الانكسارات (Compactness={r['compactness']:.2f})")
+        reasons.append((f"محيط متعرج كثير الانكسارات (Compactness={r['compactness']:.2f})",
+                        f"jagged outline with many corners (compactness={r['compactness']:.2f})"))
 
     if r["area_m2"] < 25:
-        reasons.append(f"مساحة متناهية الصغر ({r['area_m2']} م²)")
+        reasons.append((f"مساحة متناهية الصغر ({r['area_m2']} م²)", f"tiny area ({r['area_m2']} m²)"))
     elif r["area_m2"] > 15000:
-        reasons.append(f"مساحة استثنائية الضخامة ({r['area_m2']:,} م²)")
+        reasons.append((f"مساحة استثنائية الضخامة ({r['area_m2']:,} م²)", f"exceptionally large area ({r['area_m2']:,} m²)"))
 
     if not reasons:
-        reasons.append("انحراف مركب في تناسق النسبة بين المساحة والمحيط والعقد")
-    return " • ".join(reasons)
+        reasons.append(("انحراف مركب في تناسق النسبة بين المساحة والمحيط والعقد",
+                        "unusual combination of area, perimeter and node count"))
+    return " • ".join(ar for ar, _ in reasons), " • ".join(en for _, en in reasons)
 
 
 def main():
     pbf_path = find_pbf(BASE_DIR)
-    boundary_path = os.path.join(BASE_DIR, "sa_boundary.geojson")
     output_path = os.path.join(BASE_DIR, "mosque_anomalies.json")
 
     print("=" * 65)
@@ -281,11 +240,7 @@ def main():
     print("=" * 65)
     print(f"OSM PBF Source: {pbf_path}")
 
-    # Load Saudi Arabia boundary polygon
-    with open(boundary_path, "r", encoding="utf-8") as f:
-        boundary_data = json.load(f)
-    boundary_poly = shape(boundary_data["geometry"])
-    boundary_prep = prep(boundary_poly)
+    boundary_poly, boundary_prep, _ = load_boundary(BASE_DIR)
 
     # Extract geometries
     print("\nScanning building footprints inside Saudi Arabia...")
@@ -304,7 +259,7 @@ def main():
     print("=" * 65)
 
     for rank, a in enumerate(anomalies[:10], 1):
-        reason = diagnose_anomaly(a)
+        reason = diagnose_anomaly(a)[0]
         lat, lon = a["centroid"]
         osm_url = f"https://www.openstreetmap.org/way/{a['osm_id']}"
         josm_url = f"http://127.0.0.1:8111/load_and_zoom?left={lon-0.001}&right={lon+0.001}&top={lat+0.001}&bottom={lat-0.001}&select=way{a['osm_id']}"
@@ -314,12 +269,15 @@ def main():
         print(f"   • Area: {a['area_m2']:,} m² | Perimeter: {a['perimeter_m']:,} m | Nodes: {a['node_count']} | Compactness: {a['compactness']}")
         print(f"   • Diagnosis: {reason}")
         print(f"   • OSM Link: {osm_url}")
+        print(f"   • JOSM: {josm_url}")
 
     # Save to JSON
     # Map by osm_id so it can be merged directly into the dashboard
     # We save all scored mosque footprints with their exact Qibla deviation so the UI can dynamically filter and sort
-    anomalies_dict = {
-        str(r["osm_id"]): {
+    anomalies_dict = {}
+    for r in all_scored:
+        diagnosis_ar, diagnosis_en = diagnose_anomaly(r)
+        anomalies_dict[str(r["osm_id"])] = {
             "anomaly_score": r["anomaly_score"],
             "is_anomaly": r["is_anomaly"],
             "compactness": r["compactness"],
@@ -328,17 +286,18 @@ def main():
             "qibla_dev": r["qibla_dev"],
             "qibla_az": r["qibla_azimuth"],
             "bldg_az": r["building_azimuth"],
-            "diagnosis": diagnose_anomaly(r)
+            "diagnosis": diagnosis_ar,
+            "diagnosis_en": diagnosis_en,
         }
-        for r in all_scored
-    }
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(anomalies_dict, f, indent=2, ensure_ascii=False)
+    write_json(output_path, anomalies_dict)
 
     flagged_count = sum(1 for r in anomalies_dict.values() if r["is_anomaly"])
-    qibla_flagged = sum(1 for r in anomalies_dict.values() if r["qibla_dev"] >= 20.0)
-    print(f"\n[Done] Saved {len(anomalies_dict):,} mosque footprints ({flagged_count} flagged anomalies, {qibla_flagged} with Qibla dev >= 20°) to {output_path}")
+    qibla_flagged = sum(1 for r in anomalies_dict.values() if r["qibla_dev"] >= QIBLA_ALERT_DEG)
+    update_summary("anomalies", {"count": len(anomalies_dict), "flagged": flagged_count,
+                                 "qibla_over_threshold": qibla_flagged}, pbf_path)
+    print(f"\n[Done] Saved {len(anomalies_dict):,} mosque footprints ({flagged_count} ML-flagged, "
+          f"{qibla_flagged} with Qibla dev >= {QIBLA_ALERT_DEG:.0f}°) to {output_path}")
 
 
 if __name__ == "__main__":

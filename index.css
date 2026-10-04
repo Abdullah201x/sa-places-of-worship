@@ -1457,6 +1457,11 @@ h1 {
   border-color: #ff3b30;
 }
 
+.toast-notification .toast-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
 @keyframes slide-in-left {
   from {
     transform: translateX(-100%);
@@ -2451,3 +2456,10 @@ h1 {
 }
 
 
+
+.data-updated {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}

@@ -4,16 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>خارطة الكثافة وفجوات التغطية لأماكن العبادة بالمملكة</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕌%3C/text%3E%3C/svg%3E">
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   
   <!-- Leaflet Marker Cluster CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" integrity="sha384-lPzjPsFQL6te2x+VxmV6q1DpRxpRk0tmnl2cpwAO5y04ESyc752tnEWPKDfl1olr" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" integrity="sha384-5kMSQJ6S4Qj5i09mtMNrWpSi8iXw230pKU76xTmrpezGnNJQzj0NzXjQLLg+jE7k" crossorigin="anonymous" />
   
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="index.css?v=guest1">
+  <link rel="stylesheet" href="index.css?v=2">
 </head>
 <body>
 
@@ -27,6 +28,7 @@
           <h1>خارطة أماكن العبادة</h1>
         </div>
         <p class="subtitle">عرض تفاعلي للتوزيع الجغرافي ونقاط الكثافة وفجوات التغطية لأماكن العبادة في المملكة العربية السعودية. تم تحليل البيانات خارج نطاق الإنترنت بالاعتماد على قاعدة بيانات OSM للخليج العربي.</p>
+        <p class="data-updated" id="data-updated" style="display: none;"></p>
       </header>
 
       <!-- User Profile Widget (OSM Auth) -->
@@ -183,7 +185,7 @@
         <div class="improve-section-header">
           <div class="improve-header-title-wrap">
             <h2 class="section-title">نوع مشكلة جودة البيانات</h2>
-            <span class="improve-header-badge" id="quality-total-issues-badge">١١ فحص نشط</span>
+            <span class="improve-header-badge" id="quality-total-issues-badge">-</span>
           </div>
           <button type="button" class="improve-reset-filter-btn" id="btn-reset-improve-filter" title="إعادة تعيين إلى جميع المشاكل">إعادة تعيين</button>
         </div>
@@ -220,19 +222,19 @@
         <div class="improve-category-tabs" role="tablist" aria-label="تصنيفات مشاكل البيانات">
           <button type="button" class="category-tab active" data-category="all" role="tab" aria-selected="true">
             <span>الكل</span>
-            <span class="category-tab-count" id="cat-count-all">١١</span>
+            <span class="category-tab-count" id="cat-count-all">-</span>
           </button>
           <button type="button" class="category-tab" data-category="ai" role="tab" aria-selected="false">
             <span>🤖 ذكاء اصطناعي</span>
-            <span class="category-tab-count" id="cat-count-ai">٢</span>
+            <span class="category-tab-count" id="cat-count-ai">-</span>
           </button>
           <button type="button" class="category-tab" data-category="geometry" role="tab" aria-selected="false">
             <span>📐 الهندسة</span>
-            <span class="category-tab-count" id="cat-count-geom">٤</span>
+            <span class="category-tab-count" id="cat-count-geometry">-</span>
           </button>
           <button type="button" class="category-tab" data-category="metadata" role="tab" aria-selected="false">
             <span>📝 الوسوم والبيانات</span>
-            <span class="category-tab-count" id="cat-count-meta">٥</span>
+            <span class="category-tab-count" id="cat-count-metadata">-</span>
           </button>
         </div>
 
@@ -245,7 +247,7 @@
               <div class="improve-item-icon icon-qibla">🕋</div>
               <div class="improve-item-info">
                 <div class="improve-item-title">انحراف حاد عن القبلة</div>
-                <div class="improve-item-meta">محاذاة المحور المعماري للمبنى (≥ 20°)</div>
+                <div class="improve-item-meta">محاذاة المحور المعماري للمبنى (<span id="qibla-threshold-label" dir="ltr">≥ 20°</span>)</div>
               </div>
             </div>
             <div class="improve-item-left">
@@ -378,6 +380,20 @@
             </div>
             <div class="improve-item-left">
               <span class="improve-count-pill" id="count-improve-missing_denom">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="duplicate_poi" data-category="metadata" aria-label="تصفية حسب مكان مرسوم مرتين">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-tag">👯</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مرسوم مرتين (مبنى + نقطة)</div>
+                <div class="improve-item-meta">المبنى ونقطة داخله كلاهما موسوم كدار عبادة</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-duplicate_poi">-</span>
               <span class="improve-item-indicator"></span>
             </div>
           </button>
@@ -891,16 +907,17 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   
-  <!-- Leaflet Boundary Canvas Plugin -->
-  <script src="https://cdn.jsdelivr.net/gh/aparshin/leaflet-boundary-canvas@master/src/BoundaryCanvas.js"></script>
+  <!-- Leaflet Boundary Canvas Plugin (pinned to a commit; the repo has no releases) -->
+  <script src="https://cdn.jsdelivr.net/gh/aparshin/leaflet-boundary-canvas@83e6a725ab24e895c570f514b4439da9d320ea31/src/BoundaryCanvas.js" integrity="sha384-H4/juVf9a8QtQIMJNyyWx+LwLH6VxjLUUC6mOAGZfVEAsdR6VLKYVoV4URBuMwc/" crossorigin="anonymous"></script>
   
   <!-- Leaflet Heatmap Plugin -->
-  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" integrity="sha384-mFKkGiGvT5vo1fEyGCD3hshDdKmW3wzXW/x+fWriYJArD0R3gawT6lMvLboM22c0" crossorigin="anonymous"></script>
   
   <!-- Leaflet Marker Cluster JS -->
-  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" integrity="sha384-RLIyj5q1b5XJTn0tqUhucRZe40nFTocRP91R/NkRJHwAe4XxnTV77FXy/vGLiec2" crossorigin="anonymous"></script>
   
   <!-- App JS -->
-  <script src="app.js?v=guest1"></script>
+  <script src="js/arabic.js?v=2"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

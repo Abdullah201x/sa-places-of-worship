@@ -1,0 +1,87 @@
+import os
+import sys
+
+import pytest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from common import (axis_deviation, calculate_qibla_azimuth, is_generic_mosque_name,  # noqa: E402
+                    normalize_arabic, ring_centroid)
+from import_wikidata_suggestions import clean_name, is_non_mosque_entity  # noqa: E402
+
+
+def test_ring_centroid_closed_square_ignores_repeated_first_node():
+    square = [(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)]
+    assert ring_centroid(square) == pytest.approx((1.0, 1.0))
+
+
+def test_ring_centroid_dense_edge_does_not_pull_centroid():
+    # Many nodes along the bottom edge used to drag the vertex average down.
+    ring = [(x / 10, 0) for x in range(0, 21)] + [(2, 2), (0, 2), (0, 0)]
+    assert ring_centroid(ring) == pytest.approx((1.0, 1.0))
+
+
+def test_ring_centroid_l_shape_stays_inside():
+    l_shape = [(0, 0), (10, 0), (10, 1), (1, 1), (1, 10), (0, 10), (0, 0)]
+    from shapely.geometry import Point, Polygon
+    assert Polygon(l_shape).contains(Point(ring_centroid(l_shape)))
+
+
+def test_ring_centroid_open_way_uses_vertex_mean():
+    assert ring_centroid([(0, 0), (4, 0), (4, 2)]) == pytest.approx((8 / 3, 2 / 3))
+
+
+def test_normalize_arabic():
+    assert normalize_arabic("الجَامِعُ الكبيـــر", strip_al=True) == normalize_arabic("المسجد الكبير", strip_al=True)
+    assert normalize_arabic("جامع") == normalize_arabic("مسجد")
+    assert normalize_arabic("أحمد") == "احمد"
+    assert normalize_arabic("مكة") == "مكه"
+    assert normalize_arabic("Masjid  AL-Noor") == "masjid alnoor"
+
+
+@pytest.mark.parametrize("name", ["", "مسجد", "المسجد", "جامع", "الجامع", "مصلى", "مسجد جامع",
+                                  "Mosque", "Place of Worship", "مسجد 3", "مسجد بدون اسم"])
+def test_generic_names(name):
+    assert is_generic_mosque_name(name)
+
+
+@pytest.mark.parametrize("name", ["مسجد الرحمن", "جامع الملك فهد", "مصلى العيد", "Al Rajhi Mosque"])
+def test_specific_names(name):
+    assert not is_generic_mosque_name(name)
+
+
+def test_non_mosque_landform_containing_mosque_word():
+    assert is_non_mosque_entity("فيضة ام مسجد", "Fayḑat Umm Masjid")
+
+
+def test_non_mosque_university():
+    assert is_non_mosque_entity("جامعة الملك سعود", "King Saud University")
+
+
+@pytest.mark.parametrize("ar,en", [("جامع الملك فهد", ""), ("مسجد قباء", "Quba Mosque"),
+                                   ("", "Al Rajhi Masjid"), ("مصلى العيد", "")])
+def test_real_mosques_are_kept(ar, en):
+    assert not is_non_mosque_entity(ar, en)
+
+
+def test_clean_name_strips_serial_suffix():
+    assert clean_name("جامع الرمال 1") == "جامع الرمال"
+    assert clean_name("مسجد ٢٣") == "مسجد"
+
+
+def test_qibla_azimuth_from_riyadh_points_west():
+    az = calculate_qibla_azimuth(24.7136, 46.6753)
+    assert 240 < az < 250
+
+
+def test_qibla_azimuth_from_madinah_points_south():
+    az = calculate_qibla_azimuth(24.4672, 39.6112)
+    assert 170 < az < 185
+
+
+@pytest.mark.parametrize("axis,qibla,expected", [
+    (245, 245, 0), (65, 245, 0), (155, 245, 0),   # parallel, reversed, perpendicular
+    (260, 245, 15), (230, 245, 15), (200, 245, 45),
+])
+def test_axis_deviation(axis, qibla, expected):
+    assert axis_deviation(axis, qibla) == pytest.approx(expected)

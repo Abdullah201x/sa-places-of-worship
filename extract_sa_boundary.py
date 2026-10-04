@@ -1,4 +1,3 @@
-import glob
 import os
 import osmium
 import sys
@@ -6,25 +5,10 @@ import json
 from shapely.geometry import LineString, mapping
 from shapely.ops import polygonize, unary_union
 
+from common import find_pbf
+
 # Resolve all paths relative to this script so it runs on any machine.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-def find_pbf(base_dir=None):
-    if base_dir is None:
-        base_dir = BASE_DIR
-    search_dirs = [
-        base_dir,
-        os.path.abspath(os.path.join(base_dir, "..", "update osm")),
-        r"C:\Users\abdul\Desktop\update osm",
-    ]
-    for d in search_dirs:
-        if os.path.exists(d):
-            matches = glob.glob(os.path.join(d, "*.osm.pbf")) + glob.glob(os.path.join(d, "*.pbf"))
-            seen = set()
-            unique = [m for m in matches if not (m in seen or seen.add(m))]
-            if unique:
-                return unique[0]
-    sys.exit("No .osm.pbf or .pbf file found in project or update osm directory.")
 
 class RelationWayCollector(osmium.SimpleHandler):
     def __init__(self, target_relation_id):

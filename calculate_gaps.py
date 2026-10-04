@@ -1,23 +1,15 @@
-import glob
-import os
-import osmium
 import json
+import math
+import os
 import sys
 import time
-import math
-import  shapely
-from shapely.geometry import shape, Point
+
+import osmium
+from shapely.geometry import Point
 from shapely.strtree import STRtree
-from shapely.prepared import prep
 
-# Resolve all paths relative to this script so it runs on any machine.
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Equirectangular scaling around KSA's ~24 deg N latitude, sufficient for
-# local length/distance calculations (not a true projection).
-REF_LAT_RAD = math.radians(24.0)
-M_PER_DEG_LAT = 110_574.0
-M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
+from common import (BASE_DIR, M_PER_DEG_LAT, M_PER_DEG_LON, find_pbf, load_boundary,
+                    update_summary, write_json)
 
 # Through-traffic road classes are downweighted: OSM fragments them into many
 # short tagged segments (speed/lane/name changes), which inflates apparent
@@ -31,23 +23,6 @@ HIGHWAY_WEIGHTS = {
     'primary_link': 0.3,
 }
 DEFAULT_HIGHWAY_WEIGHT = 1.0
-
-def find_pbf(base_dir=None):
-    if base_dir is None:
-        base_dir = BASE_DIR
-    search_dirs = [
-        base_dir,
-        os.path.abspath(os.path.join(base_dir, "..", "update osm")),
-        r"C:\Users\abdul\Desktop\update osm",
-    ]
-    for d in search_dirs:
-        if os.path.exists(d):
-            matches = glob.glob(os.path.join(d, "*.osm.pbf")) + glob.glob(os.path.join(d, "*.pbf"))
-            seen = set()
-            unique = [m for m in matches if not (m in seen or seen.add(m))]
-            if unique:
-                return unique[0]
-    sys.exit("No .osm.pbf or .pbf file found in project or update osm directory.")
 
 class DrivableRoadExtractor(osmium.SimpleHandler):
     def __init__(self, boundary_prep, bounds):
@@ -95,21 +70,13 @@ class DrivableRoadExtractor(osmium.SimpleHandler):
 
 def main():
     pbf_path = find_pbf(BASE_DIR)
-    boundary_path = os.path.join(BASE_DIR, "sa_boundary.geojson")
     worship_path = os.path.join(BASE_DIR, "places_of_worship_sa.geojson")
-    output_path = os.path.join(BASE_DIR, "worship_gaps_sa.geojson")
+    output_path = os.path.join(BASE_DIR, "worship_gaps_sa.json")
+    legacy_output_path = os.path.join(BASE_DIR, "worship_gaps_sa.geojson")
 
     # 1. Load Saudi boundary
     print("Loading Saudi Arabia boundary...")
-    try:
-        with open(boundary_path, "r", encoding="utf-8") as f:
-            boundary_data = json.load(f)
-        boundary_poly = shape(boundary_data["geometry"])
-        boundary_prep = prep(boundary_poly)
-        bounds = boundary_poly.bounds
-    except Exception as e:
-        print(f"Error loading boundary: {e}")
-        sys.exit(1)
+    _, boundary_prep, bounds = load_boundary(BASE_DIR)
 
     # 2. Load already extracted places of worship
     print("Loading existing places of worship...")
@@ -191,7 +158,7 @@ def main():
         candidate_points_m.append(Point(rep_lon * M_PER_DEG_LON, rep_lat * M_PER_DEG_LAT))
         candidate_lengths.append(cell["road_length_m"])
 
-    gap_features = []
+    gap_cells = []
     if candidate_points_m:
         _, distances = worship_tree.query_nearest(
             candidate_points_m, return_distance=True, all_matches=False
@@ -212,7 +179,6 @@ def main():
                 continue  # close enough to a mosque -> not a gap
 
             road_length_m = candidate_lengths[i]
-            rep_lon, rep_lat = candidate_points[i]
 
             # Gap intensity blends road-length density (as before, but now
             # scale-invariant to OSM way-splitting) with how far the nearest
@@ -221,29 +187,21 @@ def main():
             distance_factor = min(distance_m, MAX_GAP_SCORE_DISTANCE_M) / MIN_GAP_DISTANCE_M
             gap_score = (1.0 + math.log(max(road_length_m, 1.0))) * distance_factor
 
-            gap_features.append({
-                "type": "Feature",
-                "properties": {
-                    "grid_id": f"{key[0]}_{key[1]}",
-                    "road_length_m": round(road_length_m, 1),
-                    "gap_score": round(gap_score, 3)
-                },
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [round(rep_lon, 6), round(rep_lat, 6)]
-                }
-            })
+            gap_cells.append([key[0], key[1], round(road_length_m), round(gap_score, 3)])
 
-    print(f"Detected {len(gap_features)} coverage gap areas across Saudi Arabia.")
+    print(f"Detected {len(gap_cells)} coverage gap areas across Saudi Arabia.")
 
-    # 6. Save gaps to GeoJSON
-    geojson_collection = {
-        "type": "FeatureCollection",
-        "features": gap_features
-    }
-
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(geojson_collection, f, indent=2, ensure_ascii=False)
+    # 6. Save gaps as a compact grid. A cell's position is implied by its grid
+    # index (cell (gx, gy) spans [gx*grid_size, (gx+1)*grid_size) in lon/lat),
+    # so there's no need for a GeoJSON point per cell.
+    write_json(output_path, {
+        "grid_size": GRID_SIZE,
+        "fields": ["gx", "gy", "road_length_m", "gap_score"],
+        "cells": gap_cells,
+    })
+    if os.path.exists(legacy_output_path):
+        os.remove(legacy_output_path)
+    update_summary("gaps", {"count": len(gap_cells)}, pbf_path)
 
     print(f"Coverage gaps written to {output_path}")
 
