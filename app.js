@@ -73,7 +73,8 @@ let currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
 const QIBLA_DEV_DEFAULT = 20.0;
 let currentQiblaDevThreshold = QIBLA_DEV_DEFAULT;
 let currentQiblaSort = 'least_accurate'; // 'least_accurate' or 'most_accurate'
-let currentQiblaNavIndex = -1;
+let selectedPlace = null; // { properties, lat, lon } of the place in the details panel
+let viewportCountsOnly = false;
 
 // Map configuration
 const MAP_INITIAL_CENTER = [24.0, 45.0]; // Centered on Saudi Arabia
@@ -383,8 +384,14 @@ function updateImprovementIssueCounts() {
     counts[btn.getAttribute('data-improve')] = 0;
   });
 
+  // Optionally only count what's on screen; places already marked as
+  // reviewed are left out while they're hidden, so counts show what remains.
+  const bounds = viewportCountsOnly && map ? map.getBounds() : null;
   for (let i = 0; i < allPlaces.length; i++) {
-    const issues = getIssues(allPlaces[i].properties);
+    const f = allPlaces[i];
+    if (bounds && !bounds.contains([f.geometry.coordinates[1], f.geometry.coordinates[0]])) continue;
+    if (hideReviewedPlaces && ReviewMarks.get(f.properties)) continue;
+    const issues = getIssues(f.properties);
     if (issues.length > 0) {
       counts.all++;
       for (let j = 0; j < issues.length; j++) {
@@ -902,6 +909,7 @@ function initSidebarToggle() {
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
   setupEventListeners();
+  setupKeyboardShortcuts();
   initSidebarToggle();
   // Handle OAuth callback first, then load the data
   handleOAuthCallback().then(() => {
@@ -1193,6 +1201,11 @@ function initMap() {
       updateSuggestionsViewportCount();
     }
   });
+  map.on('moveend', updatePermalinkSoon);
+  const debouncedViewportCounts = debounce(() => {
+    if (viewportCountsOnly && currentMode === 'improve') updateImprovementIssueCounts();
+  }, 250);
+  map.on('moveend', debouncedViewportCounts);
   map.on('zoomend', () => {
     debouncedUpdateStats();
     toggleLayersByZoom(); // layer swap must stay immediate
@@ -1324,10 +1337,13 @@ function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyDa
   currentDateTo = DATA_MAX_DAY;
   initDateSliders();
 
+  ReviewMarks.prune(allPlaces);
+
   // Initial display
   updateDashboardUI();
   hideLoadingOverlay();
   updateUserWidgetUI();
+  Permalink.apply();
 }
 
 // Set the date-range slider bounds/values to the real data span and update their labels.
@@ -1673,8 +1689,11 @@ function updateMapLayers() {
 
 // Show detailed information about a single place of worship in the sidebar
 function showDetails(props, lat, lon) {
+  selectedPlace = { properties: props, lat, lon };
   const panel = document.getElementById('details-panel');
   panel.style.display = 'block';
+  renderReviewActions();
+  updatePermalinkSoon();
 
   // Ensure sidebar is expanded so user sees the details immediately
   setSidebarCollapsed(false);
@@ -1843,6 +1862,7 @@ function updateDashboardUI() {
   const gapInfoBox = document.getElementById('gap-info-box');
   const gapJosmBox = document.getElementById('gap-josm-box');
   const radiusSliderContainer = document.getElementById('radius-slider-container');
+  document.getElementById('export-section').style.display = currentMode === 'gap' ? 'none' : 'block';
 
   // The gap gradient interpolates from the analysis grid directly and has
   // no blob radius, unlike the POI/Improve leaflet.heat layers.
@@ -1976,6 +1996,7 @@ function filterData() {
     } else if (currentMode === 'improve') {
       const issues = getIssues(props);
       if (issues.length === 0) return false;
+      if (isHiddenByReview(props)) return false;
 
       let matchesImprovement = false;
       if (currentImprovementFilter === 'all') {
@@ -2000,7 +2021,8 @@ function filterData() {
 
   updateMapLayers();
   updateStats();
-  updateQiblaNavUI();
+  rebuildReviewQueue();
+  updatePermalinkSoon();
 }
 
 // Wire up events for buttons, chips, search inputs, and range sliders
@@ -2183,8 +2205,6 @@ function setupEventListeners() {
   const qiblaInput = document.getElementById('qibla-dev-input');
   const qiblaResetBtn = document.getElementById('btn-reset-qibla-threshold');
   const qiblaSortSelect = document.getElementById('qibla-sort-select');
-  const qiblaPrevBtn = document.getElementById('btn-qibla-prev');
-  const qiblaNextBtn = document.getElementById('btn-qibla-next');
   const debouncedQiblaFilter = debounce(filterData, 200);
 
   function applyQiblaThreshold(val) {
@@ -2196,7 +2216,6 @@ function setupEventListeners() {
       if (qiblaInput) qiblaInput.value = num;
       const label = document.getElementById('qibla-threshold-label');
       if (label) label.textContent = `≥ ${num}°`;
-      currentQiblaNavIndex = -1;
       updateImprovementIssueCounts();
       debouncedQiblaFilter();
     }
@@ -2216,16 +2235,36 @@ function setupEventListeners() {
   if (qiblaSortSelect) {
     qiblaSortSelect.addEventListener('change', (e) => {
       currentQiblaSort = e.target.value;
-      currentQiblaNavIndex = -1;
       filterData();
     });
   }
-  if (qiblaPrevBtn) {
-    qiblaPrevBtn.addEventListener('click', () => navigateQiblaMosque(-1));
-  }
-  if (qiblaNextBtn) {
-    qiblaNextBtn.addEventListener('click', () => navigateQiblaMosque(1));
-  }
+
+  // Review queue, marks and exports (js/review.js, js/exporters.js)
+  document.getElementById('btn-review-prev').addEventListener('click', () => navigateReview(-1));
+  document.getElementById('btn-review-next').addEventListener('click', () => navigateReview(1));
+  document.getElementById('btn-review-fixed').addEventListener('click', () => markCurrentPlace('fixed'));
+  document.getElementById('btn-review-skip').addEventListener('click', () => markCurrentPlace('skipped'));
+  document.getElementById('btn-review-unmark').addEventListener('click', clearCurrentMark);
+  document.getElementById('hide-reviewed-toggle').addEventListener('change', (e) => {
+    hideReviewedPlaces = e.target.checked;
+    updateImprovementIssueCounts();
+    filterData();
+  });
+  document.getElementById('viewport-counts-toggle').addEventListener('change', (e) => {
+    viewportCountsOnly = e.target.checked;
+    updateImprovementIssueCounts();
+  });
+  document.getElementById('btn-export-csv').addEventListener('click', () => Exporters.exportCsv());
+  document.getElementById('btn-export-maproulette').addEventListener('click', () => Exporters.exportMapRoulette());
+  document.getElementById('btn-export-josm').addEventListener('click', () => Exporters.loadVisibleInJosm());
+  document.getElementById('btn-export-overpass').addEventListener('click', () => Exporters.openOverpassTurbo());
+
+  const shortcutsOverlay = document.getElementById('shortcuts-overlay');
+  document.getElementById('btn-shortcuts').addEventListener('click', () => shortcutsOverlay.classList.remove('hidden'));
+  document.getElementById('btn-close-shortcuts').addEventListener('click', () => shortcutsOverlay.classList.add('hidden'));
+  shortcutsOverlay.addEventListener('click', (e) => {
+    if (e.target === shortcutsOverlay) shortcutsOverlay.classList.add('hidden');
+  });
 
   // 3. Search Box keypress (POI Mode Only)
   // filterData() rebuilds every marker, so debounce to avoid per-keystroke lag on large datasets.
@@ -2382,6 +2421,7 @@ function setupEventListeners() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeAuthModal();
+      document.getElementById('shortcuts-overlay').classList.add('hidden');
     }
   });
 
@@ -2942,39 +2982,3 @@ function logoutOSM() {
   showToast('تم تسجيل الخروج بنجاح.');
   window.location.reload();
 }
-
-// Qibla Outlier Navigation & UI Updater
-// currentQiblaNavIndex is -1 until the first press, so "next" starts at the
-// first (most severe) entry instead of skipping it.
-function navigateQiblaMosque(direction) {
-  if (!filteredPlaces || filteredPlaces.length === 0) return;
-  const n = filteredPlaces.length;
-  currentQiblaNavIndex = currentQiblaNavIndex < 0
-    ? (direction > 0 ? 0 : n - 1)
-    : (currentQiblaNavIndex + direction + n) % n;
-  const target = filteredPlaces[currentQiblaNavIndex];
-  if (!target || !target.geometry) return;
-  const lat = target.geometry.coordinates[1];
-  const lon = target.geometry.coordinates[0];
-
-  map.flyTo([lat, lon], Math.max(map.getZoom(), 18), { duration: 0.8 });
-  showDetails(target.properties, lat, lon);
-  updateQiblaNavUI();
-}
-
-function updateQiblaNavUI() {
-  const counterEl = document.getElementById('qibla-nav-counter');
-  if (!counterEl) return;
-  if (currentMode === 'improve' && currentImprovementFilter === 'qibla_deviation' && filteredPlaces.length > 0) {
-    if (currentQiblaNavIndex >= filteredPlaces.length) currentQiblaNavIndex = -1;
-    const currentPlace = filteredPlaces[currentQiblaNavIndex];
-    const dev = currentPlace?.properties?.ml_anomaly?.qibla_dev;
-    const devStr = dev !== undefined ? ` (${dev}°)` : '';
-    const sortPrefix = currentQiblaSort === 'least_accurate' ? 'الأقل دقة' : 'الأكثر دقة';
-    const position = currentQiblaNavIndex < 0 ? '–' : currentQiblaNavIndex + 1;
-    counterEl.innerText = `${sortPrefix} [${position} من ${filteredPlaces.length}]${devStr}`;
-  } else {
-    counterEl.innerText = `إجمالي المنحرفة: ${filteredPlaces.length}`;
-  }
-}
-

@@ -26,6 +26,10 @@
         <div class="title-container">
           <div class="logo-glow"></div>
           <h1>خارطة أماكن العبادة</h1>
+          <div class="header-actions">
+            <button type="button" id="btn-toggle-lang" class="header-action-btn" lang="en">English</button>
+            <button type="button" id="btn-shortcuts" class="header-action-btn" title="اختصارات لوحة المفاتيح (?)" aria-label="اختصارات لوحة المفاتيح">⌨️</button>
+          </div>
         </div>
         <p class="subtitle">عرض تفاعلي للتوزيع الجغرافي ونقاط الكثافة وفجوات التغطية لأماكن العبادة في المملكة العربية السعودية. تم تحليل البيانات خارج نطاق الإنترنت بالاعتماد على قاعدة بيانات OSM للخليج العربي.</p>
         <p class="data-updated" id="data-updated" style="display: none;"></p>
@@ -62,6 +66,16 @@
           <span class="stat-lbl" id="visible-count-label">في النطاق المرئي</span>
         </div>
       </section>
+
+      <!-- Review queue: N / P step through the current list -->
+      <div id="review-nav-box" class="review-nav-box">
+        <button type="button" id="btn-review-prev" class="review-nav-btn" title="السابق (P)">▶</button>
+        <div class="review-nav-text">
+          <span id="review-nav-counter">-</span>
+          <span id="review-today-count" class="review-today" style="display: none;"></span>
+        </div>
+        <button type="button" id="btn-review-next" class="review-nav-btn" title="التالي (N)">◀</button>
+      </div>
 
       <!-- Gap Info Box -->
       <div id="gap-info-box" class="info-alert" style="display: none;">
@@ -414,6 +428,17 @@
 
         </div>
 
+        <div class="review-options">
+          <label class="review-option">
+            <input type="checkbox" id="hide-reviewed-toggle" checked>
+            <span>إخفاء ما راجعته (تم الإصلاح / تخطي)</span>
+          </label>
+          <label class="review-option">
+            <input type="checkbox" id="viewport-counts-toggle">
+            <span>حساب المشاكل في النطاق المرئي فقط</span>
+          </label>
+        </div>
+
         <div class="threshold-controls" id="size-threshold-controls">
           <div class="threshold-controls-header">
             <span class="threshold-controls-title">نطاق المساحة الطبيعي للمبنى (م²)</span>
@@ -457,13 +482,6 @@
             </select>
           </div>
 
-          <div id="qibla-nav-box" style="margin-top: 10px; padding: 8px 12px; background: rgba(255, 149, 0, 0.08); border: 1px solid rgba(255, 149, 0, 0.25); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-            <span id="qibla-nav-counter" style="font-size: 12px; font-weight: 700; color: #d97706;">عرض الأشد انحرافاً</span>
-            <div style="display: flex; gap: 6px;">
-              <button type="button" id="btn-qibla-prev" class="threshold-reset-btn" title="المسجد السابق" style="padding: 2px 8px;">السابق ▶</button>
-              <button type="button" id="btn-qibla-next" class="threshold-reset-btn" title="المسجد التالي" style="padding: 2px 8px;">◀ التالي</button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -484,6 +502,17 @@
             <span id="date-to-val">-</span>
           </div>
           <input type="range" id="slider-date-to" class="slider" min="0" max="1" value="1" aria-label="إلى تاريخ آخر تعديل">
+        </div>
+      </div>
+
+      <!-- Export / hand-off of the current list -->
+      <div class="control-group" id="export-section">
+        <h2 class="section-title" id="export-title">📤 تصدير القائمة الحالية</h2>
+        <div class="export-buttons">
+          <button type="button" class="export-btn" id="btn-export-csv">CSV (Excel)</button>
+          <button type="button" class="export-btn" id="btn-export-maproulette">MapRoulette GeoJSON</button>
+          <button type="button" class="export-btn" id="btn-export-josm">تحميل المرئي في JOSM</button>
+          <button type="button" class="export-btn" id="btn-export-overpass">Overpass Turbo</button>
         </div>
       </div>
 
@@ -513,6 +542,14 @@
         <div class="details-card">
           <div class="details-title-ar" id="details-name-ar">اسم المسجد</div>
           <div class="details-title-en" id="details-name-en">Mosque Name</div>
+
+          <!-- Review marks (improve mode) -->
+          <div id="details-review-actions" class="review-actions" style="display: none;">
+            <span id="details-review-status" class="review-status"></span>
+            <button type="button" id="btn-review-fixed" class="review-action-btn fixed">✓</button>
+            <button type="button" id="btn-review-skip" class="review-action-btn">⏭</button>
+            <button type="button" id="btn-review-unmark" class="review-action-btn subtle">↺</button>
+          </div>
 
           <!-- OSM Note shortcut: always visible, works for guests too -->
           <button id="btn-add-note-here" class="mapper-btn" style="margin-bottom: 14px;">📝 إضافة ملاحظة OSM هنا</button>
@@ -894,6 +931,35 @@
       </div>
     </div>
 
+    <!-- Keyboard Shortcuts Overlay -->
+    <div id="shortcuts-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+      <div class="auth-card">
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">⌨️</div>
+          <h2 id="shortcuts-title">اختصارات لوحة المفاتيح</h2>
+        </div>
+        <div class="auth-body">
+          <table class="shortcuts-table">
+            <tbody>
+              <tr><td><kbd>N</kbd> / <kbd>P</kbd></td><td>المكان التالي / السابق في القائمة</td></tr>
+              <tr><td><kbd>F</kbd></td><td>وضع علامة "تم الإصلاح" والانتقال للتالي</td></tr>
+              <tr><td><kbd>S</kbd></td><td>تخطي والانتقال للتالي</td></tr>
+              <tr><td><kbd>J</kbd></td><td>فتح المكان في JOSM</td></tr>
+              <tr><td><kbd>I</kbd></td><td>فتح المكان في iD</td></tr>
+              <tr><td><kbd>O</kbd></td><td>عرض المكان على openstreetmap.org</td></tr>
+              <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td><td>الكثافة / فجوات التغطية / تحسين البيانات</td></tr>
+              <tr><td><kbd>?</kbd></td><td>عرض هذه القائمة</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>إغلاق النوافذ</td></tr>
+            </tbody>
+          </table>
+          <button id="btn-close-shortcuts" class="auth-skip-btn">
+            <span>إغلاق</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Loading / Error Overlay -->
     <div id="loading-overlay" role="status" aria-live="polite">
       <div class="loading-box">
@@ -917,7 +983,10 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" integrity="sha384-RLIyj5q1b5XJTn0tqUhucRZe40nFTocRP91R/NkRJHwAe4XxnTV77FXy/vGLiec2" crossorigin="anonymous"></script>
   
   <!-- App JS -->
+  <script src="js/i18n.js?v=2"></script>
   <script src="js/arabic.js?v=2"></script>
+  <script src="js/review.js?v=2"></script>
+  <script src="js/exporters.js?v=2"></script>
   <script src="app.js?v=2"></script>
 </body>
 </html>
