@@ -17,7 +17,7 @@ addTranslations({
 // OAuth2 application registered on openstreetmap.org for this site (public
 // PKCE client, scopes read_prefs write_api write_notes, redirect URI
 // https://saudiosm.org/).
-const DEFAULT_OSM_CLIENT_ID = '66V3GYmV7X9ZP9zIimXwk1Pi-R2YWBLz2peCFLjcImE';
+const DEFAULT_OSM_CLIENT_ID = 'FLWYiombLxXfIjsnoG25hqP5fMQZJD52WdME2gn0b60';
 
 const OSM_SCOPES = 'read_prefs write_api write_notes';
 const CHANGESET_CREATED_BY = 'Saudi Places of Worship Map (https://saudiosm.org)';
