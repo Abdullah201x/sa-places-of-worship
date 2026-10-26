@@ -60,11 +60,35 @@ const ReviewMarks = {
   set(props, status) {
     this._load()[this.keyOf(props)] = { status, version: props.version, at: Date.now() };
     this._save();
+    if (window.BackendApi && BackendApi.isOnline) {
+      const uName = (window.OsmApi && OsmApi.user) ? OsmApi.user.name : null;
+      BackendApi.setReview(osmTypeOf(props), props.osm_id, status, props.version, uName);
+    }
   },
 
   clear(props) {
     delete this._load()[this.keyOf(props)];
     this._save();
+    if (window.BackendApi && BackendApi.isOnline) {
+      const uName = (window.OsmApi && OsmApi.user) ? OsmApi.user.name : null;
+      BackendApi.clearReview(osmTypeOf(props), props.osm_id, uName);
+    }
+  },
+
+  async syncWithBackend() {
+    if (!window.BackendApi) return;
+    const health = await BackendApi.checkHealth();
+    if (!health) return;
+    const local = this._load();
+    const uName = (window.OsmApi && OsmApi.user) ? OsmApi.user.name : null;
+    const serverMarks = await BackendApi.syncReviews(local, uName);
+    if (serverMarks) {
+      this._marks = Object.assign({}, serverMarks, local);
+      this._save();
+      if (typeof updateImprovementIssueCounts === 'function') {
+        updateImprovementIssueCounts();
+      }
+    }
   },
 
   countToday() {

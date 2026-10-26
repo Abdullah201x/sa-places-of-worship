@@ -2903,3 +2903,293 @@ kbd {
   color: var(--color-text-muted);
   line-height: 1.4;
 }
+
+/* ==========================================================================
+   Backend Integration, Community Notes & Server Status Modal Styles
+   ========================================================================== */
+
+/* Header Backend Status Pill */
+.backend-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(0, 255, 135, 0.08);
+  border: 1px solid rgba(0, 255, 135, 0.25);
+  color: #00ff87;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backend-status-pill:hover {
+  background: rgba(0, 255, 135, 0.16);
+  border-color: rgba(0, 255, 135, 0.45);
+  box-shadow: 0 0 12px rgba(0, 255, 135, 0.2);
+}
+
+.backend-status-pill.offline {
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+}
+
+.backend-status-pill.offline .status-dot {
+  background: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00ff87;
+  box-shadow: 0 0 8px rgba(0, 255, 135, 0.8);
+  display: inline-block;
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.api-doc-link {
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.3) !important;
+  background: rgba(56, 189, 248, 0.06) !important;
+  text-decoration: none;
+}
+
+.api-doc-link:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+}
+
+/* Community Review Count in review-nav-box */
+.review-community {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-inline-start: 6px;
+}
+
+/* Community Notes Section in Details Panel */
+.community-notes-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notes-header-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notes-count-badge {
+  background: rgba(0, 255, 135, 0.12);
+  color: #00ff87;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 135, 0.25);
+}
+
+.notes-list-container {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notes-empty-msg {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 4px 0;
+  text-align: center;
+  padding: 8px;
+}
+
+.notes-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-bubble {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.note-bubble-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.note-bubble-meta strong {
+  color: #38bdf8;
+}
+
+.note-bubble-content {
+  font-size: 12px;
+  color: var(--color-text);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.note-add-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.note-text-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.note-text-input:focus {
+  border-color: #00ff87;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 8px rgba(0, 255, 135, 0.2);
+}
+
+.note-submit-btn {
+  background: rgba(0, 255, 135, 0.15);
+  border: 1px solid rgba(0, 255, 135, 0.35);
+  color: #00ff87;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.note-submit-btn:hover {
+  background: rgba(0, 255, 135, 0.28);
+  border-color: #00ff87;
+  box-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
+}
+
+/* Server Status Modal */
+.server-status-card {
+  max-width: 520px !important;
+}
+
+.status-indicator-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.status-indicator-banner.online {
+  background: rgba(0, 255, 135, 0.1);
+  border: 1px solid rgba(0, 255, 135, 0.3);
+  color: #00ff87;
+}
+
+.status-indicator-banner.offline {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
+.status-pulse-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+  animation: pulse-dot 1.5s infinite;
+}
+
+.server-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.server-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.info-label {
+  color: var(--color-text-muted);
+}
+
+.info-val {
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+}
+
+.info-val.accent {
+  color: #00ff87;
+}
+
+.server-actions-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.validation-result-box {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.validation-result-box.success {
+  background: rgba(0, 255, 135, 0.1);
+  border: 1px solid rgba(0, 255, 135, 0.3);
+  color: #00ff87;
+}
+
+.validation-result-box.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}

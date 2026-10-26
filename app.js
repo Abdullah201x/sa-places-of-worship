@@ -1259,6 +1259,14 @@ function loadData() {
     OsmApi.checkAuth().then(isAuthenticated => {
       isOsmAnonymized = !isAuthenticated;
       initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData);
+      if (window.ReviewMarks && ReviewMarks.syncWithBackend) {
+        ReviewMarks.syncWithBackend();
+      }
+      if (window.BackendApi) {
+        BackendApi.checkHealth().then(() => {
+          BackendApi.fetchReviewStats();
+        });
+      }
     });
   })
   .catch(error => {
@@ -1834,6 +1842,159 @@ function showDetails(props, lat, lon) {
     issuesBox.style.display = 'block';
   } else {
     issuesBox.style.display = 'none';
+  }
+
+  // Update Community Mapper Notes
+  loadCommunityNotes(props);
+}
+
+// ---------------------------------------------------------------------------
+// Backend Integration: Community Notes and Server Status Handlers
+// ---------------------------------------------------------------------------
+async function loadCommunityNotes(props) {
+  const container = document.getElementById('notes-items-list');
+  const emptyMsg = document.getElementById('notes-empty-msg');
+  const badge = document.getElementById('notes-count-badge');
+  if (!container) return;
+
+  container.innerHTML = '';
+  if (!window.BackendApi || !BackendApi.isOnline) {
+    if (emptyMsg) {
+      emptyMsg.textContent = t('notesEmpty');
+      emptyMsg.style.display = 'block';
+    }
+    if (badge) badge.textContent = '0';
+    return;
+  }
+
+  const notes = await BackendApi.getNotes(osmTypeOf(props), props.osm_id);
+  if (badge) badge.textContent = String(notes.length);
+
+  if (!notes || notes.length === 0) {
+    if (emptyMsg) {
+      emptyMsg.textContent = t('notesEmpty');
+      emptyMsg.style.display = 'block';
+    }
+  } else {
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    container.innerHTML = notes.map(n => {
+      const dateStr = n.created_at ? n.created_at.slice(0, 10) : '';
+      return `
+        <div class="note-bubble">
+          <div class="note-bubble-meta">
+            <strong>${escapeHtml(n.user_name || t('anonymous'))}</strong>
+            <span>${escapeHtml(dateStr)}</span>
+          </div>
+          <div class="note-bubble-content">${escapeHtml(n.content)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function setupCommunityNotesEvents() {
+  const submitBtn = document.getElementById('btn-submit-place-note');
+  const input = document.getElementById('input-place-note');
+  if (!submitBtn || !input) return;
+
+  submitBtn.addEventListener('click', async () => {
+    if (!selectedPlace) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (!window.BackendApi || !BackendApi.isOnline) {
+      showToast(t('backendOffline'), 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = t('notesSending');
+
+    const uName = (window.OsmApi && OsmApi.user) ? OsmApi.user.name : null;
+    const res = await BackendApi.addNote(osmTypeOf(selectedPlace.properties), selectedPlace.properties.osm_id, text, uName);
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = t('notesAddBtn');
+
+    if (res) {
+      input.value = '';
+      loadCommunityNotes(selectedPlace.properties);
+      showToast(t('noteSent'));
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      submitBtn.click();
+    }
+  });
+}
+
+function setupServerStatusModal() {
+  const pill = document.getElementById('backend-status-pill');
+  const overlay = document.getElementById('server-status-overlay');
+  const closeBtn = document.getElementById('btn-close-server-status');
+  const validateBtn = document.getElementById('btn-run-validation');
+
+  if (!pill || !overlay) return;
+
+  const openModal = async () => {
+    overlay.classList.remove('hidden');
+    const health = await BackendApi.checkHealth();
+    const banner = document.getElementById('server-status-banner-text');
+    const bannerBox = overlay.querySelector('.status-indicator-banner');
+
+    if (health) {
+      if (bannerBox) bannerBox.className = 'status-indicator-banner online';
+      if (banner) banner.textContent = t('backendOnline');
+      const uptime = health.uptime_seconds ? Math.round(health.uptime_seconds) + 's' : '-';
+      const upEl = document.getElementById('status-uptime-val');
+      if (upEl) upEl.textContent = uptime;
+      const plEl = document.getElementById('status-places-count');
+      if (plEl) plEl.textContent = fmtNum(health.datasets?.places_count || 0);
+      const gpEl = document.getElementById('status-gaps-count');
+      if (gpEl) gpEl.textContent = fmtNum(health.datasets?.gaps_count || 0);
+      const sgEl = document.getElementById('status-sug-count');
+      if (sgEl) sgEl.textContent = fmtNum(health.datasets?.suggestions_count || 0);
+      const dbEl = document.getElementById('status-db-val');
+      if (dbEl) dbEl.textContent = health.database_connected ? 'SQLite (Online)' : 'SQLite (Offline)';
+    } else {
+      if (bannerBox) bannerBox.className = 'status-indicator-banner offline';
+      if (banner) banner.textContent = t('backendOffline');
+    }
+  };
+
+  const closeModal = () => {
+    overlay.classList.add('hidden');
+  };
+
+  pill.addEventListener('click', openModal);
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+
+  if (validateBtn) {
+    validateBtn.addEventListener('click', async () => {
+      validateBtn.disabled = true;
+      validateBtn.textContent = '...';
+      const resultBox = document.getElementById('validation-result-box');
+      resultBox.style.display = 'block';
+      resultBox.className = 'validation-result-box';
+      resultBox.textContent = 'Running validation checks...';
+
+      const res = await BackendApi.validatePipeline();
+      validateBtn.disabled = false;
+      validateBtn.textContent = t('datasetValidateBtn');
+
+      if (res.is_valid) {
+        resultBox.className = 'validation-result-box success';
+        resultBox.textContent = t('validationSuccess');
+      } else {
+        resultBox.className = 'validation-result-box error';
+        resultBox.textContent = t('validationFailed', { msg: (res.errors || []).join(', ') });
+      }
+    });
   }
 }
 
@@ -2548,6 +2709,10 @@ function setupEventListeners() {
       applySuggestionsFilter();
     });
   });
+
+  // Wire Community Notes & Backend Server Status Modal
+  setupCommunityNotesEvents();
+  setupServerStatusModal();
 }
 
 // ==========================================

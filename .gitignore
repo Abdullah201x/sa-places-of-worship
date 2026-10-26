@@ -18,3 +18,14 @@ venv/
 # Local SSL certificates for HTTPS testing
 cert.pem
 key.pem
+
+# SQLite database
+*.db
+*.sqlite
+*.db-wal
+*.db-shm
+
+# Domain pricing search scratch
+results.csv
+
+
