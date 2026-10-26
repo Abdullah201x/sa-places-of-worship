@@ -2856,3 +2856,50 @@ kbd {
   font-size: 11px;
   line-height: 22px;
 }
+
+/* Auth Feature Cards Styling */
+.auth-features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
+}
+
+.auth-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: right;
+}
+
+[dir="ltr"] .auth-feature-item {
+  text-align: left;
+}
+
+.auth-feature-icon {
+  font-size: 18px;
+  line-height: 1;
+  padding-top: 2px;
+}
+
+.auth-feature-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.auth-feature-text strong {
+  font-size: 12px;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.auth-feature-text span {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}

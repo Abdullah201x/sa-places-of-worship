@@ -3,6 +3,18 @@
 // Generated from index.html; when you add or change Arabic UI text there,
 // add the matching entry here.
 addStaticTranslations({
+  "تسجيل الدخول عبر OpenStreetMap": "Log in with OpenStreetMap",
+  "سجّل الدخول بحساب OpenStreetMap للمساهمة في تحسين بيانات المساجد وإضافة الملاحظات الميدانية.": "Log in with your OpenStreetMap account to contribute improvements to mosque data and add field notes.",
+  "تعديل بيانات ووسوم المساجد": "Edit mosque data & tags",
+  "إصلاح الأسماء والقبلة والوسوم وتوثيق التعديل مباشرة على OSM": "Fix names, Qibla and tags directly on OpenStreetMap",
+  "إضافة ملاحظات وبلاغات ميدانية": "Add field notes & reports",
+  "إنشاء ملاحظات في OpenStreetMap ليراجعها مجتمع المخططين": "Create notes in OpenStreetMap for mappers to review",
+  "عرض المساهمين وتاريخ التعديل": "View contributors & edit history",
+  "كشف تفاصيل المساهمين وتاريخ التعديل (محجوبة للزوار بموجب GDPR)": "Reveal contributor details & timestamps (hidden for guests under GDPR)",
+  "المتابعة كزائر (تصفح فقط)": "Continue as a guest (browse only)",
+  "إعدادات متقدمة للمطورين (بيئة العمل ومعرّف العميل)": "Advanced developer settings (environment & client ID)",
+  "معرّف مخصص (اتركه فارغاً للافتراضي المدمج)": "Custom ID (leave empty for built-in default)",
+  "عنوان العودة (Redirect URI):": "Redirect URI:",
   "خارطة أماكن العبادة": "Places of Worship Map",
   "اختصارات لوحة المفاتيح (?)": "Keyboard shortcuts (?)",
   "اختصارات لوحة المفاتيح": "Keyboard shortcuts",

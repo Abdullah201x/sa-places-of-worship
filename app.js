@@ -17,7 +17,7 @@ let activeNotePreset = 'freetext';
 // Appended to every submitted note (preset or free text) so mappers processing
 // it know which site it came from - the same convention StreetComplete/MAPS.ME
 // use ("via StreetComplete", "#mapsme"), which also promotes the site itself.
-const NOTE_SIGNATURE = 'via خارطة أماكن العبادة (https://abdullah201x.github.io/sa-places-of-worship) #sa-worship-map';
+const NOTE_SIGNATURE = 'via خارطة أماكن العبادة (https://saudiosm.org) #sa-worship-map';
 
 // Temporary storage for loaded data if auth is pending
 let pendingPoiData = null;

@@ -16,11 +16,11 @@ addTranslations({
 
 // OAuth2 application registered on openstreetmap.org for this site (public
 // PKCE client, scopes read_prefs write_api write_notes, redirect URI
-// https://abdullah201x.github.io/sa-places-of-worship/).
+// https://saudiosm.org/).
 const DEFAULT_OSM_CLIENT_ID = '66V3GYmV7X9ZP9zIimXwk1Pi-R2YWBLz2peCFLjcImE';
 
 const OSM_SCOPES = 'read_prefs write_api write_notes';
-const CHANGESET_CREATED_BY = 'Saudi Places of Worship Map (https://abdullah201x.github.io/sa-places-of-worship)';
+const CHANGESET_CREATED_BY = 'Saudi Places of Worship Map (https://saudiosm.org)';
 const CHANGESET_HASHTAGS = '#sa-worship-map';
 const MAX_TAG_LENGTH = 255; // OSM rejects longer tag values
 
