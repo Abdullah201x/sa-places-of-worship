@@ -156,44 +156,26 @@ See `VPS_HARDWARE_ANALYSIS.md`.
    - The public `gcc-states-updates/state.txt` uses the same sequence numbers as the internal feed (public 3867 vs local internal file 3866).
    - The local file's header points at the internal URL (`osm-internal.download.geofabrik.de`), so the server must start from a **public** download.
 
-### Remaining Phase 2 tasks
-1. **`pipeline/extract_places.py`** (around line 102): remove `last_edited_by`, `user_id` and `changeset_id`, which are empty in public data. Keep `version` and `edited_at`.
-2. **Frontend lazy fetch:**
-   - Add `OsmApi.fetchLastEdit(type, id)` to `frontend/src/osm_api.js`. It does `GET ${urls().api}/api/0.6/${type}/${id}.json` and returns `elements[0]`'s `{user, uid, changeset, version, timestamp}`, cached in `sessionStorage` under `osm_meta:${type}/${id}@${version}`.
-   - In `showDetails` (`app.js`, the `else` branch, i.e. logged in), when `props.last_edited_by` is missing, show "…" and fill the rows when the fetch returns. Check that the same place is still selected first, because the user may have clicked another place in the meantime.
-   - Never fetch for guests (they already see "hidden under GDPR"), on hover, or for lists.
-3. **`pipeline/Dockerfile`:**
-   - Base image `python:3.12-slim`.
-   - `pip install -r pipeline/requirements.txt brotli` (drop pytest from the runtime image, or keep it, since it's harmless).
-   - `COPY pipeline/ /app/`, `WORKDIR /app`, `CMD ["python", "run.py", "schedule"]`.
-   - Volumes: `/state` (a Docker volume) and `/published` (a host directory shared with web).
-4. **Coolify setup (the user does this in the UI):**
-   - A **second application** from the same repo, Dockerfile build pack, Dockerfile `pipeline/Dockerfile`, with **no domain**.
-   - Resource limits: CPU 1.5, memory 1536M.
-   - Persistent storage: a volume at `/state`, and the host directory `/data/manara/published` at `/published`.
-   - Optional env var: `MANARA_RUN_AT_UTC`.
-5. **Web container:**
-   - Add Coolify persistent storage: host `/data/manara/published` at `/srv/manara/published`.
-   - Change `Caddyfile.container` so `/data/*` serves from `published/current` when the file exists, and **falls back** to the baked `/srv/manara/data`. Suggested config:
-     ```
-     handle_path /data/* {
-         @live file {
-             root /srv/manara/published/current
-         }
-         root * /srv/manara/data
-         root @live /srv/manara/published/current
-         (keep the existing geojson Content-Type and ?v= cache headers)
-         file_server { precompressed br gzip }
-     }
-     ```
-     The `file` matcher follows symlinks. Validate with `caddy validate`, then test locally with the Windows Caddy binary (download v2.11.7 from GitHub releases into `%TEMP%`, as done before).
-6. **Test `run.py`:** locally (Windows needs symlink rights or Developer Mode; otherwise test in Docker/WSL), then on the VPS (`docker exec … python run.py once`). Check:
-   - `status.json`, the `current` symlink and the `.br` files exist;
-   - the site's `summary.json` shows the new `pbf_date`;
-   - a second run says "No new OSM data".
-7. **Retire the desktop updater for Manara:** remove the `"gcc"` entry from `PROJECTS` in `C:\Users\abdul\Desktop\update osm\update_projects.py`. Keep the `wikidata_osm` entry, which still publishes `sa.json` to GitHub, which the server reads.
-8. **After about a week of successful server runs:** `git rm --cached` the generated data files, add them to `.gitignore`, remove the baked-data `COPY` from the root Dockerfile, and remove the Caddy fallback.
-9. **Update `README.md`** for the new pipeline location and server runner. Its "Data pipeline" section still says the scripts are at the repo root.
+### Phase 2 Completed & Verified Live
+1. **`pipeline/extract_places.py`**: removed `last_edited_by`, `user_id` and `changeset_id`; kept `version` and `edited_at`.
+2. **Frontend lazy fetch**:
+   - `OsmApi.fetchLastEdit(type, id, version)` implemented in `frontend/src/osm_api.js` with `sessionStorage` caching (`osm_meta:${type}/${id}@${version}`).
+   - `showDetails` in `frontend/src/app.js` lazily loads contributor rows for authenticated mappers with race-condition selection guards. Guests remain under GDPR notice without network calls.
+3. **`pipeline/Dockerfile`**:
+   - Base `python:3.12-slim` + `libexpat1` + `pipeline/requirements.txt` + `brotli`.
+   - Mounts `/state` (Docker volume `manara-state`) and `/published` (host mount `/data/manara/published`).
+4. **Coolify setup**:
+   - Created `manara-pipeline` container (ID `db86741a3c9a`) on VPS with `cpus: 1.5`, `memory: 1536M`, scheduled to run daily at 23:30 UTC.
+5. **Web container dynamic serving**:
+   - `deploy/Caddyfile.container` serves `/data/*` dynamically from `/srv/manara/published/current` with fallback to baked data.
+   - Tested live: Brotli compression verified (`Content-Encoding: br`, 257 KB for 14k places).
+6. **Execution & change detection verified**:
+   - Initial run executed in 255s inside container, publishing `v20261027T232444Z` to `/data/manara/published`.
+   - Second run correctly detected sequence 3867 was current: `"No new OSM data since the last run; nothing to do"`.
+7. **Desktop updater retired**:
+   - Removed `"gcc"` entry from `C:\Users\abdul\Desktop\update osm\update_projects.py`.
+8. **README updated**:
+   - `README.md` updated to reflect `pipeline/` directory, prerequisites, and automated runner options.
 
 ---
 
