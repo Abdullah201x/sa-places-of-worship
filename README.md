@@ -6,7 +6,7 @@ density) that contain **zero** places of worship, and a data-improvement mode
 for finding and fixing OpenStreetMap tagging problems.
 
 The front-end is a Leaflet dashboard (Arabic RTL by default, with an English
-toggle) built with Vite and served from a VPS behind Caddy. All heavy data
+toggle) built with Vite and served from a VPS (Coolify) by Caddy. All heavy data
 processing happens ahead of time in Python from an OpenStreetMap `.pbf`
 extract.
 
@@ -26,7 +26,7 @@ Live site: <https://manara.saudiosm.org>
 | [validate_data.py](validate_data.py) | Blocks publishing when a dataset is missing, unreadable, or shrank by more than 20%. |
 | [frontend/](frontend) | The Vite app: `index.html` (the map), `about.html`, `privacy.html`. |
 | [frontend/src/](frontend/src) | ES modules: `main.js` (entry), `app.js` (the dashboard), `i18n.js` + `translations*.js` (Arabic/English), `arabic.js` (name normalization), `review.js` (review queue, marks, permalinks, shortcuts), `exporters.js` (CSV, MapRoulette, JOSM, Overpass), `osm_api.js` (OAuth + API 0.6 editing), `editing.js` (quick fixes, batch, history), `analytics.js` (Umami), `vendor/` (pinned Leaflet.BoundaryCanvas). |
-| [deploy/](deploy) | VPS deployment: `Caddyfile.manara` (site config + CSP), `docker-compose.yml` (PostgreSQL/PostGIS + Umami), `deploy.sh`, `.env.example`. |
+| [Dockerfile](Dockerfile) / [deploy/Caddyfile.container](deploy/Caddyfile.container) | The production image (Coolify Dockerfile build pack): frontend build, datasets precompressed at build time, served by Caddy with the security headers, CSP, caching rules and the `/stats` proxy to Umami. |
 | [tests/](tests) | pytest tests for the shared helpers. |
 | [ML_ROADMAP.md](ML_ROADMAP.md) | Machine learning roadmap (Arabic). |
 
@@ -106,20 +106,21 @@ only the known dataset names are served.
 
 ## Deployment (VPS)
 
-Manara runs on the VPS as its own Docker Compose project in `/opt/manara`,
-separate from the other sites there; only the host Caddy is shared.
+The VPS runs Coolify, whose Traefik proxy owns ports 80/443 and terminates
+TLS. Manara is a Coolify application using the **Dockerfile** build pack on
+the root [Dockerfile](Dockerfile); pushes to `main` redeploy it. Inside the
+container Caddy listens on port 80 and:
 
-1. Clone the repo to `/opt/manara` and copy `deploy/.env.example` to
-   `deploy/.env`, filling in the secrets (`openssl rand -hex 32`).
-2. Add `import /opt/manara/deploy/Caddyfile.manara` to `/etc/caddy/Caddyfile`
-   and reload Caddy. Point the DNS of `manara.saudiosm.org` and
-   `analytics.saudiosm.org` at the VPS.
-3. Run `deploy/deploy.sh`. It builds the frontend in a Node container,
-   publishes it to `/srv/manara/dist` and the datasets to `/srv/manara/data`,
-   and starts PostgreSQL and Umami.
-4. Open `https://analytics.saudiosm.org`, change the default Umami login
-   (`admin` / `umami`), add the website `manara.saudiosm.org`, put its ID in
-   `VITE_UMAMI_WEBSITE_ID` in `deploy/.env`, and run `deploy/deploy.sh` again.
+- serves the built frontend and the datasets from precompressed `.br`/`.gz`
+  copies made at build time;
+- adds the security headers and the Content-Security-Policy (the same line is
+  read by `npm run preview`);
+- proxies `/stats/*` to the shared Umami instance
+  (`analytics.rahmahealth.net`, where Manara is its own website), passing the
+  visitor IP in `CF-Connecting-IP` so country stats stay correct.
+
+The Umami website ID is the `VITE_UMAMI_WEBSITE_ID` build argument (default in
+the Dockerfile).
 
 The old GitHub Pages address keeps working: there is no root `index.html` and
 `.nojekyll` stops Jekyll from rendering this README in its place, so Pages

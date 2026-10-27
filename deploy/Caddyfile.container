@@ -1,13 +1,55 @@
-:80 {
-	encode zstd gzip
+# Caddy inside Manara's container (root Dockerfile), deployed by Coolify's
+# Dockerfile build pack. It listens on plain HTTP :80 only: Coolify's Traefik
+# owns ports 80/443 on the VPS, terminates TLS for manara.saudiosm.org and
+# forwards here.
+#
+# Files baked into the image:
+#   /srv/manara/dist  built frontend (frontend/dist), with .br/.gz copies
+#   /srv/manara/data  published datasets, with .br/.gz copies
 
+{
+	admin off
+	auto_https off
+	servers {
+		# Traefik sits in front on the private Docker network: trust its
+		# X-Forwarded-For so {client_ip} is the visitor, not Traefik.
+		trusted_proxies static private_ranges
+		client_ip_headers X-Forwarded-For
+	}
+}
+
+:80 {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		# Everything the app loads is self-hosted. External hosts: Esri/CARTO
+		# tiles, the OSM API and OAuth token endpoint (prod + dev), and JOSM
+		# Remote Control on the mapper's own machine. frontend/vite.config.js
+		# reads this line so `npm run preview` enforces the same policy.
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self'; connect-src 'self' https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://server.arcgisonline.com http://127.0.0.1:8111; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
 		-Server
+	}
+
+	# Container health check (Dockerfile HEALTHCHECK).
+	handle /healthz {
+		respond 200
+	}
+
+	# Umami, same-origin so ad blockers leave it alone: /stats/script.js and
+	# /stats/api/send go to the shared Umami instance (Manara is its own
+	# website there). The request re-enters through Traefik, which replaces
+	# X-Forwarded-For, so the visitor IP travels in the headers Umami checks
+	# first (as rahmahealth.net's proxy does); the IP is used for the country
+	# and not stored.
+	handle_path /stats/* {
+		reverse_proxy https://analytics.rahmahealth.net {
+			header_up Host analytics.rahmahealth.net
+			header_up CF-Connecting-IP {client_ip}
+			header_up True-Client-IP {client_ip}
+			header_up -Cookie
+		}
 	}
 
 	# Datasets: file?v=<timestamp> is cached permanently, summary.json revalidates
@@ -19,7 +61,9 @@
 		header @versioned Cache-Control "public, max-age=31536000, immutable"
 		@unversioned not query v=*
 		header @unversioned Cache-Control "no-cache"
-		file_server
+		file_server {
+			precompressed br gzip
+		}
 	}
 
 	# Frontend: Hashed assets cached permanently, HTML pages revalidate
@@ -30,6 +74,11 @@
 		@pages not path /assets/*
 		header @pages Cache-Control "no-cache"
 		try_files {path} {path}.html
-		file_server
+		file_server {
+			precompressed br gzip
+		}
 	}
+
+	# Anything without a precompressed copy (small files, proxied responses).
+	encode zstd gzip
 }

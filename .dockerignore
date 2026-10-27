@@ -1,0 +1,13 @@
+# The image only needs frontend/, deploy/ and the dataset files.
+.git
+.github
+.claude
+.pytest_cache
+**/__pycache__
+**/node_modules
+frontend/dist
+*.pbf
+*.pem
+*.csv
+*.db
+tests
