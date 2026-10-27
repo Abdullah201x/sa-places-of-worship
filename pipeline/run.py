@@ -61,6 +61,7 @@ CURRENT_LINK = os.path.join(PUBLISH_DIR, "current")
 # In order; each reads the previous steps' output from the work dir.
 STEPS = [
     ["extract_sa_boundary.py", "--force"],
+    ["extract_regions.py", "--force"],
     ["extract_places.py"],
     ["calculate_gaps.py"],
     ["calculate_mosque_sizes.py"],
@@ -76,6 +77,7 @@ PUBLISHED_FILES = [
     "places_of_worship_sa.geojson",
     "worship_gaps_sa.json",
     "sa_boundary.geojson",
+    "sa_regions.geojson",
     "mosque_sizes.json",
     "mosque_anomalies.json",
     "suggested_mosques_sa.geojson",

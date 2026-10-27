@@ -23,6 +23,7 @@ DATASETS = {
     # summary key: (file, function returning the record count, required)
     "places": ("places_of_worship_sa.geojson", lambda d: len(d["features"]), True),
     "gaps": ("worship_gaps_sa.json", lambda d: len(d["cells"]), True),
+    "regions": ("sa_regions.geojson", lambda d: len(d["features"]), True),
     "sizes": ("mosque_sizes.json", len, False),
     "anomalies": ("mosque_anomalies.json", len, False),
     "suggestions": ("suggested_mosques_sa.geojson", lambda d: len(d["features"]), False),
