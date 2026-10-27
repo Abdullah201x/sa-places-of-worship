@@ -9,7 +9,7 @@ The front-end is a static Leaflet dashboard (Arabic RTL by default, with an
 English toggle). All heavy data processing happens ahead of time in Python from
 an OpenStreetMap `.pbf` extract.
 
-Live site: <https://saudiosm.org>
+Live site: <https://manara.saudiosm.org>
 
 ## Contents
 
@@ -109,7 +109,7 @@ Then open <http://localhost:8000/>.
 Login uses OAuth 2.0 with PKCE. Set `DEFAULT_OSM_CLIENT_ID` in
 [js/osm_api.js](js/osm_api.js) to the client ID of an application registered
 on openstreetmap.org with the redirect URI
-`https://saudiosm.org/` (and
+`https://manara.saudiosm.org/` (and
 `http://localhost:8000/` for local testing), as a public (non-confidential)
 client with the scopes *Read user preferences*, *Modify the map* and *Create
 notes*. Until then, or for a self-hosted copy, a client ID can be entered in
