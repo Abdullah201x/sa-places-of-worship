@@ -1,6 +1,6 @@
 // Arabic name helpers. Mirrors normalize_arabic() / is_generic_mosque_name()
 // in common.py (ported from the osm x wikidata project); keep both in sync.
-const ArabicText = {
+export const ArabicText = {
   _tashkeel: /[ً-ٰٟ]/g,
   _tatweel: /ـ/g,
   _punct: /[^\w\s؀-ۿ]/g,

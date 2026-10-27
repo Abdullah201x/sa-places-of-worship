@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+/* Fonts are self-hosted (@fontsource-variable packages, imported in fonts.css). */
 
 :root {
   --bg-dark: #0a0b10;
@@ -12,8 +12,8 @@
   --color-text: #f1f5f9;
   --color-text-muted: #94a3b8;
   
-  --font-title: 'Outfit', 'Cairo', sans-serif;
-  --font-body: 'Cairo', 'Plus Jakarta Sans', sans-serif;
+  --font-title: 'Outfit Variable', 'Cairo Variable', sans-serif;
+  --font-body: 'Cairo Variable', 'Plus Jakarta Sans Variable', sans-serif;
   
   --shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 
                0 0 20px rgba(0, 242, 254, 0.05);
@@ -373,7 +373,7 @@ h1 {
   margin-bottom: 4px;
   color: #fff;
   text-align: right;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Outfit Variable', sans-serif;
 }
 
 .details-title-en {
@@ -2653,7 +2653,7 @@ kbd {
   border-bottom-width: 2px;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.05);
-  font-family: 'Plus Jakarta Sans', monospace;
+  font-family: 'Plus Jakarta Sans Variable', monospace;
   font-size: 11px;
   text-align: center;
   color: var(--color-text);
@@ -2902,4 +2902,24 @@ kbd {
   font-size: 11px;
   color: var(--color-text-muted);
   line-height: 1.4;
+}
+
+/* Links to the about / privacy pages at the bottom of the sidebar */
+.site-links {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--panel-border);
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.site-links a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.site-links a:hover {
+  color: var(--color-primary);
 }

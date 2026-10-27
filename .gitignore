@@ -15,7 +15,7 @@ venv/
 .tmp_*.json
 .pytest_cache/
 
-# Local SSL certificates for HTTPS testing
+# Local SSL certificates (from the old serve_ssl.py dev server)
 cert.pem
 key.pem
 
@@ -29,3 +29,10 @@ key.pem
 results.csv
 
 
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Deployment secrets
+deploy/.env

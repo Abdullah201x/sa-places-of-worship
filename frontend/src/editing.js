@@ -2,6 +2,11 @@
 // Every edit is previewed and confirmed by the mapper; the batch only holds
 // fixes that were reviewed one by one, then uploads them in one changeset
 // (the osm x wikidata batch pattern). There is deliberately no "fix all".
+import { addTranslations, t, fmtNum, fmtDate, onLanguageChange } from './i18n.js';
+import { ReviewMarks, refreshAfterReviewChange } from './review.js';
+import { Exporters } from './exporters.js';
+import { OsmApi, EditHistory } from './osm_api.js';
+import { allPlaces, selectedPlace, denomLabel, osmTypeOf, getIssues, invalidateIssues, updateImprovementIssueCounts, showToast, placeName, showDetails } from './app.js';
 
 addTranslations({
   quickFixesTitle: ['⚡ إصلاح سريع (OSM API)', '⚡ Quick fix (OSM API)'],
@@ -57,7 +62,7 @@ addTranslations({
   close: ['إغلاق', 'Close'],
 });
 
-const FIX_COMMENT_SUMMARY = {
+export const FIX_COMMENT_SUMMARY = {
   missing_amenity: 'add amenity=place_of_worship',
   building_yes: 'building=yes -> building=mosque',
   missing_name_en: 'add name:en',
@@ -66,7 +71,7 @@ const FIX_COMMENT_SUMMARY = {
 
 // Issue id -> how to fix it. target: which OSM object gets the tags ("poi" is
 // the merged POI node when there is one, otherwise the place itself).
-const QUICK_FIXES = {
+export const QUICK_FIXES = {
   missing_amenity: {
     target: 'place',
     source: 'local knowledge',
@@ -93,21 +98,21 @@ const QUICK_FIXES = {
   }
 };
 
-function fixTarget(props, fix) {
+export function fixTarget(props, fix) {
   if (fix.target === 'poi' && props.poi_node_id) {
     return { type: 'node', id: props.poi_node_id, expectedVersion: props._editedNodeVersion || props.poi_node_version };
   }
   return { type: osmTypeOf(props), id: props.osm_id, expectedVersion: props._editedVersion || props.version };
 }
 
-function findPlaceByKey(key) {
+export function findPlaceByKey(key) {
   return allPlaces.find(f => ReviewMarks.keyOf(f.properties) === key);
 }
 
 // Reflects uploaded tags in the loaded data so the issue disappears now, and
 // marks the place fixed so it stays hidden until the pipeline publishes the
 // new version.
-function applyUploadedTagsToPlace(placeKey, result) {
+export function applyUploadedTagsToPlace(placeKey, result) {
   const f = findPlaceByKey(placeKey);
   if (!f) return;
   const props = f.properties;
@@ -125,7 +130,7 @@ function applyUploadedTagsToPlace(placeKey, result) {
   }
 }
 
-function refreshAfterEdits() {
+export function refreshAfterEdits() {
   invalidateIssues();
   updateImprovementIssueCounts();
   refreshAfterReviewChange();
@@ -135,7 +140,7 @@ function refreshAfterEdits() {
 // ---------------------------------------------------------------------------
 // Details panel: list the fixes available for the selected place
 // ---------------------------------------------------------------------------
-function renderQuickFixes(props) {
+export function renderQuickFixes(props) {
   const box = document.getElementById('details-quick-fixes');
   if (!box) return;
   const fixes = getIssues(props)
@@ -174,7 +179,7 @@ function renderQuickFixes(props) {
 // ---------------------------------------------------------------------------
 // Edit dialog
 // ---------------------------------------------------------------------------
-function sourceSelect(selected) {
+export function sourceSelect(selected) {
   const select = document.createElement('select');
   select.className = 'auth-input edit-source';
   [['local knowledge', 'sourceLocal'], ['survey', 'sourceSurvey'], ['Esri World Imagery', 'sourceImagery']].forEach(([value, key]) => {
@@ -187,7 +192,7 @@ function sourceSelect(selected) {
   return select;
 }
 
-function commentField(value) {
+export function commentField(value) {
   const wrap = document.createElement('div');
   wrap.className = 'client-id-config';
   const label = document.createElement('label');
@@ -207,7 +212,7 @@ function commentField(value) {
   return { wrap, area };
 }
 
-function describeEdits(edits) {
+export function describeEdits(edits) {
   const lines = [];
   Object.entries(edits.set || {}).forEach(([k, v]) => lines.push(`+ ${k}=${v}`));
   Object.entries(edits.setIfMissing || {}).forEach(([k, v]) => lines.push(`+ ${k}=${v} ${t('editIfMissing')}`));
@@ -215,7 +220,7 @@ function describeEdits(edits) {
   return lines;
 }
 
-function openOverlay(id, build) {
+export function openOverlay(id, build) {
   const overlay = document.getElementById(id);
   const card = overlay.querySelector('.auth-card');
   card.innerHTML = '';
@@ -224,7 +229,7 @@ function openOverlay(id, build) {
   return overlay;
 }
 
-function openEditDialog(props, fixId) {
+export function openEditDialog(props, fixId) {
   const fix = QUICK_FIXES[fixId];
   const target = fixTarget(props, fix);
   const label = placeName(props);
@@ -354,7 +359,7 @@ function openEditDialog(props, fixId) {
   });
 }
 
-function handleEditError(err) {
+export function handleEditError(err) {
   if (err.message === 'AUTH_EXPIRED' || err.message === 'NOT_AUTHENTICATED') {
     showToast(t('editAuthExpired'), 'error');
     document.getElementById('osm-auth-overlay').classList.remove('hidden');
@@ -363,7 +368,7 @@ function handleEditError(err) {
   }
 }
 
-async function uploadSingle(item, comment, source) {
+export async function uploadSingle(item, comment, source) {
   try {
     let { changesetId, results } = await OsmApi.applyEdits([item], { comment, source });
     let r = results[0];
@@ -395,7 +400,7 @@ async function uploadSingle(item, comment, source) {
 // ---------------------------------------------------------------------------
 // Batch queue (localStorage), uploaded as one changeset
 // ---------------------------------------------------------------------------
-const EditBatch = {
+export const EditBatch = {
   KEY: 'gcc_edit_batch',
 
   items() {
@@ -434,7 +439,7 @@ const EditBatch = {
   }
 };
 
-function renderBatchDock() {
+export function renderBatchDock() {
   const dock = document.getElementById('batch-dock');
   if (!dock) return;
   const n = EditBatch.items().length;
@@ -442,7 +447,7 @@ function renderBatchDock() {
   dock.style.display = n ? '' : 'none';
 }
 
-function openBatchDialog() {
+export function openBatchDialog() {
   openOverlay('batch-overlay', (card, close) => {
     const items = EditBatch.items();
     const header = document.createElement('div');
@@ -565,7 +570,7 @@ function openBatchDialog() {
 // ---------------------------------------------------------------------------
 // History dialog
 // ---------------------------------------------------------------------------
-function exportHistory(format) {
+export function exportHistory(format) {
   const records = EditHistory.list();
   if (format === 'json') {
     Exporters._download(`sa-worship-edits-${new Date().toISOString().slice(0, 10)}.json`,
@@ -585,7 +590,7 @@ function exportHistory(format) {
     '﻿' + rows.join('\r\n'), 'text/csv;charset=utf-8');
 }
 
-function openHistoryDialog() {
+export function openHistoryDialog() {
   openOverlay('history-overlay', (card, close) => {
     const records = EditHistory.list();
     const header = document.createElement('div');
@@ -652,7 +657,7 @@ function openHistoryDialog() {
   });
 }
 
-function setupEditing() {
+export function setupEditing() {
   document.getElementById('batch-dock').addEventListener('click', openBatchDialog);
   document.getElementById('btn-edit-history').addEventListener('click', openHistoryDialog);
   ['edit-overlay', 'batch-overlay', 'history-overlay'].forEach(id => {

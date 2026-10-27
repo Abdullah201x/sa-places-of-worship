@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>عن المشروع | منارة: خارطة أماكن العبادة</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕌%3C/text%3E%3C/svg%3E">
+  <link rel="canonical" href="https://manara.saudiosm.org/about">
+  <meta name="description" content="منارة: خارطة مفتوحة لأماكن العبادة في المملكة العربية السعودية مبنية على بيانات OpenStreetMap، مع تحليل فجوات التغطية وأدوات لتحسين البيانات.">
+</head>
+<body data-title-key="aboutTitle">
+  <header class="page-header">
+    <a href="/"><span data-lang="ar">→ العودة إلى الخارطة</span><span data-lang="en">← Back to the map</span></a>
+    <button type="button" id="btn-toggle-lang" lang="en">English</button>
+  </header>
+
+  <main>
+    <article data-lang="ar">
+      <h1>عن منارة</h1>
+      <p>منارة خارطة تفاعلية لأماكن العبادة في المملكة العربية السعودية، مبنية بالكامل على بيانات <a href="https://www.openstreetmap.org">OpenStreetMap</a> المفتوحة. تهدف إلى إظهار توزيع المساجد وكثافتها، وكشف الأحياء المأهولة التي تفتقر إليها، ومساعدة المخططين على إصلاح أخطاء البيانات.</p>
+
+      <h2>ماذا تقدم الخارطة؟</h2>
+      <ul>
+        <li><strong>كثافة الأماكن:</strong> خارطة حرارية وعلامات مجمّعة مع تصفية حسب الديانة وتاريخ آخر تعديل، وبحث يفهم اختلافات الإملاء العربي.</li>
+        <li><strong>فجوات التغطية:</strong> خلايا مأهولة (بحسب شبكة الطرق) تبعد أكثر من ٧٥٠ متراً عن أقرب مكان عبادة.</li>
+        <li><strong>تحسين البيانات:</strong> كشف مشكلات الوسوم والأسماء والأحجام غير المعتادة وانحراف اتجاه القبلة والأشكال الهندسية الشاذة (بالتعلم الآلي)، مع أدوات للمراجعة والتصدير والإصلاح المباشر عبر OSM.</li>
+        <li><strong>اقتراحات ويكي بيانات:</strong> مساجد مسجلة في ويكي بيانات وغير موجودة على OSM.</li>
+      </ul>
+
+      <h2>مصدر البيانات</h2>
+      <p>تُستخرج البيانات من نسخة OpenStreetMap لدول الخليج التي يوفرها موقع <a href="https://download.geofabrik.de/">Geofabrik</a>، وتُعالج على الخادم ثم تُنشر هنا بشكل دوري. أي تعديل تجريه على OSM يظهر في الخارطة بعد التحديث التالي. اقتراحات المساجد مأخوذة من <a href="https://www.wikidata.org">ويكي بيانات</a> عبر مشروع <a href="https://github.com/Abdullah201x/osm-x-wikidata">osm x wikidata</a>.</p>
+      <p>بيانات الخارطة © <a href="https://www.openstreetmap.org/copyright">المساهمون في OpenStreetMap</a>، متاحة بموجب رخصة قاعدة البيانات المفتوحة (ODbL).</p>
+
+      <h2>المساهمة</h2>
+      <p>يمكنك تسجيل الدخول بحساب OpenStreetMap لإصلاح المشكلات من داخل الخارطة أو لإضافة ملاحظات ميدانية. كل تعديل يُرفع في مجموعة تعديلات (changeset) باسمك ويحمل الوسم <code>#sa-worship-map</code>. الشيفرة المصدرية متاحة على <a href="https://github.com/Abdullah201x/sa-places-of-worship">GitHub</a>، ويسعدنا استقبال البلاغات والمقترحات هناك.</p>
+    </article>
+
+    <article data-lang="en" lang="en" dir="ltr">
+      <h1>About Manara</h1>
+      <p>Manara is an interactive map of places of worship in Saudi Arabia, built entirely on open <a href="https://www.openstreetmap.org">OpenStreetMap</a> data. It shows where mosques are and how dense they are, highlights inhabited neighbourhoods that lack one, and helps mappers fix data problems.</p>
+
+      <h2>What the map offers</h2>
+      <ul>
+        <li><strong>POI density:</strong> a heatmap and clustered markers, filterable by religion and last-edit date, with search that understands Arabic spelling variants.</li>
+        <li><strong>Coverage gaps:</strong> inhabited grid cells (judged by the road network) more than 750 m from the nearest place of worship.</li>
+        <li><strong>Data improvement:</strong> tagging, naming and size problems, Qibla misalignment and machine-learning geometry anomalies, with review, export and in-app fixes through OSM.</li>
+        <li><strong>Wikidata suggestions:</strong> mosques recorded in Wikidata but missing from OSM.</li>
+      </ul>
+
+      <h2>Where the data comes from</h2>
+      <p>The data is extracted from the GCC States OpenStreetMap extract published by <a href="https://download.geofabrik.de/">Geofabrik</a>, processed on our server and published here regularly. Anything you change in OSM appears on the map after the next update. Mosque suggestions come from <a href="https://www.wikidata.org">Wikidata</a> through the <a href="https://github.com/Abdullah201x/osm-x-wikidata">osm x wikidata</a> project.</p>
+      <p>Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, available under the Open Database License (ODbL).</p>
+
+      <h2>Contributing</h2>
+      <p>Log in with your OpenStreetMap account to fix issues from the map or to add field notes. Every edit is uploaded in a changeset under your own name and tagged <code>#sa-worship-map</code>. The source code is on <a href="https://github.com/Abdullah201x/sa-places-of-worship">GitHub</a>; bug reports and ideas are welcome there.</p>
+    </article>
+  </main>
+
+  <footer class="page-footer">
+    <a href="/privacy"><span data-lang="ar">سياسة الخصوصية</span><span data-lang="en">Privacy policy</span></a>
+  </footer>
+
+  <script type="module" src="/src/page.js"></script>
+</body>
+</html>

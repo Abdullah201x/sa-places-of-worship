@@ -2,28 +2,12 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <script>
-    // Redirect old GitHub Pages URL to manara.saudiosm.org
-    if (window.location.hostname.endsWith('github.io')) {
-      var newPath = window.location.pathname.replace(/^\/sa-places-of-worship\/?/, '/');
-      window.location.replace('https://manara.saudiosm.org' + newPath + window.location.search + window.location.hash);
-    }
-  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>خارطة الكثافة وفجوات التغطية لأماكن العبادة بالمملكة</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕌%3C/text%3E%3C/svg%3E">
   <link rel="canonical" href="https://manara.saudiosm.org/">
   <meta name="description" content="خارطة تفاعلية لعرض التوزيع الجغرافي ونقاط الكثافة وفجوات التغطية لأماكن العبادة في المملكة العربية السعودية مع إمكانية التعديل عبر OpenStreetMap.">
   
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  
-  <!-- Leaflet Marker Cluster CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" integrity="sha384-lPzjPsFQL6te2x+VxmV6q1DpRxpRk0tmnl2cpwAO5y04ESyc752tnEWPKDfl1olr" crossorigin="anonymous" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" integrity="sha384-5kMSQJ6S4Qj5i09mtMNrWpSi8iXw230pKU76xTmrpezGnNJQzj0NzXjQLLg+jE7k" crossorigin="anonymous" />
-  
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="index.css?v=2">
 </head>
 <body>
 
@@ -644,6 +628,12 @@
           </div>
         </div>
       </section>
+
+      <nav class="site-links" aria-label="روابط الموقع">
+        <a href="/about">عن المشروع</a>
+        <a href="/privacy">الخصوصية</a>
+        <a href="https://github.com/Abdullah201x/sa-places-of-worship" rel="noopener" target="_blank">GitHub</a>
+      </nav>
     </aside>
 
     <!-- Sidebar Collapse/Expand Toggle -->
@@ -956,27 +946,6 @@
 
   </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  
-  <!-- Leaflet Boundary Canvas Plugin (pinned to a commit; the repo has no releases) -->
-  <script src="https://cdn.jsdelivr.net/gh/aparshin/leaflet-boundary-canvas@83e6a725ab24e895c570f514b4439da9d320ea31/src/BoundaryCanvas.js" integrity="sha384-H4/juVf9a8QtQIMJNyyWx+LwLH6VxjLUUC6mOAGZfVEAsdR6VLKYVoV4URBuMwc/" crossorigin="anonymous"></script>
-  
-  <!-- Leaflet Heatmap Plugin -->
-  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" integrity="sha384-mFKkGiGvT5vo1fEyGCD3hshDdKmW3wzXW/x+fWriYJArD0R3gawT6lMvLboM22c0" crossorigin="anonymous"></script>
-  
-  <!-- Leaflet Marker Cluster JS -->
-  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" integrity="sha384-RLIyj5q1b5XJTn0tqUhucRZe40nFTocRP91R/NkRJHwAe4XxnTV77FXy/vGLiec2" crossorigin="anonymous"></script>
-  
-  <!-- App JS -->
-  <script src="js/i18n.js?v=2"></script>
-  <script src="js/translations.js?v=2"></script>
-  <script src="js/translations_static.js?v=2"></script>
-  <script src="js/arabic.js?v=2"></script>
-  <script src="js/review.js?v=2"></script>
-  <script src="js/exporters.js?v=2"></script>
-  <script src="js/osm_api.js?v=2"></script>
-  <script src="js/editing.js?v=2"></script>
-  <script src="app.js?v=2"></script>
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>

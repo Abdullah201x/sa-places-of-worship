@@ -2,7 +2,11 @@
 // text itself (whitespace-collapsed). See applyStaticTranslations() in i18n.js.
 // Generated from index.html; when you add or change Arabic UI text there,
 // add the matching entry here.
+import { addStaticTranslations } from './i18n.js';
 addStaticTranslations({
+  "روابط الموقع": "Site links",
+  "عن المشروع": "About",
+  "الخصوصية": "Privacy",
   "تسجيل الدخول عبر OpenStreetMap": "Log in with OpenStreetMap",
   "سجّل الدخول بحساب OpenStreetMap للمساهمة في تحسين بيانات المساجد وإضافة الملاحظات الميدانية.": "Log in with your OpenStreetMap account to contribute improvements to mosque data and add field notes.",
   "تعديل بيانات ووسوم المساجد": "Edit mosque data & tags",

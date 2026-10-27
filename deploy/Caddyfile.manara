@@ -1,0 +1,73 @@
+# Manara site config for the VPS's existing host Caddy. Add one line to the
+# main /etc/caddy/Caddyfile (rahmahealth.net's config is not touched):
+#
+#     import /opt/manara/deploy/Caddyfile.manara
+#
+# then `sudo systemctl reload caddy`. Web roots (filled by deploy/deploy.sh):
+#   /srv/manara/dist  built frontend (frontend/dist)
+#   /srv/manara/data  published datasets
+# Local services (deploy/docker-compose.yml): Umami on 127.0.0.1:3010.
+
+(manara_security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		# Everything the app loads is self-hosted. External hosts: Esri/CARTO
+		# tiles, the OSM API and OAuth token endpoint (prod + dev), and JOSM
+		# Remote Control on the mapper's own machine. vite.config.js reads this
+		# line so `npm run preview` enforces the same policy.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self'; connect-src 'self' https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://server.arcgisonline.com http://127.0.0.1:8111; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		-Server
+	}
+}
+
+manara.saudiosm.org {
+	encode zstd gzip
+	import manara_security_headers
+
+	# Umami, same-origin so ad blockers leave it alone: /stats/script.js and
+	# /stats/api/send. Caddy passes the visitor IP in X-Forwarded-For, which
+	# Umami uses for the country lookup (the IP itself is not stored).
+	handle_path /stats/* {
+		reverse_proxy 127.0.0.1:3010
+	}
+
+	# Published datasets. The app requests them as file?v=<updated_at>, so
+	# versioned requests can be cached for good; summary.json (fetched without
+	# v=) must always revalidate.
+	handle /data/* {
+		root * /srv/manara
+		@geojson path *.geojson
+		header @geojson Content-Type "application/geo+json; charset=utf-8"
+		@versioned query v=*
+		header @versioned Cache-Control "public, max-age=31536000, immutable"
+		@unversioned not query v=*
+		header @unversioned Cache-Control "no-cache"
+		file_server
+	}
+
+	# The frontend. Hashed assets never change; pages always revalidate.
+	handle {
+		root * /srv/manara/dist
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /assets/*
+		header @pages Cache-Control "no-cache"
+		try_files {path} {path}.html
+		file_server
+	}
+}
+
+# Umami dashboard (Manara's own instance, separate from rahmahealth.net's).
+analytics.saudiosm.org {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	reverse_proxy 127.0.0.1:3010
+}

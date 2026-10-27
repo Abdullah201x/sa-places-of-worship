@@ -1,6 +1,9 @@
 // OpenStreetMap OAuth 2.0 (PKCE) and API 0.6 tag editing, adapted from the
 // osm x wikidata project's js/osm_oauth.js (linkOsmElement /
 // linkOsmElementsBatch), which itself started from this project's login code.
+import { addTranslations, t } from './i18n.js';
+import { showToast, showLoadingText } from './app.js';
+import { trackEvent } from './analytics.js';
 
 addTranslations({
   authNeedClientId: ['لا يوجد معرّف عميل مدمج لهذا العنوان. أدخل معرّف العميل (Client ID) في الإعدادات المتقدمة.', 'No built-in client ID for this address. Enter a client ID under advanced settings.'],
@@ -10,21 +13,21 @@ addTranslations({
   authSuccess: ['تم تسجيل الدخول بنجاح عبر OpenStreetMap!', 'Logged in with OpenStreetMap.'],
   authFailed: ['فشل في تسجيل الدخول عبر OpenStreetMap: {msg}', 'OpenStreetMap login failed: {msg}'],
   authLoggedOut: ['تم تسجيل الخروج بنجاح.', 'Logged out.'],
-  authHttpsRequired: ['يتطلب تسجيل الدخول عبر OpenStreetMap اتصالاً آمناً (HTTPS). شغّل الخادم المحلي بالأمر: python serve_ssl.py ثم افتح https://localhost:8000/', 'OpenStreetMap login requires HTTPS. Run the local server with: python serve_ssl.py and open https://localhost:8000/'],
-  authFileProtocol: ['لا يمكن تسجيل الدخول عبر فتح الملف مباشرة (file://). شغّل الموقع عبر خادم محلي آمن أو GitHub Pages.', 'Login is not supported over file://. Please serve via a local HTTPS server or GitHub Pages.'],
+  authHttpsRequired: ['يتطلب تسجيل الدخول عبر OpenStreetMap اتصالاً آمناً (HTTPS). شغّل الخادم المحلي بالأمر: npm run dev (داخل مجلد frontend) ثم افتح https://localhost:8000/', 'OpenStreetMap login requires HTTPS. Run the local server with: npm run dev (in the frontend folder) and open https://localhost:8000/'],
+  authFileProtocol: ['لا يمكن تسجيل الدخول عبر فتح الملف مباشرة (file://). شغّل الموقع عبر خادم محلي آمن (npm run dev).', 'Login is not supported over file://. Please serve the site over HTTPS (npm run dev).'],
 });
 
 // OAuth2 application registered on openstreetmap.org for this site (public
 // PKCE client, scopes read_prefs write_api write_notes, redirect URI
 // https://manara.saudiosm.org/).
-const DEFAULT_OSM_CLIENT_ID = 'FLWYiombLxXfIjsnoG25hqP5fMQZJD52WdME2gn0b60';
+export const DEFAULT_OSM_CLIENT_ID = 'FLWYiombLxXfIjsnoG25hqP5fMQZJD52WdME2gn0b60';
 
-const OSM_SCOPES = 'read_prefs write_api write_notes';
-const CHANGESET_CREATED_BY = 'Saudi Places of Worship Map (https://manara.saudiosm.org)';
-const CHANGESET_HASHTAGS = '#sa-worship-map';
-const MAX_TAG_LENGTH = 255; // OSM rejects longer tag values
+export const OSM_SCOPES = 'read_prefs write_api write_notes';
+export const CHANGESET_CREATED_BY = 'Saudi Places of Worship Map (https://manara.saudiosm.org)';
+export const CHANGESET_HASHTAGS = '#sa-worship-map';
+export const MAX_TAG_LENGTH = 255; // OSM rejects longer tag values
 
-const OsmApi = {
+export const OsmApi = {
   environment() {
     return localStorage.getItem('osm_oauth_environment') || 'production';
   },
@@ -160,6 +163,7 @@ const OsmApi = {
       localStorage.setItem('osm_access_token', data.access_token);
       localStorage.setItem('osm_granted_scope', data.scope || OSM_SCOPES);
       await this.checkAuth();
+      trackEvent('Login success');
       showToast(t('authSuccess'));
     } catch (err) {
       console.error(err);
@@ -336,6 +340,7 @@ const OsmApi = {
     }
 
     if (changesetId) {
+      trackEvent('Fix uploaded', { objects: results.filter(r => r.status === 'success').length });
       EditHistory.add({
         changesetId,
         timestamp: Date.now(),
@@ -356,7 +361,7 @@ const OsmApi = {
 };
 
 // Local record of changesets made from this browser (most recent first).
-const EditHistory = {
+export const EditHistory = {
   KEY: 'gcc_edit_history',
   MAX: 300,
 

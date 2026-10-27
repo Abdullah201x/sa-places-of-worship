@@ -1,6 +1,8 @@
 // Mapper review workflow: fixed/skipped marks, the N/P review queue,
 // permalinks and keyboard shortcuts. Uses app.js globals (map, filteredPlaces,
 // currentMode, ...) at call time.
+import { addTranslations, currentLang, t, fmtNum } from './i18n.js';
+import { map, allPlaces, filteredPlaces, currentMode, currentReligionFilter, currentImprovementFilter, currentSearchQuery, setCurrentSearchQuery, currentQiblaSort, selectedPlace, osmTypeOf, updateImprovementIssueCounts, showToast, showDetails, filterData } from './app.js';
 
 addTranslations({
   reviewFixed: ['✓ تم الإصلاح', '✓ Fixed'],
@@ -24,7 +26,7 @@ addTranslations({
 // automatically once the published data has a newer version of the object,
 // i.e. someone edited it in OSM since it was marked.
 // ---------------------------------------------------------------------------
-const ReviewMarks = {
+export const ReviewMarks = {
   KEY: 'gcc_review_marks',
   _marks: null,
 
@@ -89,13 +91,16 @@ const ReviewMarks = {
   }
 };
 
-let hideReviewedPlaces = true;
+export let hideReviewedPlaces = true;
+export function setHideReviewedPlaces(value) {
+  hideReviewedPlaces = value;
+}
 
-function isHiddenByReview(props) {
+export function isHiddenByReview(props) {
   return hideReviewedPlaces && currentMode === 'improve' && ReviewMarks.get(props) !== null;
 }
 
-function markCurrentPlace(status) {
+export function markCurrentPlace(status) {
   if (!selectedPlace) return;
   ReviewMarks.set(selectedPlace.properties, status);
   showToast(t(status === 'fixed' ? 'reviewMarkedFixedToast' : 'reviewMarkedSkippedToast'));
@@ -103,7 +108,7 @@ function markCurrentPlace(status) {
   navigateReview(1);
 }
 
-function clearCurrentMark() {
+export function clearCurrentMark() {
   if (!selectedPlace) return;
   ReviewMarks.clear(selectedPlace.properties);
   refreshAfterReviewChange();
@@ -112,7 +117,7 @@ function clearCurrentMark() {
 // Rebuilds the filtered list (and so the review queue) around the selected
 // place. If the place is now hidden, "next" starts from the nearest remaining
 // one (or the most severe remaining one for the Qibla list).
-function refreshAfterReviewChange() {
+export function refreshAfterReviewChange() {
   updateImprovementIssueCounts();
   filterData();
   reviewIndex = selectedPlace ? reviewQueue.findIndex(f => f.properties === selectedPlace.properties) : -1;
@@ -120,7 +125,7 @@ function refreshAfterReviewChange() {
   renderReviewActions();
 }
 
-function renderReviewActions() {
+export function renderReviewActions() {
   const box = document.getElementById('details-review-actions');
   if (!box) return;
   if (!selectedPlace || currentMode !== 'improve') {
@@ -145,10 +150,10 @@ function renderReviewActions() {
 // distance from where the map was when the list was built, so stepping
 // through it walks outward from the area you're looking at.
 // ---------------------------------------------------------------------------
-let reviewQueue = [];
-let reviewIndex = -1;
+export let reviewQueue = [];
+export let reviewIndex = -1;
 
-function rebuildReviewQueue() {
+export function rebuildReviewQueue() {
   if (currentMode === 'improve' && currentImprovementFilter === 'qibla_deviation') {
     reviewQueue = filteredPlaces.slice();
   } else if (map) {
@@ -167,7 +172,7 @@ function rebuildReviewQueue() {
   updateReviewNavUI();
 }
 
-function navigateReview(direction) {
+export function navigateReview(direction) {
   if (currentMode === 'gap' || reviewQueue.length === 0) {
     showToast(t('reviewEmpty'), 'error');
     return;
@@ -186,7 +191,7 @@ function navigateReview(direction) {
   updateReviewNavUI();
 }
 
-function updateReviewNavUI() {
+export function updateReviewNavUI() {
   const counterEl = document.getElementById('review-nav-counter');
   const box = document.getElementById('review-nav-box');
   if (!counterEl || !box) return;
@@ -218,7 +223,7 @@ function updateReviewNavUI() {
 // ---------------------------------------------------------------------------
 // Permalinks: #mode=improve&issue=missing_name&rel=all&q=...&map=15/24.71/46.67&place=way/123&lang=en
 // ---------------------------------------------------------------------------
-const Permalink = {
+export const Permalink = {
   _applying: false,
 
   read() {
@@ -251,7 +256,7 @@ const Permalink = {
     try {
       const q = p.get('q');
       if (q) {
-        currentSearchQuery = q;
+        setCurrentSearchQuery(q);
         const box = document.getElementById('search-input');
         if (box) box.value = q;
       }
@@ -283,8 +288,8 @@ const Permalink = {
   }
 };
 
-let permalinkTimer = null;
-function updatePermalinkSoon() {
+export let permalinkTimer = null;
+export function updatePermalinkSoon() {
   clearTimeout(permalinkTimer);
   permalinkTimer = setTimeout(() => Permalink.update(), 300);
 }
@@ -292,7 +297,7 @@ function updatePermalinkSoon() {
 // ---------------------------------------------------------------------------
 // Keyboard shortcuts (ignored while typing in a field)
 // ---------------------------------------------------------------------------
-function setupKeyboardShortcuts() {
+export function setupKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const tag = (e.target.tagName || '').toLowerCase();

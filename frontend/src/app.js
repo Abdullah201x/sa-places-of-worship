@@ -1,69 +1,79 @@
-let map;
-let heatmapLayer = null;
-let markerClusterLayer = null;
-let basemaps = {};
-let currentBasemap = null;
-let currentBasemapKey = 'dark';
+import { currentLang, t, fmtNum, fmtDate, onLanguageChange, setLanguage } from './i18n.js';
+import { ArabicText } from './arabic.js';
+import { ReviewMarks, hideReviewedPlaces, setHideReviewedPlaces, isHiddenByReview, markCurrentPlace, clearCurrentMark, renderReviewActions, rebuildReviewQueue, navigateReview, updateReviewNavUI, Permalink, updatePermalinkSoon, setupKeyboardShortcuts } from './review.js';
+import { Exporters } from './exporters.js';
+import { OsmApi } from './osm_api.js';
+import { renderQuickFixes, setupEditing } from './editing.js';
+import { trackEvent } from './analytics.js';
+export let map;
+export let heatmapLayer = null;
+export let markerClusterLayer = null;
+export let basemaps = {};
+export let currentBasemap = null;
+export let currentBasemapKey = 'dark';
 
 // Login, OAuth and API editing live in js/osm_api.js (OsmApi).
-let isOsmAnonymized = true;
+export let isOsmAnonymized = true;
 
 // OSM Notes State
-let addNoteMode = false;
-let noteMarkersLayer = null;
-let pendingNoteLatLng = null;
-let activeNotePreset = 'freetext';
+export let addNoteMode = false;
+export let noteMarkersLayer = null;
+export let pendingNoteLatLng = null;
+export let activeNotePreset = 'freetext';
 
 // Appended to every submitted note (preset or free text) so mappers processing
 // it know which site it came from - the same convention StreetComplete/MAPS.ME
 // use ("via StreetComplete", "#mapsme"), which also promotes the site itself.
-const NOTE_SIGNATURE = 'via خارطة أماكن العبادة (https://manara.saudiosm.org) #sa-worship-map';
+export const NOTE_SIGNATURE = 'via خارطة أماكن العبادة (https://manara.saudiosm.org) #sa-worship-map';
 
 // Temporary storage for loaded data if auth is pending
-let pendingPoiData = null;
-let pendingGapData = null;
-let pendingBoundaryData = null;
-let pendingSizeData = null;
-let pendingAnomalyData = null;
+export let pendingPoiData = null;
+export let pendingGapData = null;
+export let pendingBoundaryData = null;
+export let pendingSizeData = null;
+export let pendingAnomalyData = null;
 
 // Datasets
-let allPlaces = [];
-let filteredPlaces = [];
-let allGaps = [];
-let filteredGaps = [];
+export let allPlaces = [];
+export let filteredPlaces = [];
+export let allGaps = [];
+export let filteredGaps = [];
 
 // Filter States
-let currentMode = 'poi'; // 'poi', 'gap', or 'improve'
-let currentReligionFilter = 'all';
-let currentImprovementFilter = 'all';
-let currentSearchQuery = '';
-let currentDateFrom = null; // day-index (see dayIndex()), set once data loads
-let currentDateTo = null;
-let DATA_MIN_DAY = 0;
-let DATA_MAX_DAY = 1;
+export let currentMode = 'poi'; // 'poi', 'gap', or 'improve'
+export let currentReligionFilter = 'all';
+export let currentImprovementFilter = 'all';
+export let currentSearchQuery = '';
+export function setCurrentSearchQuery(q) {
+  currentSearchQuery = q;
+}
+export let currentDateFrom = null; // day-index (see dayIndex()), set once data loads
+export let currentDateTo = null;
+export let DATA_MIN_DAY = 0;
+export let DATA_MAX_DAY = 1;
 
 // Size-outlier thresholds (m²), user-adjustable in Improve Mode. Defaults match
 // calculate_mosque_sizes.py's DEFAULT_MIN/MAX_AREA_M2.
-const SIZE_MIN_AREA_DEFAULT = 20;
-const SIZE_MAX_AREA_DEFAULT = 15000;
-let currentSizeMinM2 = SIZE_MIN_AREA_DEFAULT;
-let currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
+export const SIZE_MIN_AREA_DEFAULT = 20;
+export const SIZE_MAX_AREA_DEFAULT = 15000;
+export let currentSizeMinM2 = SIZE_MIN_AREA_DEFAULT;
+export let currentSizeMaxM2 = SIZE_MAX_AREA_DEFAULT;
 
 // Qibla-outlier threshold (degrees), user-adjustable in Improve Mode. Default is 20 deg (top ~10% outliers).
-const QIBLA_DEV_DEFAULT = 20.0;
-let currentQiblaDevThreshold = QIBLA_DEV_DEFAULT;
-let currentQiblaSort = 'least_accurate'; // 'least_accurate' or 'most_accurate'
-let selectedPlace = null; // { properties, lat, lon } of the place in the details panel
-let viewportCountsOnly = false;
+export const QIBLA_DEV_DEFAULT = 20.0;
+export let currentQiblaDevThreshold = QIBLA_DEV_DEFAULT;
+export let currentQiblaSort = 'least_accurate'; // 'least_accurate' or 'most_accurate'
+export let selectedPlace = null; // { properties, lat, lon } of the place in the details panel
+export let viewportCountsOnly = false;
 
 // Map configuration
-const MAP_INITIAL_CENTER = [24.0, 45.0]; // Centered on Saudi Arabia
-const MAP_INITIAL_ZOOM = 6;
-const CLUSTER_MIN_ZOOM = 11; // Zoom level at which individual markers/clusters appear
-const KAABA_COORDS = { lat: 21.42252, lng: 39.82618 };
+export const MAP_INITIAL_CENTER = [24.0, 45.0]; // Centered on Saudi Arabia
+export const MAP_INITIAL_ZOOM = 6;
+export const CLUSTER_MIN_ZOOM = 11; // Zoom level at which individual markers/clusters appear
+export const KAABA_COORDS = { lat: 21.42252, lng: 39.82618 };
 
 // Color configuration for POIs
-const RELIGION_COLORS = {
+export const RELIGION_COLORS = {
   'muslim': '#00ff87', // Neon Green
   'christian': '#4facfe', // Electric Blue
   'unknown': '#ffb03a', // Gold/Amber
@@ -72,19 +82,19 @@ const RELIGION_COLORS = {
 
 // Localized labels for religion=* / denomination=* values (js/translations.js);
 // unknown values are shown as tagged.
-function religionLabel(value) {
+export function religionLabel(value) {
   const label = t(`rel_${value}`);
   return label === `rel_${value}` ? value : label;
 }
 
-function denomLabel(value) {
+export function denomLabel(value) {
   const label = t(`denom_${value}`);
   return label === `denom_${value}` ? value : label;
 }
 
 // Small utility: delay invoking fn until `ms` after the last call.
 // Keeps search/pan/zoom smooth by avoiding per-keystroke/per-frame recomputes.
-function debounce(fn, ms) {
+export function debounce(fn, ms) {
   let timer = null;
   return function (...args) {
     clearTimeout(timer);
@@ -98,14 +108,14 @@ function debounce(fn, ms) {
 // (same technique used by the iD/RapiD OSM editors) that reports tile availability without
 // downloading imagery, so we can discover the true max zoom for the current view and overzoom
 // up to it instead of guessing a fixed cap.
-const ESRI_TILEMAP_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tilemap';
-const ESRI_ASSUMED_MIN_ZOOM = 13; // always-available global mosaic level; skip probing below this
-const ESRI_MAX_PROBE_ZOOM = 21;   // Esri rarely publishes real imagery deeper than this
+export const ESRI_TILEMAP_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tilemap';
+export const ESRI_ASSUMED_MIN_ZOOM = 13; // always-available global mosaic level; skip probing below this
+export const ESRI_MAX_PROBE_ZOOM = 21;   // Esri rarely publishes real imagery deeper than this
 
 // Cache for max zoom levels. Keys are zoom-13 tile coordinates (approx. 4.4km x 4.4km grid cells).
-const esriMaxZoomCache = new Map();
+export const esriMaxZoomCache = new Map();
 
-async function esriTilesAvailable(zoom, centerLatLng) {
+export async function esriTilesAvailable(zoom, centerLatLng) {
   const point = map.project(centerLatLng, zoom);
   const tileSize = 256;
   const x = Math.floor(point.x / tileSize);
@@ -124,7 +134,7 @@ async function esriTilesAvailable(zoom, centerLatLng) {
 
 // Binary search between the always-available floor and the probe ceiling for the deepest
 // zoom with real imagery at the given point.
-async function findEsriMaxZoom(centerLatLng) {
+export async function findEsriMaxZoom(centerLatLng) {
   // Determine regional cache key at zoom level 13 to avoid redundant checks when panning locally
   const point13 = map.project(centerLatLng, 13);
   const x13 = Math.floor(point13.x / 256);
@@ -155,7 +165,7 @@ async function findEsriMaxZoom(centerLatLng) {
 
 // Re-probes real imagery availability for the current view and raises/lowers the satellite
 // layer's zoom ceiling to match, so users can overzoom exactly as far as real data allows.
-async function updateSatelliteZoomCap() {
+export async function updateSatelliteZoomCap() {
   if (currentBasemapKey !== 'satellite') return;
   const layer = basemaps['satellite'];
   const maxFound = await findEsriMaxZoom(map.getCenter());
@@ -174,20 +184,20 @@ async function updateSatelliteZoomCap() {
   }
 }
 
-const debouncedUpdateSatelliteZoomCap = debounce(updateSatelliteZoomCap, 400);
+export const debouncedUpdateSatelliteZoomCap = debounce(updateSatelliteZoomCap, 400);
 
 // Convert an ISO edited_at timestamp to a whole-day index for slider bounds/comparison.
-function dayIndex(isoString) {
+export function dayIndex(isoString) {
   return Math.floor(new Date(isoString).getTime() / 86400000);
 }
 
 // Render a day-index back to a localized short date for slider labels.
-function formatDay(day) {
+export function formatDay(day) {
   return new Date(day * 86400000).toLocaleDateString(currentLang === 'ar' ? 'ar-SA' : 'en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 // Escape user-supplied text (OSM names) before injecting into popup HTML.
-function escapeHtml(str) {
+export function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => ({
     '&': '&amp;',
     '<': '&lt;',
@@ -198,20 +208,20 @@ function escapeHtml(str) {
 }
 
 // Returns the URL only if it uses http(s); blocks javascript: and similar schemes.
-function safeUrl(url) {
+export function safeUrl(url) {
   const s = String(url || '').trim();
   return /^https?:\/\//i.test(s) ? s : '';
 }
 
 // OSM element type ('node' | 'way' | 'relation') for a place's properties.
-function osmTypeOf(props) {
+export function osmTypeOf(props) {
   if (props.geom_type === 'Point') return 'node';
   if (props.geom_type === 'Relation') return 'relation';
   return 'way';
 }
 
 // Detect mapping issues for a feature based on its tags
-function getQualityIssues(props) {
+export function getQualityIssues(props) {
   const issues = [];
   
   // 1. building=mosque without amenity=place_of_worship
@@ -336,8 +346,8 @@ function getQualityIssues(props) {
 // getQualityIssues() depends on the size/Qibla thresholds; cache its result
 // per place and bump issuesVersion whenever a threshold changes, so counts,
 // filtering, popups and the details panel don't recompute it 14k times each.
-let issuesVersion = 0;
-function getIssues(props) {
+export let issuesVersion = 0;
+export function getIssues(props) {
   if (props._issuesVersion !== issuesVersion) {
     props._issues = getQualityIssues(props);
     props._issuesVersion = issuesVersion;
@@ -345,12 +355,12 @@ function getIssues(props) {
   return props._issues;
 }
 
-function invalidateIssues() {
+export function invalidateIssues() {
   issuesVersion++;
 }
 
 // Calculate and update the dynamic counts badge for each quality issue filter
-function updateImprovementIssueCounts() {
+export function updateImprovementIssueCounts() {
   if (!allPlaces || allPlaces.length === 0) return;
 
   // One badge per filter button in index.html; counts start at zero so a
@@ -394,7 +404,7 @@ function updateImprovementIssueCounts() {
 }
 
 // Send load_and_zoom request to JOSM Remote Control port (8111)
-function editInJOSM(lat, lon, props) {
+export function editInJOSM(lat, lon, props) {
   // Merged places select both the building and the POI node inside it.
   const select = [`${osmTypeOf(props)}${props.osm_id}`];
   if (props.poi_node_id) select.push(`node${props.poi_node_id}`);
@@ -417,7 +427,7 @@ function editInJOSM(lat, lon, props) {
 // Send the currently visible map viewport (used in Gap Mode after locating an
 // underserved area via the heatmap + Qibla compass) to JOSM Remote Control so
 // the user can survey the area and add a new mosque node with its own ID.
-function openAreaInJOSM() {
+export function openAreaInJOSM() {
   const bounds = map.getBounds();
   const url = `http://127.0.0.1:8111/load_and_zoom?left=${bounds.getWest()}&right=${bounds.getEast()}&top=${bounds.getNorth()}&bottom=${bounds.getSouth()}`;
 
@@ -436,7 +446,7 @@ function openAreaInJOSM() {
 
 // Update the iD Editor link for the currently viewed map area so that the user
 // can open the area in iD Editor and add a new mosque node.
-function updateIdEditorAreaLink() {
+export function updateIdEditorAreaLink() {
   const idBtn = document.getElementById('btn-open-area-id');
   if (idBtn && map) {
     const isDev = OsmApi.environment() === 'dev';
@@ -448,14 +458,14 @@ function updateIdEditorAreaLink() {
 }
 
 // === Wikidata Suggested Mosques Layer ===
-let suggestionsLayer = null;
-let suggestionsLoading = false;
-let suggestionsAllFeatures = [];
-let suggestionsMarkers = [];
-const suggestionsByQid = {};
-let currentSuggestionFilter = 'all'; // 'all' | 'named' | 'unnamed'
+export let suggestionsLayer = null;
+export let suggestionsLoading = false;
+export let suggestionsAllFeatures = [];
+export let suggestionsMarkers = [];
+export const suggestionsByQid = {};
+export let currentSuggestionFilter = 'all'; // 'all' | 'named' | 'unnamed'
 
-function setSuggestionsVisible(visible) {
+export function setSuggestionsVisible(visible) {
   const toggle = document.getElementById('suggestions-toggle');
   const subcontrols = document.getElementById('suggestions-subcontrols');
   const badge = document.getElementById('suggestions-badge');
@@ -571,7 +581,7 @@ function setSuggestionsVisible(visible) {
     });
 }
 
-function applySuggestionsFilter() {
+export function applySuggestionsFilter() {
   if (!suggestionsLayer) return;
   suggestionsLayer.clearLayers();
 
@@ -595,7 +605,7 @@ function applySuggestionsFilter() {
   updateSuggestionsViewportCount();
 }
 
-function updateSuggestionsViewportCount() {
+export function updateSuggestionsViewportCount() {
   if (!map || !suggestionsLayer || !map.hasLayer(suggestionsLayer)) return;
   const countEl = document.getElementById('suggestions-viewport-count');
   if (!countEl) return;
@@ -616,7 +626,7 @@ function updateSuggestionsViewportCount() {
   countEl.innerText = fmtNum(inView);
 }
 
-function buildSuggestionPopup(props, lat, lon) {
+export function buildSuggestionPopup(props, lat, lon) {
   const isUnnamed = props.is_unnamed;
   const displayName = (currentLang === 'en' ? props.name_en || props.name_ar : props.name_ar || props.name_en) || t('sugUnnamed');
   const subtitle = currentLang === 'en' ? props.name_ar : props.name_en;
@@ -687,7 +697,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function previewSuggestionSatellite(lat, lon) {
+export function previewSuggestionSatellite(lat, lon) {
   if (!map) return;
   setBasemap('satellite');
   const satChip = document.querySelector('#basemap-filters .chip[data-basemap="satellite"]');
@@ -699,7 +709,7 @@ function previewSuggestionSatellite(lat, lon) {
   showToast(t('sugSatelliteToast'));
 }
 
-function copySuggestionTags(qid) {
+export function copySuggestionTags(qid) {
   const s = suggestionsByQid[qid];
   if (!s) return;
   const lines = [
@@ -729,7 +739,7 @@ function copySuggestionTags(qid) {
   }
 }
 
-function addSuggestionInJOSM(qid) {
+export function addSuggestionInJOSM(qid) {
   const s = suggestionsByQid[qid];
   if (!s) return;
   const { lat, lon } = s;
@@ -767,7 +777,7 @@ function addSuggestionInJOSM(qid) {
 
 // Show animated non-blocking toast notification. The message is plain text
 // (it can contain server error text); pass { link: { href, text } } to append a link.
-function showToast(message, type = 'success', options = {}) {
+export function showToast(message, type = 'success', options = {}) {
   // Remove existing toast if any
   const existingToast = document.querySelector('.toast-notification');
   if (existingToast) {
@@ -801,7 +811,7 @@ function showToast(message, type = 'success', options = {}) {
 }
 
 // Calculate Great Circle bearing between two lat/lon points
-function calculateBearing(lat1, lon1, lat2, lon2) {
+export function calculateBearing(lat1, lon1, lat2, lon2) {
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const lat1Rad = lat1 * Math.PI / 180;
   const lat2Rad = lat2 * Math.PI / 180;
@@ -815,7 +825,7 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 }
 
 // Calculate Haversine distance in kilometers
-function calculateDistance(lat1, lon1, lat2, lon2) {
+export function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Radius of the Earth in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -827,7 +837,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 // Update the rotation of the Qibla Compass needle
-function updateQiblaCompass() {
+export function updateQiblaCompass() {
   const compassEl = document.getElementById('qibla-compass');
   if (!compassEl || compassEl.classList.contains('hidden')) return;
 
@@ -842,7 +852,7 @@ function updateQiblaCompass() {
 }
 
 // Controls sidebar collapsed state and persists preference
-function setSidebarCollapsed(isCollapsed) {
+export function setSidebarCollapsed(isCollapsed) {
   const container = document.getElementById('app-container');
   const toggleBtn = document.getElementById('sidebar-toggle');
   if (!container) return;
@@ -862,7 +872,7 @@ function setSidebarCollapsed(isCollapsed) {
 // sidebar state and wires the toggle button. The auth overlay is a fixed,
 // higher-z-index full-viewport modal, so it already covers this button
 // whenever it's shown - no extra guard needed there.
-function initSidebarToggle() {
+export function initSidebarToggle() {
   const container = document.getElementById('app-container');
   const toggleBtn = document.getElementById('sidebar-toggle');
   if (!container || !toggleBtn) return;
@@ -901,7 +911,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Build basemap layers according to whether a CARTO API key is provided
-function createBasemapLayers() {
+export function createBasemapLayers() {
   const cartoKey = (localStorage.getItem('carto_api_key') || '').trim();
   const cartoParam = cartoKey ? `?key=${encodeURIComponent(cartoKey)}` : '';
 
@@ -971,7 +981,7 @@ function createBasemapLayers() {
 }
 
 // Switches the active basemap on the map
-function setBasemap(key) {
+export function setBasemap(key) {
   if (basemaps[key] && (currentBasemap !== basemaps[key] || !map.hasLayer(basemaps[key]))) {
     if (currentBasemap) {
       map.removeLayer(currentBasemap);
@@ -1008,7 +1018,7 @@ function setBasemap(key) {
 }
 
 // Rebuilds basemaps when CARTO API key is saved or cleared, without losing state
-function reloadBasemapLayers() {
+export function reloadBasemapLayers() {
   const activeKey = currentBasemapKey || 'dark';
   if (currentBasemap) {
     map.removeLayer(currentBasemap);
@@ -1027,7 +1037,7 @@ function reloadBasemapLayers() {
 }
 
 // Updates UI badge and modal fields based on stored CARTO key
-function updateCartoBadgeStatus() {
+export function updateCartoBadgeStatus() {
   const cartoKey = (localStorage.getItem('carto_api_key') || '').trim();
   const btn = document.getElementById('btn-carto-config');
   const inputEl = document.getElementById('carto-api-key-input');
@@ -1068,7 +1078,7 @@ function updateCartoBadgeStatus() {
 }
 
 // Sets up CARTO API Key modal event listeners
-function setupCartoModalEvents() {
+export function setupCartoModalEvents() {
   const configBtn = document.getElementById('btn-carto-config');
   const modal = document.getElementById('carto-settings-overlay');
   const closeBtn = document.getElementById('btn-close-carto-modal');
@@ -1126,10 +1136,14 @@ function setupCartoModalEvents() {
 }
 
 // Initialize Leaflet Map
-function initMap() {
+export function initMap() {
   map = L.map('map', {
     zoomControl: false // Custom styled zoom controls
   }).setView(MAP_INITIAL_CENTER, MAP_INITIAL_ZOOM);
+
+  // The overlays are OSM data whatever the basemap, so the ODbL attribution
+  // stays on even over the Esri tiles.
+  map.attributionControl.addAttribution('Data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)');
 
   // Position Zoom Control on the bottom-left to avoid sidebar overlap on the right (RTL layout)
   L.control.zoom({
@@ -1209,11 +1223,14 @@ function initMap() {
 // summary.json is tiny and always fetched fresh; its updated_at is then used
 // as the version for the big data files, so browsers cache them until the
 // pipeline publishes new data instead of re-downloading ~20 MB every visit.
-let dataSummary = {};
-let dataVersion = String(Date.now());
+// Published datasets live under /data/ (served by Caddy in production and by
+// vite.config.js in development), never next to the app's own files.
+const DATA_BASE = '/data/';
+export let dataSummary = {};
+export let dataVersion = String(Date.now());
 
-function fetchJson(path, required = true) {
-  const req = fetch(`${path}?v=${encodeURIComponent(dataVersion)}`).then(r => {
+export function fetchJson(path, required = true) {
+  const req = fetch(`${DATA_BASE}${path}?v=${encodeURIComponent(dataVersion)}`).then(r => {
     if (!r.ok) throw new Error(`Failed to load ${path} (HTTP ${r.status})`);
     return r.json();
   });
@@ -1221,7 +1238,7 @@ function fetchJson(path, required = true) {
 }
 
 // Shows which OSM extract the published data was built from.
-function renderDataUpdatedLabel() {
+export function renderDataUpdatedLabel() {
   const el = document.getElementById('data-updated');
   if (!el) return;
   const date = dataSummary.pbf_date || (dataSummary.updated_at || '').slice(0, 10);
@@ -1229,8 +1246,8 @@ function renderDataUpdatedLabel() {
   el.style.display = date ? '' : 'none';
 }
 
-function loadData() {
-  fetch('summary.json', { cache: 'no-store' })
+export function loadData() {
+  fetch(`${DATA_BASE}summary.json`, { cache: 'no-store' })
     .then(r => (r.ok ? r.json() : {}))
     .catch(() => ({}))
     .then(summary => {
@@ -1267,7 +1284,7 @@ function loadData() {
   });
 }
 
-function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData) {
+export function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData) {
   allPlaces = poiData.features;
   // Merge in weekly-computed building footprint areas (calculate_mosque_sizes.py),
   // keyed by osm_id; features with no entry simply have no size data. The
@@ -1330,7 +1347,7 @@ function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyDa
 }
 
 // Set the date-range slider bounds/values to the real data span and update their labels.
-function initDateSliders() {
+export function initDateSliders() {
   const fromSlider = document.getElementById('slider-date-from');
   const toSlider = document.getElementById('slider-date-to');
 
@@ -1346,13 +1363,13 @@ function initDateSliders() {
 }
 
 // Hide the loading overlay once data has rendered.
-function hideLoadingOverlay() {
+export function hideLoadingOverlay() {
   const overlay = document.getElementById('loading-overlay');
   if (overlay) overlay.classList.add('hidden');
 }
 
 // Keep the overlay visible and show an inline error instead of a blocking alert().
-function showLoadingError(message) {
+export function showLoadingError(message) {
   const overlay = document.getElementById('loading-overlay');
   const text = document.getElementById('loading-text');
   if (overlay) overlay.classList.add('error');
@@ -1360,7 +1377,7 @@ function showLoadingError(message) {
 }
 
 // Switch display logic based on current zoom level
-function toggleLayersByZoom() {
+export function toggleLayersByZoom() {
   const zoom = map.getZoom();
   
   // Individual markers are only displayed in POI/Improve Density mode at high zoom levels
@@ -1383,15 +1400,15 @@ function toggleLayersByZoom() {
 // scattered dots rather than a smooth field - once the grid spacing exceeds
 // the blob radius on screen, which is exactly what happens when zoomed into
 // dense cities to inspect detail.
-let GAP_GRID_SIZE_DEG = 0.004; // overridden by worship_gaps_sa.json's grid_size
-const GAP_GRADIENT_STOPS = [
+export let GAP_GRID_SIZE_DEG = 0.004; // overridden by worship_gaps_sa.json's grid_size
+export const GAP_GRADIENT_STOPS = [
   { stop: 0.0, color: [63, 43, 150] },   // Deep Indigo
   { stop: 0.5, color: [168, 192, 255] }, // Soft Lilac
   { stop: 0.8, color: [236, 0, 140] },   // Neon Magenta
   { stop: 1.0, color: [252, 103, 103] }  // Flame Orange/Red
 ];
 
-function gapScoreToColor(t) {
+export function gapScoreToColor(t) {
   t = Math.max(0, Math.min(1, t));
   for (let i = 1; i < GAP_GRADIENT_STOPS.length; i++) {
     const a = GAP_GRADIENT_STOPS[i - 1];
@@ -1411,7 +1428,7 @@ function gapScoreToColor(t) {
 // worship_gaps_sa.json stores one [gx, gy, road_length_m, gap_score] row per
 // cell; a cell's position is implied by its grid index, so expand each row to
 // a small object with the cell-centre coordinates used for viewport counts.
-function parseGapGrid(gapData) {
+export function parseGapGrid(gapData) {
   if (gapData.grid_size) GAP_GRID_SIZE_DEG = gapData.grid_size;
   const g = GAP_GRID_SIZE_DEG;
   return (gapData.cells || []).map(([gx, gy, roadLength, score]) => ({
@@ -1426,7 +1443,7 @@ function parseGapGrid(gapData) {
 // Builds a sparse Map<"x,y", gap_score> from the gap grid's own cell
 // coordinates, so interpolation always lines up with the real analysis grid
 // regardless of zoom.
-function buildGapScoreLookup(gapCells) {
+export function buildGapScoreLookup(gapCells) {
   const scoreByCell = new Map();
   let maxScore = 0;
   gapCells.forEach(c => {
@@ -1443,7 +1460,7 @@ function buildGapScoreLookup(gapCells) {
 // smoothing (averaging with many zero neighbors shrinks every score, so
 // normalizing against the *pre-smoothing* max would make the whole layer
 // fade to near-invisible).
-function buildSmoothedLookup(rawMap, rawMaxScore, radiusCells) {
+export function buildSmoothedLookup(rawMap, rawMaxScore, radiusCells) {
   if (radiusCells <= 0) return { scoreByCell: rawMap, maxScore: rawMaxScore };
 
   const offsets = [];
@@ -1474,7 +1491,7 @@ function buildSmoothedLookup(rawMap, rawMaxScore, radiusCells) {
   return { scoreByCell: smoothed, maxScore };
 }
 
-const GapGradientLayer = L.GridLayer.extend({
+export const GapGradientLayer = L.GridLayer.extend({
   initialize: function (scoreByCell, maxScore, options) {
     L.GridLayer.prototype.initialize.call(this, options);
     this._scoreByCell = scoreByCell;
@@ -1537,8 +1554,8 @@ const GapGradientLayer = L.GridLayer.extend({
 });
 
 // One shared icon per marker class instead of a new divIcon per place.
-const MARKER_ICONS = {};
-function markerIcon(markerClass) {
+export const MARKER_ICONS = {};
+export function markerIcon(markerClass) {
   if (!MARKER_ICONS[markerClass]) {
     MARKER_ICONS[markerClass] = L.divIcon({
       html: '<div class="custom-marker-inner"></div>',
@@ -1551,11 +1568,11 @@ function markerIcon(markerClass) {
 }
 
 // Display name in the UI language (the Arabic name when no name:en exists).
-function placeName(props) {
+export function placeName(props) {
   return currentLang === 'en' ? props.name_en || props.name : props.name;
 }
 
-function buildPlacePopup(props, mode) {
+export function buildPlacePopup(props, mode) {
   if (mode === 'improve') {
     const issues = getIssues(props);
     return `
@@ -1581,7 +1598,7 @@ function buildPlacePopup(props, mode) {
 // Markers are built once per place and mode and then reused: filtering only
 // changes which of them are handed to the cluster layer. Popup content is
 // generated when opened, so issue counts always reflect current thresholds.
-function getPlaceMarker(f) {
+export function getPlaceMarker(f) {
   const mode = currentMode === 'improve' ? 'improve' : 'poi';
   f._markers = f._markers || {};
   if (f._markers[mode]) return f._markers[mode];
@@ -1606,7 +1623,7 @@ function getPlaceMarker(f) {
 }
 
 // Re-generate Heatmap and Marker Clusters based on selected mode
-function updateMapLayers() {
+export function updateMapLayers() {
   // 1. Remove previous heatmap & clusters
   if (heatmapLayer) {
     map.removeLayer(heatmapLayer);
@@ -1676,7 +1693,7 @@ function updateMapLayers() {
 }
 
 // Show detailed information about a single place of worship in the sidebar
-function showDetails(props, lat, lon) {
+export function showDetails(props, lat, lon) {
   selectedPlace = { properties: props, lat, lon };
   const panel = document.getElementById('details-panel');
   panel.style.display = 'block';
@@ -1838,7 +1855,7 @@ function showDetails(props, lat, lon) {
 }
 
 // Update UI panel labels and counts depending on selected Mode
-function updateDashboardUI() {
+export function updateDashboardUI() {
   const totalCountLabel = document.getElementById('total-count-label');
   const visibleCountLabel = document.getElementById('visible-count-label');
   const searchSection = document.getElementById('search-section');
@@ -1903,7 +1920,7 @@ function updateDashboardUI() {
 }
 
 // Calculate and update metrics matching filters and map bounds
-function updateStats() {
+export function updateStats() {
   const bounds = map.getBounds();
   let totalCount = 0;
   let visibleCount = 0;
@@ -1934,7 +1951,7 @@ function updateStats() {
 // Combines search query and religion category filters (POI mode only)
 // Rebuilds filteredPlaces and the map layers for the current mode (the single
 // entry point for any change to filters, thresholds or mode).
-function filterData() {
+export function filterData() {
   if (currentMode === 'gap') {
     updateMapLayers();
     updateStats();
@@ -2016,7 +2033,7 @@ function filterData() {
 
 // Number of checks per category tab, derived from the issue buttons
 // themselves so adding a check never leaves a stale hard-coded count.
-function updateCategoryTabCounts() {
+export function updateCategoryTabCounts() {
   const improveItems = [...document.querySelectorAll('#improve-filters .improve-item')];
   document.querySelectorAll('.improve-category-tabs .category-tab').forEach(tab => {
     const category = tab.getAttribute('data-category');
@@ -2030,7 +2047,7 @@ function updateCategoryTabCounts() {
 
 // Re-renders everything built in JavaScript after a language switch; static
 // text is swapped by setLanguage() itself.
-function refreshLanguageDependentUI() {
+export function refreshLanguageDependentUI() {
   updateCategoryTabCounts();
   renderDataUpdatedLabel();
   updateUserWidgetUI();
@@ -2053,7 +2070,7 @@ function refreshLanguageDependentUI() {
 }
 
 // Wire up events for buttons, chips, search inputs, and range sliders
-function setupEventListeners() {
+export function setupEventListeners() {
   // 1. Dashboard Mode Selector
   document.getElementById('mode-poi').addEventListener('click', (e) => {
     document.getElementById('mode-gap').classList.remove('active');
@@ -2264,7 +2281,7 @@ function setupEventListeners() {
   document.getElementById('btn-review-skip').addEventListener('click', () => markCurrentPlace('skipped'));
   document.getElementById('btn-review-unmark').addEventListener('click', clearCurrentMark);
   document.getElementById('hide-reviewed-toggle').addEventListener('change', (e) => {
-    hideReviewedPlaces = e.target.checked;
+    setHideReviewedPlaces(e.target.checked);
     updateImprovementIssueCounts();
     filterData();
   });
@@ -2525,7 +2542,7 @@ function setupEventListeners() {
   const redirectUriDisplay = document.getElementById('osm-redirect-uri-display');
   if (redirectUriDisplay) {
     if (window.location.protocol === 'http:') {
-      redirectUriDisplay.innerHTML = `${escapeHtml(OsmApi.redirectUri())} <span style="color:#ffb03a; font-size:11px; display:block; margin-top:3px;">⚠️ يتطلب OpenStreetMap بروتوكول HTTPS. شغّل: python serve_ssl.py</span>`;
+      redirectUriDisplay.innerHTML = `${escapeHtml(OsmApi.redirectUri())} <span style="color:#ffb03a; font-size:11px; display:block; margin-top:3px;">⚠️ يتطلب OpenStreetMap بروتوكول HTTPS. شغّل: npm run dev</span>`;
     } else {
       redirectUriDisplay.innerText = OsmApi.redirectUri();
     }
@@ -2557,7 +2574,7 @@ function setupEventListeners() {
 // Enables/disables click-to-place Add Note mode: toggles the map cursor and
 // (re)loads existing nearby notes so users can see what's already reported
 // before filing a duplicate.
-function setAddNoteMode(enabled) {
+export function setAddNoteMode(enabled) {
   addNoteMode = enabled;
   const mapEl = document.getElementById('map');
   if (mapEl) mapEl.classList.toggle('note-mode-active', enabled);
@@ -2569,14 +2586,14 @@ function setAddNoteMode(enabled) {
   }
 }
 
-function handleMapClickForNotes(e) {
+export function handleMapClickForNotes(e) {
   if (!addNoteMode) return;
   openNoteComposer(e.latlng.lat, e.latlng.lng);
 }
 
 // Switches which preset's field group is shown in the composer and updates
 // the chip selector's active state to match.
-function setActiveNotePreset(preset) {
+export function setActiveNotePreset(preset) {
   activeNotePreset = preset;
 
   document.querySelectorAll('#note-preset-chips .chip').forEach(chip => {
@@ -2597,7 +2614,7 @@ function setActiveNotePreset(preset) {
 // Opens the note composer overlay pre-filled with the given coordinates.
 // Used both by map-click placement (Add Note mode) and the "report an issue
 // here" shortcut on a POI's detail panel.
-function openNoteComposer(lat, lon) {
+export function openNoteComposer(lat, lon) {
   const overlay = document.getElementById('note-composer-overlay');
   const coordsEl = document.getElementById('note-composer-coords');
   const attributionEl = document.getElementById('note-composer-attribution');
@@ -2627,7 +2644,7 @@ function openNoteComposer(lat, lon) {
   textInput.focus();
 }
 
-function closeNoteComposer() {
+export function closeNoteComposer() {
   const overlay = document.getElementById('note-composer-overlay');
   if (overlay) overlay.classList.add('hidden');
   pendingNoteLatLng = null;
@@ -2638,7 +2655,7 @@ function closeNoteComposer() {
 // preset or free text alike - the same convention StreetComplete/MAPS.ME use.
 // Returns null (after showing a toast) if a required field for the active
 // preset is missing.
-function buildNoteText() {
+export function buildNoteText() {
   let body = '';
 
   if (activeNotePreset === 'worship') {
@@ -2686,7 +2703,7 @@ function buildNoteText() {
 // reporters); an attributed note is only attempted if the stored token's
 // granted scope actually includes write_notes, since tokens issued before
 // this feature existed won't have it.
-async function submitPendingOsmNote() {
+export async function submitPendingOsmNote() {
   if (!pendingNoteLatLng) return;
 
   const text = buildNoteText();
@@ -2716,6 +2733,7 @@ async function submitPendingOsmNote() {
     renderNoteMarker(noteFeature);
 
     const noteId = noteFeature.properties ? noteFeature.properties.id : undefined;
+    trackEvent('Note created', { signedIn: Boolean(headers['Authorization']) });
     showToast(t('noteSent'), 'success', {
       link: { href: `https://www.openstreetmap.org/note/${encodeURIComponent(noteId)}`, text: t('noteView') }
     });
@@ -2730,7 +2748,7 @@ async function submitPendingOsmNote() {
 
 // Renders a single note (GeoJSON Feature from the notes API) as a read-only
 // marker with a popup showing its first comment and a link to the note on OSM.
-function renderNoteMarker(noteFeature) {
+export function renderNoteMarker(noteFeature) {
   if (!noteMarkersLayer || !noteFeature || !noteFeature.geometry) return;
 
   const [lon, lat] = noteFeature.geometry.coordinates;
@@ -2760,7 +2778,7 @@ function renderNoteMarker(noteFeature) {
 // Fetches open (and recently-closed) notes within the current map view while
 // Add Note mode is active, so users can see what's already reported instead
 // of filing duplicates.
-async function loadNearbyNotes() {
+export async function loadNearbyNotes() {
   if (!addNoteMode || !map || !noteMarkersLayer) return;
 
   const bounds = map.getBounds();
@@ -2783,7 +2801,7 @@ async function loadNearbyNotes() {
 // ==========================================
 
 // Saves the advanced settings from the login dialog, then starts the PKCE flow.
-function redirectToOSM() {
+export function redirectToOSM() {
   const envSelect = document.getElementById('osm-environment');
   if (envSelect) localStorage.setItem('osm_oauth_environment', envSelect.value);
   const clientId = document.getElementById('osm-client-id').value.trim();
@@ -2797,7 +2815,7 @@ function redirectToOSM() {
   });
 }
 
-function showLoadingText(message) {
+export function showLoadingText(message) {
   const overlay = document.getElementById('loading-overlay');
   const text = document.getElementById('loading-text');
   if (overlay) {
@@ -2807,7 +2825,7 @@ function showLoadingText(message) {
   if (text) text.innerText = message;
 }
 
-function updateUserWidgetUI() {
+export function updateUserWidgetUI() {
   const widget = document.getElementById('user-profile-widget');
   const nameEl = document.getElementById('user-display-name');
   const roleEl = widget ? widget.querySelector('.user-role-text') : null;

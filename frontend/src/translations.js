@@ -1,6 +1,7 @@
 // Strings built by app.js (both languages). Static page text is in
 // translations_static.js; the review, export and editing modules register
 // their own strings next to their code.
+import { addTranslations } from './i18n.js';
 
 addTranslations({
   // Religion / denomination labels
@@ -25,7 +26,7 @@ addTranslations({
   labelTotalGaps: ['الفجوات المكتشفة', 'Detected gaps'],
   labelVisibleGaps: ['الفجوات في النطاق', 'Gaps in view'],
   dataUpdated: ['بيانات OSM بتاريخ {date}', 'OSM data as of {date}'],
-  loadError: ['فشل في تحميل بيانات الخريطة. يرجى التأكد من تشغيل خادم محلي (مثل: python -m http.server) وفتح الصفحة عبر http://', 'Failed to load the map data. Make sure the page is served over http:// (e.g. python -m http.server).'],
+  loadError: ['فشل في تحميل بيانات الخريطة. يرجى تحديث الصفحة أو المحاولة لاحقاً.', 'Failed to load the map data. Please reload the page or try again later.'],
 
   // Details panel
   unnamed: ['غير مسمى', 'Unnamed'],

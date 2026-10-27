@@ -5,9 +5,10 @@ plus a "coverage gaps" analysis highlighting inhabited grid cells (by road
 density) that contain **zero** places of worship, and a data-improvement mode
 for finding and fixing OpenStreetMap tagging problems.
 
-The front-end is a static Leaflet dashboard (Arabic RTL by default, with an
-English toggle). All heavy data processing happens ahead of time in Python from
-an OpenStreetMap `.pbf` extract.
+The front-end is a Leaflet dashboard (Arabic RTL by default, with an English
+toggle) built with Vite and served from a VPS behind Caddy. All heavy data
+processing happens ahead of time in Python from an OpenStreetMap `.pbf`
+extract.
 
 Live site: <https://manara.saudiosm.org>
 
@@ -23,8 +24,9 @@ Live site: <https://manara.saudiosm.org>
 | [detect_geometry_anomalies.py](detect_geometry_anomalies.py) | Isolation Forest model flagging distorted / over-noded outlines, plus each building's Qibla deviation. |
 | [import_wikidata_suggestions.py](import_wikidata_suggestions.py) | Wikidata mosques missing from OSM, from the [osm x wikidata](https://github.com/Abdullah201x/osm-x-wikidata) project's `data/sa.json`. |
 | [validate_data.py](validate_data.py) | Blocks publishing when a dataset is missing, unreadable, or shrank by more than 20%. |
-| [index.html](index.html) / [app.js](app.js) / [index.css](index.css) | The Leaflet dashboard. |
-| [js/](js) | Front-end modules: `i18n.js` + `translations*.js` (Arabic/English), `arabic.js` (name normalization), `review.js` (review queue, marks, permalinks, shortcuts), `exporters.js` (CSV, MapRoulette, JOSM, Overpass), `osm_api.js` (OAuth + API 0.6 editing), `editing.js` (quick fixes, batch, history). |
+| [frontend/](frontend) | The Vite app: `index.html` (the map), `about.html`, `privacy.html`. |
+| [frontend/src/](frontend/src) | ES modules: `main.js` (entry), `app.js` (the dashboard), `i18n.js` + `translations*.js` (Arabic/English), `arabic.js` (name normalization), `review.js` (review queue, marks, permalinks, shortcuts), `exporters.js` (CSV, MapRoulette, JOSM, Overpass), `osm_api.js` (OAuth + API 0.6 editing), `editing.js` (quick fixes, batch, history), `analytics.js` (Umami), `vendor/` (pinned Leaflet.BoundaryCanvas). |
+| [deploy/](deploy) | VPS deployment: `Caddyfile.manara` (site config + CSP), `docker-compose.yml` (PostgreSQL/PostGIS + Umami), `deploy.sh`, `.env.example`. |
 | [tests/](tests) | pytest tests for the shared helpers. |
 | [ML_ROADMAP.md](ML_ROADMAP.md) | Machine learning roadmap (Arabic). |
 
@@ -68,16 +70,6 @@ above, and commits only the generated data files when validation passes.
 
 Tests: `pytest`.
 
-## Running locally
-
-Because OpenStreetMap OAuth2 strictly enforces **HTTPS** for all redirect URIs (even on `localhost`), run the included SSL development server:
-
-```bash
-python serve_ssl.py
-```
-
-Then open `https://localhost:8000/` in your browser. (Accept the local development certificate on first visit).
-
 Notes:
 - The Saudi Arabia boundary uses OSM relation id **307584**.
 - A tagged POI node inside a mosque building outline is merged into that
@@ -96,21 +88,50 @@ Notes:
 
 ## Running the front-end
 
-The app loads data via `fetch`, so it must be served over HTTP:
+Requires Node.js 20+.
 
 ```bash
-python -m http.server 8000
+cd frontend
+npm install
+npm run dev        # https://localhost:8000/ with hot reload
+npm run build      # production build in frontend/dist
+npm run preview    # serves the build with the production CSP header
+npm run lint
 ```
 
-Then open <http://localhost:8000/>.
+The dev server uses a self-signed certificate (accept it on first visit),
+because OpenStreetMap OAuth only accepts HTTPS redirect URIs. Datasets are
+served under `/data/` from the repo root, or from `MANARA_DATA_DIR` if set;
+only the known dataset names are served.
+
+## Deployment (VPS)
+
+Manara runs on the VPS as its own Docker Compose project in `/opt/manara`,
+separate from the other sites there; only the host Caddy is shared.
+
+1. Clone the repo to `/opt/manara` and copy `deploy/.env.example` to
+   `deploy/.env`, filling in the secrets (`openssl rand -hex 32`).
+2. Add `import /opt/manara/deploy/Caddyfile.manara` to `/etc/caddy/Caddyfile`
+   and reload Caddy. Point the DNS of `manara.saudiosm.org` and
+   `analytics.saudiosm.org` at the VPS.
+3. Run `deploy/deploy.sh`. It builds the frontend in a Node container,
+   publishes it to `/srv/manara/dist` and the datasets to `/srv/manara/data`,
+   and starts PostgreSQL and Umami.
+4. Open `https://analytics.saudiosm.org`, change the default Umami login
+   (`admin` / `umami`), add the website `manara.saudiosm.org`, put its ID in
+   `VITE_UMAMI_WEBSITE_ID` in `deploy/.env`, and run `deploy/deploy.sh` again.
+
+The old GitHub Pages address keeps working: there is no root `index.html` and
+`.nojekyll` stops Jekyll from rendering this README in its place, so Pages
+serves `404.html` for every path, which redirects to `manara.saudiosm.org`.
 
 ### OSM login
 
 Login uses OAuth 2.0 with PKCE. Set `DEFAULT_OSM_CLIENT_ID` in
-[js/osm_api.js](js/osm_api.js) to the client ID of an application registered
+[frontend/src/osm_api.js](frontend/src/osm_api.js) to the client ID of an application registered
 on openstreetmap.org with the redirect URI
 `https://manara.saudiosm.org/` (and
-`http://localhost:8000/` for local testing), as a public (non-confidential)
+`https://localhost:8000/` for local testing), as a public (non-confidential)
 client with the scopes *Read user preferences*, *Modify the map* and *Create
 notes*. Until then, or for a self-hosted copy, a client ID can be entered in
 the login dialog under "advanced settings".

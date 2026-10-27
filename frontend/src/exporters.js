@@ -1,5 +1,7 @@
 // Exports and editor hand-offs for the currently filtered places, based on
 // MappingTools in the osm x wikidata project (js/tools.js).
+import { addTranslations, currentLang, t, fmtNum } from './i18n.js';
+import { map, filteredPlaces, currentMode, currentReligionFilter, currentImprovementFilter, osmTypeOf, getIssues, showToast } from './app.js';
 
 addTranslations({
   exportTitle: ['📤 تصدير القائمة الحالية', '📤 Export current list'],
@@ -17,7 +19,7 @@ addTranslations({
   mrInstruction: ['راجع {name} ({osm}) وأصلح: {issues}', 'Review {name} ({osm}) and fix: {issues}'],
 });
 
-const Exporters = {
+export const Exporters = {
   JOSM_MAX_OBJECTS: 300,
 
   _download(filename, content, mime) {
@@ -98,7 +100,12 @@ const Exporters = {
         }
       };
     });
-    this._download(this._filename('geojson'), JSON.stringify({ type: 'FeatureCollection', features }), 'application/geo+json');
+    this._download(this._filename('geojson'), JSON.stringify({
+      type: 'FeatureCollection',
+      // ODbL: derived from OSM data, so the attribution travels with the file.
+      attribution: '© OpenStreetMap contributors, ODbL 1.0 (https://www.openstreetmap.org/copyright)',
+      features
+    }), 'application/geo+json');
     showToast(t('exportDone', { n: fmtNum(list.length) }));
   },
 

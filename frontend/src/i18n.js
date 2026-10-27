@@ -7,22 +7,22 @@
 // attributes in place, so the markup needs no per-element keys. Strings built
 // in JavaScript use t(key, vars), registered with both languages.
 
-const TRANSLATIONS = { ar: {}, en: {} };
-const STATIC_EN = {};
+export const TRANSLATIONS = { ar: {}, en: {} };
+export const STATIC_EN = {};
 
-function addStaticTranslations(entries) {
+export function addStaticTranslations(entries) {
   Object.assign(STATIC_EN, entries);
 }
 
 // Registers strings: addTranslations({ key: ['عربي', 'English'], ... }).
-function addTranslations(entries) {
+export function addTranslations(entries) {
   Object.entries(entries).forEach(([key, [ar, en]]) => {
     TRANSLATIONS.ar[key] = ar;
     TRANSLATIONS.en[key] = en;
   });
 }
 
-let currentLang = (() => {
+export let currentLang = (() => {
   const fromUrl = new URLSearchParams(window.location.hash.slice(1)).get('lang');
   if (fromUrl === 'ar' || fromUrl === 'en') return fromUrl;
   try {
@@ -33,7 +33,7 @@ let currentLang = (() => {
 })();
 
 // t('key', { n: 5 }) -> string with {n} replaced. Falls back to Arabic, then the key.
-function t(key, vars) {
+export function t(key, vars) {
   let s = TRANSLATIONS[currentLang][key];
   if (s === undefined) s = TRANSLATIONS.ar[key];
   if (s === undefined) return key;
@@ -43,31 +43,31 @@ function t(key, vars) {
   return s;
 }
 
-function fmtNum(n) {
+export function fmtNum(n) {
   return Number(n).toLocaleString(currentLang === 'ar' ? 'ar-SA' : 'en-US');
 }
 
-function fmtDate(value, withTime = false) {
+export function fmtDate(value, withTime = false) {
   const d = new Date(value);
   const locale = currentLang === 'ar' ? 'ar-SA' : 'en-GB';
   return withTime ? d.toLocaleString(locale) : d.toLocaleDateString(locale);
 }
 
-const languageListeners = [];
-function onLanguageChange(fn) {
+export const languageListeners = [];
+export function onLanguageChange(fn) {
   languageListeners.push(fn);
 }
 
-const collapseSpace = str => str.replace(/\s+/g, ' ').trim();
-const TRANSLATED_ATTRS = ['placeholder', 'title', 'aria-label'];
+export const collapseSpace = str => str.replace(/\s+/g, ' ').trim();
+export const TRANSLATED_ATTRS = ['placeholder', 'title', 'aria-label'];
 // node -> { ar, en } and element -> { attr: { ar, en } }, remembered the first
 // time an Arabic original is seen so switching back restores it exactly.
-const textOriginals = new WeakMap();
-const attrOriginals = new WeakMap();
+export const textOriginals = new WeakMap();
+export const attrOriginals = new WeakMap();
 
 // Returns { ar, en } for an Arabic string with a known translation (keeping
 // the surrounding whitespace), or null.
-function staticPair(value) {
+export function staticPair(value) {
   const key = collapseSpace(value);
   const en = key && STATIC_EN[key];
   if (!en) return null;
@@ -76,7 +76,7 @@ function staticPair(value) {
   return { ar: value, en: lead + en + trail };
 }
 
-function applyStaticTranslations(root = document.body) {
+export function applyStaticTranslations(root = document.body) {
   const en = currentLang === 'en';
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: n => (n.parentElement && n.parentElement.closest('#map, script, style')
@@ -114,7 +114,7 @@ function applyStaticTranslations(root = document.body) {
   });
 }
 
-function setLanguage(lang) {
+export function setLanguage(lang) {
   currentLang = lang === 'en' ? 'en' : 'ar';
   try {
     localStorage.setItem('gcc_lang', currentLang);
@@ -123,7 +123,7 @@ function setLanguage(lang) {
   }
   document.documentElement.lang = currentLang;
   document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-  document.title = t('docTitle');
+  document.title = t(document.body.dataset.titleKey || 'docTitle');
   applyStaticTranslations();
   const btn = document.getElementById('btn-toggle-lang');
   if (btn) btn.textContent = currentLang === 'ar' ? 'English' : 'العربية';

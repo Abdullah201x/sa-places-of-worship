@@ -1,0 +1,70 @@
+# Manara's own stack, separate from rahmahealth.net: its own project name,
+# networks, volumes and secrets (deploy/.env). Only the host Caddy is shared.
+#
+#   cd /opt/manara && docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d
+#
+# Phase 1 runs PostgreSQL (with PostGIS, ready for the API) and Umami. The
+# API and pipeline services are added in later phases.
+name: manara
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: manara
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: manara
+      # Read by initdb/01-umami.sh to create Umami's own database and role.
+      UMAMI_DB_PASSWORD: ${UMAMI_DB_PASSWORD:?set UMAMI_DB_PASSWORD in deploy/.env}
+    # Sized to share the VPS with rahmahealth.net.
+    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "effective_cache_size=768MB", "-c", "max_connections=40"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U manara -d manara"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 768m
+    cpus: 1.0
+    logging: *logging
+
+  umami:
+    # Pin this to a specific release once deployed (see the tags on
+    # ghcr.io/umami-software/umami) so upgrades are deliberate.
+    image: ghcr.io/umami-software/umami:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD}@db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:?set UMAMI_APP_SECRET in deploy/.env}
+      TWO_FACTOR_ENCRYPTION_KEY: ${UMAMI_TWO_FACTOR_KEY:?set UMAMI_TWO_FACTOR_KEY in deploy/.env}
+      DISABLE_TELEMETRY: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Only the host Caddy reaches it (manara.saudiosm.org/stats/* and
+    # analytics.saudiosm.org); 3010 avoids rahmahealth's Umami on 3000.
+    ports:
+      - "127.0.0.1:3010:3000"
+    networks: [internal, edge]
+    mem_limit: 512m
+    cpus: 0.5
+    logging: *logging
+
+networks:
+  # No route to the internet: the database is only reachable from the stack.
+  internal:
+    internal: true
+  edge: {}
+
+volumes:
+  pgdata:
