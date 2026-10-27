@@ -37,13 +37,16 @@
 		respond 200
 	}
 
-	# Umami, same-origin so ad blockers leave it alone: /stats/script.js and
-	# /stats/api/send go to the shared Umami instance (Manara is its own
-	# website there). The request re-enters through Traefik, which replaces
-	# X-Forwarded-For, so the visitor IP travels in the headers Umami checks
-	# first (as rahmahealth.net's proxy does); the IP is used for the country
-	# and not stored.
-	handle_path /stats/* {
+	# Umami, same-origin so ad blockers leave it alone. Only the tracker
+	# script and its collect endpoint are proxied, never the dashboard: the
+	# shared instance's login (and rahmahealth.net's stats) must not be
+	# reachable on this domain. Manara is its own website there. The request
+	# re-enters through Traefik, which replaces X-Forwarded-For, so the visitor
+	# IP travels in the headers Umami checks first (as rahmahealth.net's proxy
+	# does); the IP is used for the country and not stored.
+	@umami path /stats/script.js /stats/api/send
+	handle @umami {
+		uri strip_prefix /stats
 		reverse_proxy https://analytics.rahmahealth.net {
 			header_up Host analytics.rahmahealth.net
 			header_up CF-Connecting-IP {client_ip}
