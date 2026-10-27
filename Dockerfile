@@ -9,6 +9,7 @@ COPY frontend/package*.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY frontend/ ./
+COPY deploy/ ../deploy/
 
 ARG VITE_UMAMI_WEBSITE_ID=401cdcc1-cbfb-4962-8fc7-9d906f900bff
 ENV VITE_UMAMI_WEBSITE_ID=$VITE_UMAMI_WEBSITE_ID

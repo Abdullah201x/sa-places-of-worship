@@ -21,11 +21,15 @@ const DATA_FILES = new Set([
 ]);
 const dataDir = path.resolve(here, process.env.MANARA_DATA_DIR || '..');
 
-// The production Content-Security-Policy lives in deploy/Caddyfile.manara;
-// `npm run preview` sends the same header so a policy violation shows up
-// locally before it ships.
-const caddyfile = fs.readFileSync(path.resolve(here, '../deploy/Caddyfile.manara'), 'utf8');
-const CSP = caddyfile.match(/Content-Security-Policy "([^"]+)"/)[1];
+let CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self'; connect-src 'self' https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://server.arcgisonline.com http://127.0.0.1:8111; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'";
+try {
+  const caddyPath = path.resolve(here, '../deploy/Caddyfile.manara');
+  if (fs.existsSync(caddyPath)) {
+    const caddyfile = fs.readFileSync(caddyPath, 'utf8');
+    const match = caddyfile.match(/Content-Security-Policy "([^"]+)"/);
+    if (match) CSP = match[1];
+  }
+} catch (_) {}
 
 function serveData(req, res, next) {
   const url = new URL(req.url, 'http://localhost');
