@@ -2,6 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <script>
+    // Redirect old GitHub Pages URL to manara.saudiosm.org
+    if (window.location.hostname.endsWith('github.io')) {
+      var newPath = window.location.pathname.replace(/^\/sa-places-of-worship\/?/, '/');
+      window.location.replace('https://manara.saudiosm.org' + newPath + window.location.search + window.location.hash);
+    }
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>خارطة الكثافة وفجوات التغطية لأماكن العبادة بالمملكة</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕌%3C/text%3E%3C/svg%3E">
