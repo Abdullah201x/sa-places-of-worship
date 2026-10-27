@@ -59,7 +59,10 @@ const Exporters = {
     const list = this._list();
     if (!list) return;
     const cell = v => {
-      const s = String(v ?? '');
+      let s = String(v ?? '');
+      if (/^[=+\-@\t\r]/.test(s)) {
+        s = "'" + s;
+      }
       return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const header = ['osm_type', 'osm_id', 'poi_node_id', 'name', 'name_en', 'religion', 'denomination',

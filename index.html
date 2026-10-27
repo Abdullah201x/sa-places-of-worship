@@ -29,11 +29,6 @@
           <div class="logo-glow"></div>
           <h1>خارطة أماكن العبادة</h1>
           <div class="header-actions">
-            <button type="button" id="backend-status-pill" class="header-action-btn backend-status-pill" title="حالة الخادم وقاعدة البيانات">
-              <span class="status-dot"></span>
-              <span class="status-text">الخادم متصل</span>
-            </button>
-            <a href="/api/docs" target="_blank" class="header-action-btn api-doc-link" title="توثيق واجهة برمجة التطبيقات (API)">API Docs ↗</a>
             <button type="button" id="btn-edit-history" class="header-action-btn">سجل تعديلاتي</button>
             <button type="button" id="btn-toggle-lang" class="header-action-btn" lang="en">English</button>
             <button type="button" id="btn-shortcuts" class="header-action-btn" title="اختصارات لوحة المفاتيح (?)" aria-label="اختصارات لوحة المفاتيح">?</button>
@@ -81,7 +76,6 @@
         <div class="review-nav-text">
           <span id="review-nav-counter">-</span>
           <span id="review-today-count" class="review-today" style="display: none;"></span>
-          <span id="review-community-count" class="review-community" style="display: none;"></span>
         </div>
         <button type="button" id="btn-review-next" class="review-nav-btn" title="التالي (N)">◀</button>
       </div>
@@ -632,22 +626,6 @@
             </div>
           </div>
 
-          <!-- Community Mapper Notes -->
-          <div id="details-notes-section" class="mapper-tools-box community-notes-box">
-            <div class="notes-header-flex">
-              <h3 class="mapper-tools-title" style="margin-bottom: 0;">💬 ملاحظات المساهمين والمراجعين</h3>
-              <span id="notes-count-badge" class="notes-count-badge">0</span>
-            </div>
-            <div id="notes-list-container" class="notes-list-container">
-              <p id="notes-empty-msg" class="notes-empty-msg">لا توجد ملاحظات مسجلة بعد لهذا المسجد.</p>
-              <div id="notes-items-list" class="notes-items-list"></div>
-            </div>
-            <div class="note-add-form">
-              <input type="text" id="input-place-note" class="note-text-input" placeholder="اكتب ملاحظة أو توثيقاً ميدانياً..." maxlength="300">
-              <button type="button" id="btn-submit-place-note" class="note-submit-btn">إرسال</button>
-            </div>
-          </div>
-
           <!-- Guest Mode Editing Block -->
           <div id="details-guest-tools-notice" class="info-alert" style="display: none; margin-top: 16px; margin-bottom: 0; background: rgba(0, 242, 254, 0.04); border-color: rgba(0, 242, 254, 0.15); color: #c4f7ff;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="alert-icon" style="color: var(--color-primary);">
@@ -955,55 +933,6 @@
       </div>
     </div>
 
-    <!-- Server & Pipeline Status Overlay -->
-    <div id="server-status-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true">
-      <div class="auth-card server-status-card">
-        <div class="auth-header">
-          <div class="auth-logo-row">
-            <span class="auth-osmlogo">🖥️</span>
-            <div>
-              <h2 id="server-status-title">حالة الخادم وقاعدة البيانات</h2>
-              <p class="auth-subtitle">خادم Python متكامل يوفر واجهات برمجة REST وقاعدة بيانات SQLite لحفظ المراجعات والملاحظات.</p>
-            </div>
-          </div>
-        </div>
-        <div class="server-status-body" id="server-status-content">
-          <div class="status-indicator-banner online">
-            <span class="status-pulse-dot"></span>
-            <span id="server-status-banner-text">الخادم متصل وجاهز</span>
-          </div>
-          <div class="server-info-grid">
-            <div class="server-info-row">
-              <span class="info-label">قاعدة البيانات:</span>
-              <span class="info-val accent" id="status-db-val">SQLite (متصلة ومفعلة)</span>
-            </div>
-            <div class="server-info-row">
-              <span class="info-label">مدة تشغيل الخادم:</span>
-              <span class="info-val" id="status-uptime-val">-</span>
-            </div>
-            <div class="server-info-row">
-              <span class="info-label">أماكن العبادة المفهرسة:</span>
-              <span class="info-val" id="status-places-count">-</span>
-            </div>
-            <div class="server-info-row">
-              <span class="info-label">خلايا فجوات التغطية:</span>
-              <span class="info-val" id="status-gaps-count">-</span>
-            </div>
-            <div class="server-info-row">
-              <span class="info-label">اقتراحات ويكي بيانات:</span>
-              <span class="info-val" id="status-sug-count">-</span>
-            </div>
-          </div>
-          <div id="validation-result-box" class="validation-result-box" style="display: none;"></div>
-        </div>
-        <div class="auth-actions server-actions-row">
-          <a href="/api/docs" target="_blank" class="auth-btn submit">تصفح توثيق واجهة API (Swagger) ↗</a>
-          <button type="button" id="btn-run-validation" class="auth-btn secondary">فحص سلامة البيانات الآن</button>
-          <button type="button" id="btn-close-server-status" class="auth-btn subtle">إغلاق</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Edit / batch / history dialogs (content rendered by js/editing.js) -->
     <div id="edit-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
     <div id="batch-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
@@ -1037,7 +966,6 @@
   <script src="js/translations.js?v=2"></script>
   <script src="js/translations_static.js?v=2"></script>
   <script src="js/arabic.js?v=2"></script>
-  <script src="js/api.js?v=2"></script>
   <script src="js/review.js?v=2"></script>
   <script src="js/exporters.js?v=2"></script>
   <script src="js/osm_api.js?v=2"></script>

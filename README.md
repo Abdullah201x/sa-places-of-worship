@@ -15,9 +15,6 @@ Live site: <https://saudiosm.org>
 
 | File | Purpose |
 |------|---------|
-| [backend/](backend) | Flask RESTful backend package: spatial search engine (STRtree), SQLite persistence, review syncing, community notes, analytics, and Swagger API docs. |
-| [server.py](server.py) | Production-ready web server serving the REST API and the interactive frontend with SSL/HTTP support. |
-| [serve_ssl.py](serve_ssl.py) | SSL runner for local development and OpenStreetMap OAuth authentication. |
 | [common.py](common.py) | Shared pipeline helpers: PBF lookup, centroids, Arabic name normalization, atomic JSON writes, `summary.json`. |
 | [extract_sa_boundary.py](extract_sa_boundary.py) | Builds the Saudi Arabia boundary polygon from OSM. |
 | [extract_places.py](extract_places.py) | Extracts places of worship (nodes, ways and multipolygon relations) inside the boundary, merging POI nodes into the building outline they sit in. |
@@ -27,8 +24,8 @@ Live site: <https://saudiosm.org>
 | [import_wikidata_suggestions.py](import_wikidata_suggestions.py) | Wikidata mosques missing from OSM, from the [osm x wikidata](https://github.com/Abdullah201x/osm-x-wikidata) project's `data/sa.json`. |
 | [validate_data.py](validate_data.py) | Blocks publishing when a dataset is missing, unreadable, or shrank by more than 20%. |
 | [index.html](index.html) / [app.js](app.js) / [index.css](index.css) | The Leaflet dashboard. |
-| [js/](js) | Front-end modules: `api.js` (backend REST client & syncing), `i18n.js` + `translations*.js` (Arabic/English), `arabic.js` (name normalization), `review.js` (review queue, marks, permalinks, shortcuts), `exporters.js` (CSV, MapRoulette, JOSM, Overpass), `osm_api.js` (OAuth + API 0.6 editing), `editing.js` (quick fixes, batch, history). |
-| [tests/](tests) | pytest tests for backend endpoints and shared pipeline helpers. |
+| [js/](js) | Front-end modules: `i18n.js` + `translations*.js` (Arabic/English), `arabic.js` (name normalization), `review.js` (review queue, marks, permalinks, shortcuts), `exporters.js` (CSV, MapRoulette, JOSM, Overpass), `osm_api.js` (OAuth + API 0.6 editing), `editing.js` (quick fixes, batch, history). |
+| [tests/](tests) | pytest tests for the shared helpers. |
 | [ML_ROADMAP.md](ML_ROADMAP.md) | Machine learning roadmap (Arabic). |
 
 Generated data (committed, consumed by the front-end):
@@ -71,51 +68,41 @@ above, and commits only the generated data files when validation passes.
 
 Tests: `pytest`.
 
-## Running the Full-Stack Server
+## Running locally
 
-The application is powered by a high-performance Flask backend that provides spatial search, persistent SQLite review syncing, community notes, and real-time analytics, while serving the interactive Leaflet frontend.
-
-Because OpenStreetMap OAuth2 strictly enforces **HTTPS** for all redirect URIs (even on `localhost`), run the server with SSL:
+Because OpenStreetMap OAuth2 strictly enforces **HTTPS** for all redirect URIs (even on `localhost`), run the included SSL development server:
 
 ```bash
-python server.py
-# Or using the legacy shorthand:
 python serve_ssl.py
 ```
 
-- **Frontend App**: `https://localhost:8000/`
-- **Interactive REST API Docs (Swagger)**: `https://localhost:8000/api/docs`
+Then open `https://localhost:8000/` in your browser. (Accept the local development certificate on first visit).
 
-To run in plain HTTP mode (for non-OAuth environments):
+Notes:
+- The Saudi Arabia boundary uses OSM relation id **307584**.
+- A tagged POI node inside a mosque building outline is merged into that
+  building (the building keeps its geometry, the node's name/amenity/religion
+  fill in). When both carry `amenity=place_of_worship` the place gets a
+  "mapped twice" issue.
+- The gap grid uses ~0.004° cells (~440 m, close to typical neighborhood
+  mosque spacing). A cell is a candidate when it contains at least 2 distinct
+  drivable ways, and a gap when the nearest place of worship (STRtree query)
+  is more than 750 m away. Gap intensity scales with that distance and with
+  the cell's drivable road **length** (through-traffic classes downweighted),
+  which, unlike a way count, isn't inflated by OSM splitting ways at every tag
+  change.
+- The ML anomaly flag is the Isolation Forest verdict only; Qibla deviation is
+  a separate check with its own (adjustable) threshold.
+
+## Running the front-end
+
+The app loads data via `fetch`, so it must be served over HTTP:
 
 ```bash
-python server.py --http --port 8000
+python -m http.server 8000
 ```
 
-## REST API Endpoints
-
-The backend provides comprehensive REST APIs:
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/health` | GET | System health check, server uptime, database status, and record counts. |
-| `/api/stats` | GET | Aggregated statistics, religion distribution, quality issue counts, and coverage gap metrics. |
-| `/api/summary` | GET | Summary metadata of the latest data pipeline build. |
-| `/api/places` | GET | Query places with spatial bounding box (`bbox=minLon,minLat,maxLon,maxLat`), Arabic full-text search (`q`), religion, quality issue (`issue`), pagination (`limit`, `offset`). |
-| `/api/places/<osm_type>/<osm_id>` | GET | Detailed place info with footprint geometry, tags, size, ML anomaly diagnosis, Qibla deviation, and issues. |
-| `/api/places/nearby` | GET | Proximity search by coordinates (`lat`, `lon`, `radius_km`). |
-| `/api/gaps` | GET | Query coverage gap cells with optional `bbox` and `min_score` filters. |
-| `/api/gaps/stats` | GET | Gap grid statistics (total cells, max score, average score). |
-| `/api/suggestions` | GET | Query Wikidata suggestions with `bbox` and search filters. |
-| `/api/reviews` | GET / POST | Persistent review marks management (fixed, skipped, needs_work) stored in SQLite. |
-| `/api/reviews/<osm_type>/<osm_id>` | DELETE | Remove or reset a review mark. |
-| `/api/reviews/sync` | POST | Two-way synchronization between client localStorage and backend SQLite database. |
-| `/api/reviews/stats` | GET | Community review statistics (reviewed today, total fixed, active reviewers). |
-| `/api/notes/<osm_type>/<osm_id>` | GET / POST | Community mapper notes and field discussions for places of worship. |
-| `/api/export/<format>` | GET | Dynamic server-side export (`csv` with UTF-8 BOM, `geojson`, `maproulette` NDJSON). |
-| `/api/pipeline/status` | GET | Data pipeline file sizes, last modified dates, and Git commit metadata. |
-| `/api/pipeline/validate` | POST | Trigger server-side dataset validation check. |
-| `/api/docs` | GET | Interactive API documentation and testing playground. |
+Then open <http://localhost:8000/>.
 
 ### OSM login
 
