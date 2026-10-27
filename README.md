@@ -16,17 +16,19 @@ Live site: <https://manara.saudiosm.org>
 
 | File | Purpose |
 |------|---------|
-| [common.py](common.py) | Shared pipeline helpers: PBF lookup, centroids, Arabic name normalization, atomic JSON writes, `summary.json`. |
-| [extract_sa_boundary.py](extract_sa_boundary.py) | Builds the Saudi Arabia boundary polygon from OSM. |
-| [extract_places.py](extract_places.py) | Extracts places of worship (nodes, ways and multipolygon relations) inside the boundary, merging POI nodes into the building outline they sit in. |
-| [calculate_gaps.py](calculate_gaps.py) | Grids the country and flags road-populated cells far from any place of worship. |
-| [calculate_mosque_sizes.py](calculate_mosque_sizes.py) | Footprint area of every mosque outline (size outliers are judged in the browser). |
-| [detect_geometry_anomalies.py](detect_geometry_anomalies.py) | Isolation Forest model flagging distorted / over-noded outlines, plus each building's Qibla deviation. |
-| [import_wikidata_suggestions.py](import_wikidata_suggestions.py) | Wikidata mosques missing from OSM, from the [osm x wikidata](https://github.com/Abdullah201x/osm-x-wikidata) project's `data/sa.json`. |
-| [validate_data.py](validate_data.py) | Blocks publishing when a dataset is missing, unreadable, or shrank by more than 20%. |
+| [pipeline/run.py](pipeline/run.py) | Server-side pipeline runner: automated Geofabrik daily diff updates, Wikidata fetch, staged subprocess execution, atomic publish with precompression. |
+| [pipeline/Dockerfile](pipeline/Dockerfile) | Pipeline container image for scheduled daily execution on the VPS. |
+| [pipeline/common.py](pipeline/common.py) | Shared pipeline helpers: PBF lookup, centroids, Arabic name normalization, atomic JSON writes, `summary.json`. |
+| [pipeline/extract_sa_boundary.py](pipeline/extract_sa_boundary.py) | Builds the Saudi Arabia boundary polygon from OSM. |
+| [pipeline/extract_places.py](pipeline/extract_places.py) | Extracts places of worship (nodes, ways and multipolygon relations) inside the boundary, merging POI nodes into the building outline they sit in. |
+| [pipeline/calculate_gaps.py](pipeline/calculate_gaps.py) | Grids the country and flags road-populated cells far from any place of worship. |
+| [pipeline/calculate_mosque_sizes.py](pipeline/calculate_mosque_sizes.py) | Footprint area of every mosque outline (size outliers are judged in the browser). |
+| [pipeline/detect_geometry_anomalies.py](pipeline/detect_geometry_anomalies.py) | Isolation Forest model flagging distorted / over-noded outlines, plus each building's Qibla deviation. |
+| [pipeline/import_wikidata_suggestions.py](pipeline/import_wikidata_suggestions.py) | Wikidata mosques missing from OSM, from the [osm x wikidata](https://github.com/Abdullah201x/osm-x-wikidata) project's `data/sa.json`. |
+| [pipeline/validate_data.py](pipeline/validate_data.py) | Blocks publishing when a dataset is missing, unreadable, or shrank by more than 20%. |
 | [frontend/](frontend) | The Vite app: `index.html` (the map), `about.html`, `privacy.html`. |
 | [frontend/src/](frontend/src) | ES modules: `main.js` (entry), `app.js` (the dashboard), `i18n.js` + `translations*.js` (Arabic/English), `arabic.js` (name normalization), `review.js` (review queue, marks, permalinks, shortcuts), `exporters.js` (CSV, MapRoulette, JOSM, Overpass), `osm_api.js` (OAuth + API 0.6 editing), `editing.js` (quick fixes, batch, history), `analytics.js` (Umami), `vendor/` (pinned Leaflet.BoundaryCanvas). |
-| [Dockerfile](Dockerfile) / [deploy/Caddyfile.container](deploy/Caddyfile.container) | The production image (Coolify Dockerfile build pack): frontend build, datasets precompressed at build time, served by Caddy with the security headers, CSP, caching rules and the `/stats` proxy to Umami. |
+| [Dockerfile](Dockerfile) / [deploy/Caddyfile.container](deploy/Caddyfile.container) | The production web image (Coolify Dockerfile build pack): frontend build, datasets precompressed at build time, served by Caddy with the security headers, CSP, caching rules and the `/stats` proxy to Umami. |
 | [tests/](tests) | pytest tests for the shared helpers. |
 | [ML_ROADMAP.md](ML_ROADMAP.md) | Machine learning roadmap (Arabic). |
 
@@ -44,29 +46,36 @@ Generated data (committed, consumed by the front-end):
 ## Prerequisites
 
 - Python 3.9+
-- `pip install -r requirements.txt`
+- `pip install -r pipeline/requirements.txt`
 - An OSM `.pbf` extract covering Saudi Arabia (e.g. Geofabrik's GCC states).
-  The scripts look for it in `$OSM_PBF`, then this folder, then the sibling
-  `../update osm` folder used by the master updater; the newest `*.pbf` wins.
+  The scripts look for it in `$OSM_PBF`, then `$MANARA_STATE_DIR`, then this folder, then the sibling
+  `../update osm` folder; the newest `*.pbf` wins.
 
 ## Data pipeline
 
-Run the scripts **in this order** (each reads the previous step's output):
+All pipeline scripts reside in `pipeline/`.
 
+### Automated Server Runner
+The server pipeline runner is orchestrated by [`pipeline/run.py`](pipeline/run.py):
 ```bash
-python extract_sa_boundary.py          # -> sa_boundary.geojson
-python extract_places.py               # -> places_of_worship_sa.geojson
-python calculate_gaps.py               # -> worship_gaps_sa.json
-python calculate_mosque_sizes.py       # -> mosque_sizes.json
-python detect_geometry_anomalies.py    # -> mosque_anomalies.json
-python import_wikidata_suggestions.py  # -> suggested_mosques_sa.geojson (reads osm x wikidata data/sa.json)
-python validate_data.py                # exits non-zero if anything looks wrong
+python pipeline/run.py once [--force]   # Single run: diff update, process, validate, atomic publish
+python pipeline/run.py schedule         # Run daily at MANARA_RUN_AT_UTC (default 23:30 UTC / 02:30 Riyadh)
 ```
 
-Every script writes minified JSON atomically and records its counts in
-`summary.json`. In day-to-day use the master updater
-(`../update osm/update_projects.py`) downloads the extract, runs all of the
-above, and commits only the generated data files when validation passes.
+### Manual Individual Execution
+Scripts can also be run sequentially in order (each reads the previous step's output):
+
+```bash
+python pipeline/extract_sa_boundary.py          # -> sa_boundary.geojson
+python pipeline/extract_places.py               # -> places_of_worship_sa.geojson
+python pipeline/calculate_gaps.py               # -> worship_gaps_sa.json
+python pipeline/calculate_mosque_sizes.py       # -> mosque_sizes.json
+python pipeline/detect_geometry_anomalies.py    # -> mosque_anomalies.json
+python pipeline/import_wikidata_suggestions.py  # -> suggested_mosques_sa.geojson (reads osm x wikidata data/sa.json)
+python pipeline/validate_data.py                # exits non-zero if anything looks wrong
+```
+
+Every script writes minified JSON atomically and records its counts in `summary.json`.
 
 Tests: `pytest`.
 

@@ -99,9 +99,6 @@ def _create_feature(osm_id, lat, lon, tags, geom_type, osm_obj):
         "female": tags.get("female", tags.get("worship:female", tags.get("female_prayer_space", ""))),
         "capacity": tags.get("capacity", ""),
         "addr_city": tags.get("addr:city", ""),
-        "last_edited_by": osm_obj.user,
-        "user_id": osm_obj.uid,
-        "changeset_id": osm_obj.changeset,
         "version": osm_obj.version,
         "edited_at": osm_obj.timestamp.isoformat()
     }

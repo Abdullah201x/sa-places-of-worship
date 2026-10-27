@@ -18,7 +18,11 @@ import unicodedata
 from shapely.geometry import Polygon, shape
 from shapely.prepared import prep
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Where the datasets are read and written. On the server MANARA_DATA_DIR
+# points at the pipeline's work directory; locally it defaults to the repo
+# root, where the frontend's dev server picks the files up.
+CODE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.abspath(os.environ.get("MANARA_DATA_DIR") or os.path.join(CODE_DIR, ".."))
 SUMMARY_PATH = os.path.join(BASE_DIR, "summary.json")
 
 # Equirectangular scaling around KSA's ~24 deg N latitude, sufficient for

@@ -1,9 +1,10 @@
 """
 Sanity checks run after the pipeline and before anything is committed.
 
-Exits non-zero (which stops update_projects.py from pushing) when a dataset
-is missing, unreadable, or has shrunk suspiciously compared with the last
-published run, e.g. after a truncated PBF download or a failed extract.
+Exits non-zero (which stops run.py from publishing, or update_projects.py
+from pushing) when a dataset is missing, unreadable, or has shrunk
+suspiciously compared with the last published run, e.g. after a truncated PBF
+download or a failed extract.
 """
 
 import json
@@ -29,7 +30,15 @@ DATASETS = {
 
 
 def published_summary():
-    """summary.json as of the last commit (what the live site serves)."""
+    """summary.json of what the live site serves: the file named by
+    MANARA_PREVIOUS_SUMMARY on the server, else the last git commit."""
+    previous_path = os.environ.get("MANARA_PREVIOUS_SUMMARY")
+    if previous_path:
+        try:
+            with open(previous_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return {}  # first run: nothing published yet
     try:
         out = subprocess.run(["git", "show", "HEAD:summary.json"], cwd=BASE_DIR,
                              capture_output=True, text=True, encoding="utf-8")

@@ -55,9 +55,15 @@
 		}
 	}
 
-	# Datasets: file?v=<timestamp> is cached permanently, summary.json revalidates
-	handle /data/* {
-		root * /srv/manara
+	# Datasets: file?v=<timestamp> is cached permanently, summary.json revalidates.
+	# Serves from live pipeline updates (/srv/manara/published/current) when
+	# present, falling back to the baked-in dataset (/srv/manara/data).
+	handle_path /data/* {
+		@live file {
+			root /srv/manara/published/current
+		}
+		root * /srv/manara/data
+		root @live /srv/manara/published/current
 		@geojson path *.geojson
 		header @geojson Content-Type "application/geo+json; charset=utf-8"
 		@versioned query v=*

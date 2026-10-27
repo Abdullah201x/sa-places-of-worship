@@ -242,6 +242,41 @@ export const OsmApi = {
     return { doc, node, tags, version: Number(node.getAttribute('version')) };
   },
 
+  // Lazy-fetch contributor info (user, uid, changeset) for authenticated mappers.
+  // The public extract omits these fields; we fetch them on-demand per element
+  // and cache in sessionStorage keyed by version.
+  async fetchLastEdit(type, id, version = null) {
+    if (version != null) {
+      const cached = sessionStorage.getItem(`osm_meta:${type}/${id}@${version}`);
+      if (cached) {
+        try { return JSON.parse(cached); } catch (e) { /* ignore parse error */ }
+      }
+    }
+    const res = await fetch(`${this.urls().api}/api/0.6/${type}/${id}.json`);
+    if (!res.ok) throw new Error(`GET ${type}/${id}.json: HTTP ${res.status}`);
+    const data = await res.json();
+    const el = data.elements && data.elements[0];
+    if (!el) throw new Error(`Element ${type}/${id} not found`);
+    const meta = {
+      user: el.user || '',
+      uid: el.uid != null ? el.uid : null,
+      changeset: el.changeset != null ? el.changeset : null,
+      version: el.version != null ? el.version : null,
+      timestamp: el.timestamp || ''
+    };
+    try {
+      if (meta.version != null) {
+        sessionStorage.setItem(`osm_meta:${type}/${id}@${meta.version}`, JSON.stringify(meta));
+      }
+      if (version != null && version !== meta.version) {
+        sessionStorage.setItem(`osm_meta:${type}/${id}@${version}`, JSON.stringify(meta));
+      }
+    } catch (e) {
+      // Ignore quota errors in private browsing
+    }
+    return meta;
+  },
+
   // edits = { set: {k: v}, setIfMissing: {k: v}, del: [k] }. Returns the
   // resulting tags, or null when the edit would change nothing.
   applyEditsToTags(tags, edits) {

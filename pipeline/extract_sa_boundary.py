@@ -5,10 +5,8 @@ import json
 from shapely.geometry import LineString, mapping
 from shapely.ops import polygonize, unary_union
 
-from common import find_pbf
-
-# Resolve all paths relative to this script so it runs on any machine.
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# BASE_DIR is the data directory (MANARA_DATA_DIR, or the repo root).
+from common import BASE_DIR, find_pbf
 
 class RelationWayCollector(osmium.SimpleHandler):
     def __init__(self, target_relation_id):

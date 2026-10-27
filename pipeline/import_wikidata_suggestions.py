@@ -27,12 +27,11 @@ import re
 import sys
 from collections import defaultdict
 
-from common import (RE_MOSQUE_NAME, RE_MOSQUE_NAME_EN, configure_utf8_output,
+from common import (BASE_DIR, RE_MOSQUE_NAME, RE_MOSQUE_NAME_EN, configure_utf8_output,
                     is_generic_mosque_name, update_summary, write_json)
 
 configure_utf8_output()
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PLACES_PATH = os.path.join(BASE_DIR, "places_of_worship_sa.geojson")
 OUTPUT_PATH = os.path.join(BASE_DIR, "suggested_mosques_sa.geojson")
 
@@ -130,7 +129,8 @@ def main():
                         help="Drop suggestions closer than this many metres to an existing OSM place of worship (default 100).")
     args = parser.parse_args()
 
-    source = args.source or find_source()
+    # On the server run.py downloads sa.json and passes it in the environment.
+    source = args.source or os.environ.get("MANARA_WIKIDATA_SOURCE") or find_source()
     if not source or not os.path.exists(source):
         sys.exit("Could not find osm x wikidata data/sa.json. Pass --source.")
     if not os.path.exists(PLACES_PATH):

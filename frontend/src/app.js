@@ -1717,9 +1717,13 @@ export function showDetails(props, lat, lon) {
   document.getElementById('details-denom').innerText = props.denomination !== 'unknown' ? denomLabel(props.denomination) : t('unspecified');
   
   document.getElementById('details-city').innerText = props.addr_city || t('saudiArabia');
+  const type = osmTypeOf(props);
+  const isDev = OsmApi.environment() === 'dev';
+  const osmBase = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://www.openstreetmap.org';
+
   document.getElementById('details-coords').innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
   // Merged places are a building outline plus the POI node inside it.
-  document.getElementById('details-osm-id').innerText = `${osmTypeOf(props)}/${props.osm_id}` +
+  document.getElementById('details-osm-id').innerText = `${type}/${props.osm_id}` +
     (props.poi_node_id ? ` + node/${props.poi_node_id}` : '');
 
   const userLink = document.getElementById('details-user');
@@ -1751,28 +1755,75 @@ export function showDetails(props, lat, lon) {
     if (guestToolsNotice) guestToolsNotice.style.display = 'flex';
   } else {
     userLink.onclick = null;
-    userLink.innerText = props.last_edited_by || t('anonymous');
-    userLink.href = props.last_edited_by ? `https://www.openstreetmap.org/user/${encodeURIComponent(props.last_edited_by)}` : '#';
-    userLink.style.pointerEvents = 'auto';
-    userLink.style.opacity = '1';
-    userLink.style.textDecoration = '';
-
-    document.getElementById('details-uid').innerText = props.user_id ?? '-';
-
-    changesetLink.innerText = props.changeset_id ?? '-';
-    changesetLink.href = props.changeset_id ? `https://www.openstreetmap.org/changeset/${props.changeset_id}` : '#';
-    changesetLink.style.pointerEvents = 'auto';
-    changesetLink.style.opacity = '1';
-    changesetLink.style.textDecoration = '';
-
     if (guestToolsNotice) guestToolsNotice.style.display = 'none';
+
+    if (props.last_edited_by) {
+      userLink.innerText = props.last_edited_by;
+      userLink.href = `${osmBase}/user/${encodeURIComponent(props.last_edited_by)}`;
+      userLink.style.pointerEvents = 'auto';
+      userLink.style.opacity = '1';
+      userLink.style.textDecoration = '';
+
+      document.getElementById('details-uid').innerText = props.user_id ?? '-';
+
+      changesetLink.innerText = props.changeset_id ?? '-';
+      changesetLink.href = props.changeset_id ? `${osmBase}/changeset/${props.changeset_id}` : '#';
+      changesetLink.style.pointerEvents = props.changeset_id ? 'auto' : 'none';
+      changesetLink.style.opacity = '1';
+      changesetLink.style.textDecoration = '';
+    } else {
+      userLink.innerText = '…';
+      userLink.href = '#';
+      userLink.style.pointerEvents = 'none';
+      userLink.style.opacity = '0.6';
+      userLink.style.textDecoration = 'none';
+
+      document.getElementById('details-uid').innerText = '…';
+
+      changesetLink.innerText = '…';
+      changesetLink.href = '#';
+      changesetLink.style.pointerEvents = 'none';
+      changesetLink.style.opacity = '0.6';
+      changesetLink.style.textDecoration = 'none';
+
+      if (props.osm_id) {
+        OsmApi.fetchLastEdit(type, props.osm_id, props.version).then(meta => {
+          props.last_edited_by = meta.user;
+          props.user_id = meta.uid;
+          props.changeset_id = meta.changeset;
+          // Guard: verify this place is still the currently selected one
+          if (selectedPlace && selectedPlace.properties === props) {
+            userLink.innerText = meta.user || t('anonymous');
+            userLink.href = meta.user ? `${osmBase}/user/${encodeURIComponent(meta.user)}` : '#';
+            userLink.style.pointerEvents = meta.user ? 'auto' : 'none';
+            userLink.style.opacity = '1';
+            userLink.style.textDecoration = '';
+
+            document.getElementById('details-uid').innerText = meta.uid ?? '-';
+
+            changesetLink.innerText = meta.changeset ?? '-';
+            changesetLink.href = meta.changeset ? `${osmBase}/changeset/${meta.changeset}` : '#';
+            changesetLink.style.pointerEvents = meta.changeset ? 'auto' : 'none';
+            changesetLink.style.opacity = '1';
+            changesetLink.style.textDecoration = '';
+          }
+        }).catch(() => {
+          if (selectedPlace && selectedPlace.properties === props) {
+            userLink.innerText = '-';
+            document.getElementById('details-uid').innerText = '-';
+            changesetLink.innerText = '-';
+          }
+        });
+      } else {
+        userLink.innerText = '-';
+        document.getElementById('details-uid').innerText = '-';
+        changesetLink.innerText = '-';
+      }
+    }
   }
 
   // Update mapper editing tools (always available in both guest and authenticated modes)
   if (mapperTools) mapperTools.style.display = 'block';
-  const type = osmTypeOf(props);
-  const isDev = OsmApi.environment() === 'dev';
-  const osmBase = isDev ? 'https://master.apis.dev.openstreetmap.org' : 'https://www.openstreetmap.org';
 
   const viewOsmBtn = document.getElementById('btn-view-osm');
   if (viewOsmBtn) {
