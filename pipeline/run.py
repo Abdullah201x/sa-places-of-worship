@@ -68,6 +68,7 @@ STEPS = [
     ["detect_geometry_anomalies.py"],
     ["import_wikidata_suggestions.py"],
     ["validate_data.py"],
+    ["load_db.py"],
 ]
 STEP_TIMEOUT_S = 45 * 60
 

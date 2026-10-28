@@ -1,0 +1,387 @@
+#!/usr/bin/env python3
+"""
+Ingests Manara's processed datasets into PostGIS.
+
+Runs inside the pipeline container after validation. When DATABASE_URL
+(or MANARA_DATABASE_URL) is set, it populates staging tables, assigns regions
+spatially with ST_Within, and swaps tables into production in a single atomic
+transaction. If DATABASE_URL is not set, it exits cleanly with code 0.
+"""
+
+import json
+import os
+import sys
+import time
+
+from common import BASE_DIR, configure_utf8_output, normalize_arabic, read_summary
+
+configure_utf8_output()
+
+DATABASE_URL = os.environ.get("MANARA_DATABASE_URL") or os.environ.get("DATABASE_URL")
+
+
+def get_connection(db_url):
+    try:
+        import psycopg
+        return psycopg.connect(db_url, autocommit=True)
+    except ImportError:
+        sys.exit("psycopg is not installed. Install with: pip install 'psycopg[binary]'")
+    except Exception as e:
+        sys.exit(f"Could not connect to database: {e}")
+
+
+def init_db(conn):
+    """Ensure PostGIS and pg_trgm extensions and production schema exist."""
+    with conn.cursor() as cur:
+        cur.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
+        cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS regions (
+            code VARCHAR(10) PRIMARY KEY,
+            osm_id BIGINT NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            name_en VARCHAR(255) NOT NULL,
+            geom GEOMETRY(Geometry, 4326) NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_regions_geom ON regions USING GIST (geom);
+
+        CREATE TABLE IF NOT EXISTS places (
+            id SERIAL PRIMARY KEY,
+            osm_type VARCHAR(16) NOT NULL,
+            osm_id BIGINT NOT NULL,
+            version INT,
+            edited_at TIMESTAMPTZ,
+            name TEXT DEFAULT '',
+            name_norm TEXT DEFAULT '',
+            name_en TEXT DEFAULT '',
+            religion VARCHAR(64) DEFAULT 'unknown',
+            denomination VARCHAR(64) DEFAULT 'unknown',
+            building VARCHAR(64) DEFAULT '',
+            amenity VARCHAR(64) DEFAULT '',
+            poi_node_id BIGINT,
+            tags JSONB DEFAULT '{}'::jsonb,
+            geom_type VARCHAR(32) NOT NULL,
+            geom GEOMETRY(Point, 4326) NOT NULL,
+            area_m2 DOUBLE PRECISION,
+            anomaly_score DOUBLE PRECISION,
+            qibla_dev DOUBLE PRECISION,
+            region_code VARCHAR(10) REFERENCES regions(code),
+            dataset_id VARCHAR(64)
+        );
+        CREATE INDEX IF NOT EXISTS idx_places_osm ON places (osm_type, osm_id);
+        CREATE INDEX IF NOT EXISTS idx_places_geom ON places USING GIST (geom);
+        CREATE INDEX IF NOT EXISTS idx_places_name_norm_trgm ON places USING GIN (name_norm gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_places_region ON places (region_code);
+        CREATE INDEX IF NOT EXISTS idx_places_religion ON places (religion);
+
+        CREATE TABLE IF NOT EXISTS gaps (
+            id SERIAL PRIMARY KEY,
+            grid_x INT NOT NULL,
+            grid_y INT NOT NULL,
+            road_length_m DOUBLE PRECISION NOT NULL,
+            gap_score DOUBLE PRECISION NOT NULL,
+            geom GEOMETRY(Point, 4326) NOT NULL,
+            region_code VARCHAR(10) REFERENCES regions(code)
+        );
+        CREATE INDEX IF NOT EXISTS idx_gaps_geom ON gaps USING GIST (geom);
+        CREATE INDEX IF NOT EXISTS idx_gaps_region ON gaps (region_code);
+
+        CREATE TABLE IF NOT EXISTS suggestions (
+            id SERIAL PRIMARY KEY,
+            wikidata_id VARCHAR(32) NOT NULL,
+            name TEXT DEFAULT '',
+            name_norm TEXT DEFAULT '',
+            name_en TEXT DEFAULT '',
+            geom GEOMETRY(Point, 4326) NOT NULL,
+            region_code VARCHAR(10) REFERENCES regions(code)
+        );
+        CREATE INDEX IF NOT EXISTS idx_suggestions_wikidata ON suggestions (wikidata_id);
+        CREATE INDEX IF NOT EXISTS idx_suggestions_geom ON suggestions USING GIST (geom);
+        CREATE INDEX IF NOT EXISTS idx_suggestions_name_norm_trgm ON suggestions USING GIN (name_norm gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_suggestions_region ON suggestions (region_code);
+
+        CREATE TABLE IF NOT EXISTS dataset_versions (
+            version VARCHAR(64) PRIMARY KEY,
+            pbf_date DATE,
+            published_at TIMESTAMPTZ NOT NULL,
+            metadata JSONB NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS region_stats_history (
+            id SERIAL PRIMARY KEY,
+            version VARCHAR(64) REFERENCES dataset_versions(version),
+            region_code VARCHAR(10) REFERENCES regions(code),
+            places_count INT NOT NULL DEFAULT 0,
+            gaps_count INT NOT NULL DEFAULT 0,
+            suggestions_count INT NOT NULL DEFAULT 0,
+            anomalies_count INT NOT NULL DEFAULT 0,
+            recorded_at TIMESTAMPTZ NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_stats_history_ver_region
+            ON region_stats_history (version, region_code);
+        """)
+
+
+def load_staging_data(conn, data_dir=BASE_DIR):
+    """Loads all datasets into clean staging tables."""
+    summary = read_summary()
+    version = "v" + summary.get("updated_at", "").replace("-", "").replace(":", "")
+
+    regions_file = os.path.join(data_dir, "sa_regions.geojson")
+    places_file = os.path.join(data_dir, "places_of_worship_sa.geojson")
+    gaps_file = os.path.join(data_dir, "worship_gaps_sa.json")
+    sizes_file = os.path.join(data_dir, "mosque_sizes.json")
+    anomalies_file = os.path.join(data_dir, "mosque_anomalies.json")
+    suggestions_file = os.path.join(data_dir, "suggested_mosques_sa.geojson")
+
+    # 1. Staging tables setup
+    with conn.cursor() as cur:
+        cur.execute("""
+        DROP TABLE IF EXISTS places_staging CASCADE;
+        DROP TABLE IF EXISTS gaps_staging CASCADE;
+        DROP TABLE IF EXISTS suggestions_staging CASCADE;
+        DROP TABLE IF EXISTS regions_staging CASCADE;
+
+        CREATE TABLE regions_staging (LIKE regions INCLUDING ALL);
+        CREATE TABLE places_staging (LIKE places INCLUDING ALL);
+        CREATE TABLE gaps_staging (LIKE gaps INCLUDING ALL);
+        CREATE TABLE suggestions_staging (LIKE suggestions INCLUDING ALL);
+        """)
+
+    # 2. Ingest Regions
+    if os.path.exists(regions_file):
+        with open(regions_file, "r", encoding="utf-8") as f:
+            regions_data = json.load(f)
+        with conn.cursor() as cur:
+            for feat in regions_data.get("features", []):
+                p = feat.get("properties", {})
+                geom_json = json.dumps(feat.get("geometry", {}))
+                cur.execute("""
+                INSERT INTO regions_staging (code, osm_id, name, name_en, geom)
+                VALUES (%s, %s, %s, %s, ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326));
+                """, (p.get("code"), p.get("osm_id"), p.get("name"), p.get("name_en"), geom_json))
+        print(f"  [OK] Ingested {len(regions_data.get('features', []))} provinces into regions_staging.")
+
+    # 3. Ingest Places
+    sizes = {}
+    if os.path.exists(sizes_file):
+        with open(sizes_file, "r", encoding="utf-8") as f:
+            sizes = {int(k): v for k, v in json.load(f).items()}
+
+    anomalies = {}
+    if os.path.exists(anomalies_file):
+        with open(anomalies_file, "r", encoding="utf-8") as f:
+            anom_data = json.load(f)
+            anomalies = anom_data.get("outliers", {}) or anom_data
+
+    if os.path.exists(places_file):
+        with open(places_file, "r", encoding="utf-8") as f:
+            places_data = json.load(f)
+
+        places_rows = []
+        for feat in places_data.get("features", []):
+            p = feat.get("properties", {})
+            geom = feat.get("geometry", {})
+            coords = geom.get("coordinates", [0, 0])
+            osm_id = p.get("osm_id")
+            name = p.get("name", "")
+            name_norm = normalize_arabic(name) if name else ""
+
+            area_m2 = sizes.get(osm_id)
+            anom_info = anomalies.get(str(osm_id)) or anomalies.get(osm_id) or {}
+            anom_score = anom_info.get("anomaly_score") if isinstance(anom_info, dict) else None
+            qibla_dev = anom_info.get("qibla_deviation") if isinstance(anom_info, dict) else None
+
+            places_rows.append((
+                p.get("geom_type", "node"),
+                osm_id,
+                p.get("version"),
+                p.get("edited_at"),
+                name,
+                name_norm,
+                p.get("name_en", ""),
+                p.get("religion", "unknown"),
+                p.get("denomination", "unknown"),
+                p.get("building", ""),
+                p.get("amenity", ""),
+                p.get("poi_node_id"),
+                json.dumps(p),
+                p.get("geom_type", "Point"),
+                coords[0],
+                coords[1],
+                area_m2,
+                anom_score,
+                qibla_dev,
+                version,
+            ))
+
+        with conn.cursor() as cur:
+            with cur.copy("""
+            COPY places_staging (
+                osm_type, osm_id, version, edited_at, name, name_norm, name_en,
+                religion, denomination, building, amenity, poi_node_id, tags,
+                geom_type, geom, area_m2, anomaly_score, qibla_dev, dataset_id
+            ) FROM STDIN
+            """) as copy:
+                for r in places_rows:
+                    geom_wkt = f"SRID=4326;POINT({r[14]} {r[15]})"
+                    copy.write_row((
+                        r[0], r[1], r[2], r[3], r[4], r[5], r[6],
+                        r[7], r[8], r[9], r[10], r[11], r[12],
+                        r[13], geom_wkt, r[16], r[17], r[18], r[19]
+                    ))
+        print(f"  [OK] Ingested {len(places_rows)} places into places_staging.")
+
+    # 4. Ingest Gaps
+    if os.path.exists(gaps_file):
+        with open(gaps_file, "r", encoding="utf-8") as f:
+            gaps_data = json.load(f)
+        grid_size = gaps_data.get("grid_size", 0.004)
+        gaps_rows = []
+        for cell in gaps_data.get("cells", []):
+            gx, gy, road_len, gap_score = cell[0], cell[1], cell[2], cell[3]
+            lon = round(gx * grid_size, 6)
+            lat = round(gy * grid_size, 6)
+            gaps_rows.append((gx, gy, road_len, gap_score, lon, lat))
+
+        with conn.cursor() as cur:
+            with cur.copy("""
+            COPY gaps_staging (grid_x, grid_y, road_length_m, gap_score, geom) FROM STDIN
+            """) as copy:
+                for r in gaps_rows:
+                    geom_wkt = f"SRID=4326;POINT({r[4]} {r[5]})"
+                    copy.write_row((r[0], r[1], r[2], r[3], geom_wkt))
+        print(f"  [OK] Ingested {len(gaps_rows)} gaps into gaps_staging.")
+
+    # 5. Ingest Suggestions
+    if os.path.exists(suggestions_file):
+        with open(suggestions_file, "r", encoding="utf-8") as f:
+            sug_data = json.load(f)
+        sug_rows = []
+        for feat in sug_data.get("features", []):
+            p = feat.get("properties", {})
+            coords = feat.get("geometry", {}).get("coordinates", [0, 0])
+            name = p.get("name", "")
+            name_norm = normalize_arabic(name) if name else ""
+            sug_rows.append((
+                p.get("wikidata_id") or p.get("id", ""),
+                name,
+                name_norm,
+                p.get("name_en", ""),
+                coords[0],
+                coords[1],
+            ))
+
+        with conn.cursor() as cur:
+            with cur.copy("""
+            COPY suggestions_staging (wikidata_id, name, name_norm, name_en, geom) FROM STDIN
+            """) as copy:
+                for r in sug_rows:
+                    geom_wkt = f"SRID=4326;POINT({r[4]} {r[5]})"
+                    copy.write_row((r[0], r[1], r[2], r[3], geom_wkt))
+        print(f"  [OK] Ingested {len(sug_rows)} suggestions into suggestions_staging.")
+
+    # 6. Spatial Assignment (ST_Within)
+    print("  Assigning provinces spatially with ST_Within...")
+    with conn.cursor() as cur:
+        cur.execute("""
+        UPDATE places_staging p
+        SET region_code = r.code
+        FROM regions_staging r
+        WHERE ST_Within(p.geom, r.geom);
+
+        UPDATE gaps_staging g
+        SET region_code = r.code
+        FROM regions_staging r
+        WHERE ST_Within(g.geom, r.geom);
+
+        UPDATE suggestions_staging s
+        SET region_code = r.code
+        FROM regions_staging r
+        WHERE ST_Within(s.geom, r.geom);
+        """)
+    print("  [OK] Spatial province assignment complete.")
+
+    # 7. Record History Stats and Dataset Version
+    now_ts = summary.get("updated_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    pbf_date = summary.get("pbf_date")
+    with conn.cursor() as cur:
+        cur.execute("""
+        INSERT INTO dataset_versions (version, pbf_date, published_at, metadata)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (version) DO UPDATE SET metadata = EXCLUDED.metadata;
+        """, (version, pbf_date, now_ts, json.dumps(summary)))
+
+        cur.execute("""
+        INSERT INTO region_stats_history (
+            version, region_code, places_count, gaps_count, suggestions_count, anomalies_count, recorded_at
+        )
+        SELECT
+            %s AS version,
+            r.code AS region_code,
+            COUNT(DISTINCT p.id) AS places_count,
+            COUNT(DISTINCT g.id) AS gaps_count,
+            COUNT(DISTINCT s.id) AS suggestions_count,
+            COUNT(DISTINCT p.id) FILTER (WHERE p.anomaly_score IS NOT NULL) AS anomalies_count,
+            %s::timestamptz AS recorded_at
+        FROM regions_staging r
+        LEFT JOIN places_staging p ON p.region_code = r.code
+        LEFT JOIN gaps_staging g ON g.region_code = r.code
+        LEFT JOIN suggestions_staging s ON s.region_code = r.code
+        GROUP BY r.code
+        ON CONFLICT (version, region_code) DO NOTHING;
+        """, (version, now_ts))
+    print(f"  [OK] Regional history stats recorded for version {version}.")
+
+
+def swap_staging_to_production(conn):
+    """Atomically swaps staging tables into production in a single transaction."""
+    print("Performing atomic table swap to production...")
+    with conn.transaction():
+        with conn.cursor() as cur:
+            cur.execute("""
+            DROP TABLE IF EXISTS places_old CASCADE;
+            DROP TABLE IF EXISTS gaps_old CASCADE;
+            DROP TABLE IF EXISTS suggestions_old CASCADE;
+            DROP TABLE IF EXISTS regions_old CASCADE;
+
+            ALTER TABLE IF EXISTS places RENAME TO places_old;
+            ALTER TABLE places_staging RENAME TO places;
+
+            ALTER TABLE IF EXISTS gaps RENAME TO gaps_old;
+            ALTER TABLE gaps_staging RENAME TO gaps;
+
+            ALTER TABLE IF EXISTS suggestions RENAME TO suggestions_old;
+            ALTER TABLE suggestions_staging RENAME TO suggestions;
+
+            ALTER TABLE IF EXISTS regions RENAME TO regions_old;
+            ALTER TABLE regions_staging RENAME TO regions;
+
+            DROP TABLE IF EXISTS places_old CASCADE;
+            DROP TABLE IF EXISTS gaps_old CASCADE;
+            DROP TABLE IF EXISTS suggestions_old CASCADE;
+            DROP TABLE IF EXISTS regions_old CASCADE;
+            """)
+    print("  [SUCCESS] All tables swapped to production atomically!")
+
+
+def main():
+    if not DATABASE_URL:
+        print("[SKIP] No DATABASE_URL set; database loading skipped.")
+        return
+
+    started = time.time()
+    print(f"Connecting to PostGIS...")
+    conn = get_connection(DATABASE_URL)
+    try:
+        init_db(conn)
+        load_staging_data(conn)
+        swap_staging_to_production(conn)
+        print(f"Database loading finished successfully in {time.time() - started:.1f}s.")
+    finally:
+        conn.close()
+
+
+if __name__ == "__main__":
+    main()
