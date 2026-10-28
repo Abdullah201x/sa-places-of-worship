@@ -5,7 +5,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app.database import close_pool, init_pool, pool
+from app import database
 from app.schema import init_app_tables
 from app.routers import (
     auth,
@@ -26,15 +26,16 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_pool()
-    if pool is not None:
+    database.init_pool()
+    if database.pool is not None:
         try:
-            with pool.connection() as conn:
+            with database.pool.connection() as conn:
                 init_app_tables(conn)
+                print("[INFO] Phase 4 tables initialized successfully.")
         except Exception as e:
             print(f"[WARN] Could not initialize Phase 4 tables: {e}")
     yield
-    close_pool()
+    database.close_pool()
 
 
 app = FastAPI(
