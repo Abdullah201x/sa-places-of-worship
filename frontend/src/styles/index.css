@@ -1431,6 +1431,21 @@ h1 {
   box-shadow: 0 0 10px rgba(0, 255, 135, 0.2);
 }
 
+.mapper-btn.direct-editor {
+  background: linear-gradient(135deg, rgba(0, 255, 135, 0.15), rgba(0, 242, 254, 0.12));
+  border-color: rgba(0, 255, 135, 0.45);
+  color: #00ff87;
+  font-weight: 700;
+}
+
+.mapper-btn.direct-editor:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 135, 0.28), rgba(0, 242, 254, 0.22));
+  border-color: #00ff87;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(0, 255, 135, 0.35);
+  transform: translateY(-1px);
+}
+
 /* Toast Notifications styling */
 .toast-notification {
   position: fixed;
@@ -2455,6 +2470,22 @@ h1 {
   color: #ffffff;
 }
 
+.btn-sug-direct {
+  background: linear-gradient(135deg, rgba(0, 255, 135, 0.18), rgba(0, 242, 254, 0.12));
+  border-color: rgba(0, 255, 135, 0.5);
+  color: #00ff87;
+  grid-column: span 2;
+  font-weight: 700;
+}
+
+.btn-sug-direct:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 135, 0.3), rgba(0, 242, 254, 0.22));
+  border-color: #00ff87;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(0, 255, 135, 0.35);
+}
+
 
 
 .data-updated {
@@ -2922,4 +2953,146 @@ kbd {
 
 .site-links a:hover {
   color: var(--color-primary);
+}
+
+/* ==========================================================================
+   Direct Add Mosque as OSM Node Mode & UI
+   ========================================================================== */
+
+#map.mosque-mode-active {
+  cursor: crosshair !important;
+}
+
+#map.mosque-mode-active .leaflet-interactive {
+  cursor: crosshair !important;
+}
+
+.add-mosque-marker {
+  z-index: 1000 !important;
+}
+
+.add-mosque-marker-pin {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #00ff87, #00f2fe);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 255, 135, 0.5);
+  font-size: 18px;
+  color: #071714;
+  position: relative;
+  cursor: grab;
+}
+
+.add-mosque-marker-pin:active {
+  cursor: grabbing;
+}
+
+.add-mosque-marker-pin > span.marker-icon-inner {
+  transform: rotate(45deg);
+  display: inline-block;
+  line-height: 1;
+}
+
+.add-mosque-marker-pin .marker-pulse {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #00ff87;
+  animation: pulse-ring 1.6s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+  pointer-events: none;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Custom map context menu */
+.custom-context-popup .leaflet-popup-content-wrapper {
+  background: rgba(13, 17, 23, 0.95) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  padding: 4px;
+}
+
+.custom-context-popup .leaflet-popup-content {
+  margin: 4px;
+  line-height: 1.4;
+}
+
+.custom-context-popup .leaflet-popup-tip {
+  background: rgba(13, 17, 23, 0.95);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+}
+
+.map-context-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.context-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: start;
+  width: 100%;
+}
+
+.context-menu-btn:hover {
+  background: rgba(0, 242, 254, 0.15);
+  border-color: var(--color-primary);
+  color: #fff;
+  transform: translateX(-2px);
+}
+
+.context-menu-btn.ctx-add-mosque:hover {
+  background: rgba(0, 255, 135, 0.18);
+  border-color: #00ff87;
+  color: #fff;
+}
+
+/* Prefix chips in Add Mosque Composer */
+.prefix-chip {
+  padding: 3px 10px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.prefix-chip:hover {
+  background: rgba(0, 255, 135, 0.15);
+  border-color: #00ff87;
+  color: #00ff87;
+}
+
+.add-mosque-card {
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
 }

@@ -344,6 +344,54 @@ export const OsmApi = {
   },
 
   /**
+   * Creates a brand new node inside an open changeset. Returns the new node ID.
+   */
+  async createNode(changesetId, { lat, lon, tags }) {
+    const latNum = Number(lat);
+    const lonNum = Number(lon);
+    if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) {
+      throw new Error(`Invalid coordinates: lat=${lat}, lon=${lon}`);
+    }
+    const tagLines = Object.entries(tags || {})
+      .filter(([_, v]) => v !== undefined && v !== null && String(v).trim() !== '')
+      .map(([k, v]) => `    <tag k="${this._escapeXml(k)}" v="${this._escapeXml(this.truncateTag(v))}"/>`)
+      .join('\n');
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="Saudi Places of Worship Map">\n  <node changeset="${this._escapeXml(changesetId)}" lat="${latNum.toFixed(7)}" lon="${lonNum.toFixed(7)}">\n${tagLines}\n  </node>\n</osm>`;
+    const responseText = await this._request('PUT', 'node/create', xml);
+    return Number(responseText.trim());
+  },
+
+  /**
+   * Creates a new node in its own changeset, reports it, and records it in local EditHistory.
+   */
+  async addNode({ lat, lon, tags, comment, source }) {
+    if (!this.canEdit()) throw new Error('NOT_AUTHENTICATED');
+    let changesetId = null;
+    try {
+      changesetId = await this.openChangeset(comment, source);
+      const nodeId = await this.createNode(changesetId, { lat, lon, tags });
+      trackEvent('Node created', { type: 'mosque', nodeId });
+      this.reportEdit(changesetId);
+      EditHistory.add({
+        changesetId,
+        timestamp: Date.now(),
+        user: this.userName(),
+        environment: this.environment(),
+        comment: this.truncateTag(comment),
+        items: [{
+          ref: `node/${nodeId}`,
+          label: tags.name || tags['name:ar'] || tags['name:en'] || 'Mosque',
+          version: 1,
+          summary: `Created node/${nodeId} (${tags.amenity || 'place_of_worship'})`
+        }]
+      });
+      return { changesetId, nodeId };
+    } finally {
+      if (changesetId) await this.closeChangeset(changesetId);
+    }
+  },
+
+  /**
    * Applies tag edits to several elements in ONE changeset (one element is
    * just a batch of one). Each item: { type, id, edits, expectedVersion,
    * label }. Items whose element changed since expectedVersion are skipped
@@ -420,6 +468,14 @@ export const OsmApi = {
 
   changesetUrl(changesetId) {
     return `${this.urls().site}/changeset/${changesetId}`;
+  },
+
+  nodeUrl(nodeId) {
+    return `${this.urls().site}/node/${nodeId}`;
+  },
+
+  elementUrl(type, id) {
+    return `${this.urls().site}/${type}/${id}`;
   }
 };
 

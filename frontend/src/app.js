@@ -21,6 +21,12 @@ export let noteMarkersLayer = null;
 export let pendingNoteLatLng = null;
 export let activeNotePreset = 'freetext';
 
+// Direct Add Mosque Node State
+export let addMosqueMode = false;
+export let pendingMosqueLatLng = null;
+export let pendingMosqueMarker = null;
+export let pendingMosqueSuggestionQid = null;
+
 // Appended to every submitted note (preset or free text) so mappers processing
 // it know which site it came from - the same convention StreetComplete/MAPS.ME
 // use ("via StreetComplete", "#mapsme"), which also promotes the site itself.
@@ -670,6 +676,9 @@ export function buildSuggestionPopup(props, lat, lon) {
         <button type="button" class="btn-sug-action btn-sug-copy" data-sug-action="copy" data-qid="${escapeHtml(props.qid)}" title="${t('sugCopyTitle')}">
           ${t('sugCopy')}
         </button>
+        <button type="button" class="btn-sug-action btn-sug-direct" data-sug-action="direct" data-qid="${escapeHtml(props.qid)}" title="${t('sugDirectTitle')}">
+          ${t('sugDirect')}
+        </button>
         <a href="${idUrl}" target="_blank" rel="noopener noreferrer" class="btn-sug-action btn-sug-id" title="${t('sugIdTitle')}">
           ${t('sugId')}
         </a>
@@ -692,6 +701,8 @@ document.addEventListener('click', (e) => {
     copySuggestionTags(qid);
   } else if (action === 'josm') {
     addSuggestionInJOSM(qid);
+  } else if (action === 'direct') {
+    openAddMosqueFromSuggestion(qid);
   } else if (action === 'satellite') {
     const s = suggestionsByQid[qid];
     if (s) previewSuggestionSatellite(s.lat, s.lon);
@@ -1213,7 +1224,38 @@ export function initMap() {
   // OSM Notes: layer for existing + newly-created note markers, click-to-place
   // handling in Add Note mode, and refetching nearby notes as the view moves.
   noteMarkersLayer = L.layerGroup().addTo(map);
-  map.on('click', handleMapClickForNotes);
+  map.on('click', (e) => {
+    if (addMosqueMode) {
+      handleMapClickForAddMosque(e);
+    } else if (addNoteMode) {
+      handleMapClickForNotes(e);
+    }
+  });
+
+  // Context menu on map (right-click / long-press) for quick actions
+  map.on('contextmenu', (e) => {
+    const lat = e.latlng.lat;
+    const lon = e.latlng.lng;
+    const container = document.createElement('div');
+    container.className = 'map-context-menu';
+    container.innerHTML = `
+      <button type="button" class="context-menu-btn ctx-add-mosque">${t('addMosqueContextAction')}</button>
+      <button type="button" class="context-menu-btn ctx-add-note">${t('noteContextAction')}</button>
+    `;
+    const popup = L.popup({ className: 'custom-context-popup', closeButton: true })
+      .setLatLng(e.latlng)
+      .setContent(container)
+      .openOn(map);
+
+    container.querySelector('.ctx-add-mosque').addEventListener('click', () => {
+      map.closePopup(popup);
+      openAddMosqueComposer(lat, lon);
+    });
+    container.querySelector('.ctx-add-note').addEventListener('click', () => {
+      map.closePopup(popup);
+      openNoteComposer(lat, lon);
+    });
+  });
   const debouncedLoadNearbyNotes = debounce(loadNearbyNotes, 400);
   map.on('moveend', debouncedLoadNearbyNotes);
 
@@ -2178,6 +2220,16 @@ export function setupEventListeners() {
     });
   }
 
+  // Gap Mode: directly add a mosque node in the current view
+  const btnOpenAreaDirect = document.getElementById('btn-open-area-direct');
+  if (btnOpenAreaDirect) {
+    btnOpenAreaDirect.addEventListener('click', () => {
+      if (!map) return;
+      const center = map.getCenter();
+      openAddMosqueComposer(center.lat, center.lng);
+    });
+  }
+
   // Basemap Chips Selector
   const basemapChips = document.querySelectorAll('#basemap-filters .chip');
   basemapChips.forEach(chip => {
@@ -2489,6 +2541,85 @@ export function setupEventListeners() {
     });
   });
 
+  // 7c. Direct Add Mosque as OSM Node Mode + Composer
+  const addMosqueToggle = document.getElementById('add-mosque-mode-toggle');
+  if (addMosqueToggle) {
+    addMosqueToggle.addEventListener('change', (e) => {
+      setAddMosqueMode(e.target.checked);
+    });
+  }
+
+  const submitMosqueBtn = document.getElementById('btn-submit-add-mosque');
+  if (submitMosqueBtn) {
+    submitMosqueBtn.addEventListener('click', submitPendingMosqueNode);
+  }
+
+  const cancelMosqueBtn = document.getElementById('btn-cancel-add-mosque');
+  if (cancelMosqueBtn) {
+    cancelMosqueBtn.addEventListener('click', closeAddMosqueComposer);
+  }
+
+  // Prefix chips for Arabic name
+  document.querySelectorAll('#mosque-prefix-chips .prefix-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const prefix = chip.getAttribute('data-prefix');
+      const nameInput = document.getElementById('add-mosque-name-ar');
+      if (nameInput) {
+        const val = nameInput.value.trim();
+        if (!val.startsWith('جامع') && !val.startsWith('مسجد') && !val.startsWith('مصلى')) {
+          nameInput.value = val ? `${prefix} ${val}` : `${prefix} `;
+        } else {
+          nameInput.value = val.replace(/^(جامع|مسجد|مصلى)\s*/, `${prefix} `);
+        }
+        nameInput.focus();
+        nameInput.dispatchEvent(new Event('input'));
+      }
+    });
+  });
+
+  // Smart suggestion button for English name
+  const suggestEnBtn = document.getElementById('btn-suggest-mosque-en');
+  if (suggestEnBtn) {
+    suggestEnBtn.addEventListener('click', () => {
+      const nameAr = (document.getElementById('add-mosque-name-ar')?.value || '').trim();
+      const nameEnInput = document.getElementById('add-mosque-name-en');
+      if (nameAr && nameEnInput) {
+        const suggested = ArabicText.suggestEnglishName(nameAr);
+        if (suggested) {
+          nameEnInput.value = suggested;
+          nameEnInput.dispatchEvent(new Event('input'));
+        }
+      }
+    });
+  }
+
+  // Auto-sync changeset comment with Arabic name as user types
+  const nameArInput = document.getElementById('add-mosque-name-ar');
+  if (nameArInput) {
+    nameArInput.addEventListener('input', () => {
+      const commentInput = document.getElementById('add-mosque-comment');
+      if (commentInput && (!commentInput.value || commentInput.dataset.touched !== 'true')) {
+        const val = nameArInput.value.trim();
+        commentInput.value = `Add mosque${val ? ': ' + val : ''} via #sa-worship-map`;
+      }
+    });
+  }
+  const commentInput = document.getElementById('add-mosque-comment');
+  if (commentInput) {
+    commentInput.addEventListener('input', () => {
+      commentInput.dataset.touched = 'true';
+    });
+  }
+
+  const mosqueOverlay = document.getElementById('add-mosque-overlay');
+  if (mosqueOverlay) {
+    mosqueOverlay.addEventListener('click', (e) => {
+      if (e.target === mosqueOverlay) {
+        closeAddMosqueComposer();
+      }
+    });
+  }
+
   // 8. OSM OAuth 2.0 Auth Controls
   const loginBtn = document.getElementById('btn-osm-login');
   if (loginBtn) {
@@ -2535,6 +2666,8 @@ export function setupEventListeners() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeAuthModal();
+      closeAddMosqueComposer();
+      closeNoteComposer();
       document.getElementById('shortcuts-overlay').classList.add('hidden');
     }
   });
@@ -2937,5 +3070,290 @@ export function updateUserWidgetUI() {
     } else {
       widget.style.display = 'none';
     }
+  }
+}
+
+// ===========================================================================
+// Direct Add Mosque as OSM Node
+// ===========================================================================
+
+export function setAddMosqueMode(enabled) {
+  addMosqueMode = enabled;
+  const mapEl = document.getElementById('map');
+  if (mapEl) mapEl.classList.toggle('mosque-mode-active', enabled);
+
+  const toggle = document.getElementById('add-mosque-mode-toggle');
+  if (toggle && toggle.checked !== enabled) {
+    toggle.checked = enabled;
+  }
+
+  if (enabled) {
+    if (addNoteMode) setAddNoteMode(false);
+    showToast(t('addMosqueModeActiveToast'));
+  } else {
+    removeMosqueMarker();
+  }
+}
+
+export function placeMosqueMarker(lat, lon) {
+  if (!map) return;
+  if (pendingMosqueMarker) {
+    pendingMosqueMarker.setLatLng([lat, lon]);
+  } else {
+    const icon = L.divIcon({
+      html: '<div class="add-mosque-marker-pin"><span class="marker-pulse"></span><span class="marker-icon-inner">🕌</span></div>',
+      className: 'add-mosque-marker',
+      iconSize: [36, 36],
+      iconAnchor: [18, 36]
+    });
+    pendingMosqueMarker = L.marker([lat, lon], { icon, draggable: true }).addTo(map);
+    pendingMosqueMarker.on('drag', (e) => {
+      const pos = e.target.getLatLng();
+      pendingMosqueLatLng = { lat: pos.lat, lon: pos.lng };
+      const display = document.getElementById('add-mosque-coords-display');
+      if (display) display.innerText = `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`;
+    });
+  }
+}
+
+export function removeMosqueMarker() {
+  if (pendingMosqueMarker) {
+    if (map) map.removeLayer(pendingMosqueMarker);
+    pendingMosqueMarker = null;
+  }
+}
+
+export function openAddMosqueComposer(lat, lon, prefill = {}) {
+  const overlay = document.getElementById('add-mosque-overlay');
+  const coordsDisplay = document.getElementById('add-mosque-coords-display');
+  const nameArInput = document.getElementById('add-mosque-name-ar');
+  const nameEnInput = document.getElementById('add-mosque-name-en');
+  const denomSelect = document.getElementById('add-mosque-denom');
+  const femaleCheck = document.getElementById('add-mosque-female');
+  const buildingCheck = document.getElementById('add-mosque-building');
+  const wheelchairSelect = document.getElementById('add-mosque-wheelchair');
+  const wikidataInput = document.getElementById('add-mosque-wikidata');
+  const sourceSelect = document.getElementById('add-mosque-source');
+  const commentInput = document.getElementById('add-mosque-comment');
+  const authStatus = document.getElementById('add-mosque-auth-status');
+  const submitBtn = document.getElementById('btn-submit-add-mosque');
+
+  if (!overlay || !nameArInput) return;
+
+  pendingMosqueLatLng = { lat, lon };
+  pendingMosqueSuggestionQid = prefill.qid || null;
+
+  placeMosqueMarker(lat, lon);
+
+  if (coordsDisplay) {
+    coordsDisplay.innerText = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+  }
+
+  // Pre-fill values
+  const nameAr = prefill.name_ar || prefill.name || '';
+  nameArInput.value = nameAr;
+  nameEnInput.value = prefill.name_en || '';
+  denomSelect.value = prefill.denomination || 'sunni';
+  femaleCheck.checked = Boolean(prefill.female);
+  buildingCheck.checked = Boolean(prefill.building);
+  wheelchairSelect.value = prefill.wheelchair || '';
+  wikidataInput.value = prefill.wikidata || prefill.qid || '';
+  sourceSelect.value = prefill.source || (prefill.qid ? 'wikidata' : 'local knowledge');
+
+  const defaultComment = prefill.comment || `Add mosque${nameAr ? ': ' + nameAr : ''} via #sa-worship-map`;
+  commentInput.value = defaultComment;
+  commentInput.dataset.touched = prefill.comment ? 'true' : 'false';
+
+  // Check authentication
+  const canEdit = OsmApi.canEdit();
+  if (authStatus) {
+    if (canEdit) {
+      const user = OsmApi.userName();
+      authStatus.innerHTML = `<span style="color: #00ff87;">✓ ${escapeHtml(t('addMosquePostedAs', { name: user }))}</span>`;
+      if (submitBtn) submitBtn.disabled = false;
+    } else {
+      authStatus.innerHTML = `
+        <div style="background: rgba(255, 176, 58, 0.1); border: 1px solid rgba(255, 176, 58, 0.3); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;">
+          <p style="color: #ffb03a; margin: 0 0 6px 0; font-size: 11.5px;">${escapeHtml(t('addMosqueNeedsAuth'))}</p>
+          <button type="button" id="btn-add-mosque-quick-login" class="quick-fix-btn" style="font-size: 11.5px; padding: 4px 10px; cursor: pointer;">
+            ${escapeHtml(t('authSuccess') ? 'تسجيل الدخول عبر OSM' : 'Log in with OSM')}
+          </button>
+        </div>
+      `;
+      const loginBtn = document.getElementById('btn-add-mosque-quick-login');
+      if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+          redirectToOSM();
+        });
+      }
+      if (submitBtn) submitBtn.disabled = true;
+    }
+  }
+
+  overlay.classList.remove('hidden');
+  nameArInput.focus();
+}
+
+export function closeAddMosqueComposer() {
+  const overlay = document.getElementById('add-mosque-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  pendingMosqueLatLng = null;
+  pendingMosqueSuggestionQid = null;
+  removeMosqueMarker();
+}
+
+export function openAddMosqueFromSuggestion(qid) {
+  const s = suggestionsByQid[qid];
+  if (!s) return;
+  if (map) {
+    map.setView([s.lat, s.lon], Math.max(17, map.getZoom()), { animate: true });
+  }
+  openAddMosqueComposer(s.lat, s.lon, {
+    qid: s.qid,
+    name_ar: s.name_ar,
+    name_en: s.name_en,
+    source: 'wikidata; Esri World Imagery',
+    wikidata: s.qid
+  });
+}
+
+export function handleMapClickForAddMosque(e) {
+  if (!addMosqueMode) return;
+  openAddMosqueComposer(e.latlng.lat, e.latlng.lng);
+}
+
+export async function submitPendingMosqueNode() {
+  if (!pendingMosqueLatLng) return;
+  if (!OsmApi.canEdit()) {
+    showToast(t('addMosqueNeedsAuth'), 'warning');
+    redirectToOSM();
+    return;
+  }
+
+  const { lat, lon } = pendingMosqueLatLng;
+  const submitBtn = document.getElementById('btn-submit-add-mosque');
+  if (submitBtn) submitBtn.disabled = true;
+
+  const tags = {
+    amenity: 'place_of_worship',
+    religion: 'muslim',
+  };
+
+  const nameAr = (document.getElementById('add-mosque-name-ar')?.value || '').trim();
+  const nameEn = (document.getElementById('add-mosque-name-en')?.value || '').trim();
+  const denom = (document.getElementById('add-mosque-denom')?.value || '').trim();
+  const female = document.getElementById('add-mosque-female')?.checked;
+  const building = document.getElementById('add-mosque-building')?.checked;
+  const wheelchair = (document.getElementById('add-mosque-wheelchair')?.value || '').trim();
+  const wikidata = (document.getElementById('add-mosque-wikidata')?.value || '').trim();
+  const source = (document.getElementById('add-mosque-source')?.value || '').trim();
+  let comment = (document.getElementById('add-mosque-comment')?.value || '').trim();
+
+  if (nameAr) {
+    tags.name = nameAr;
+    tags['name:ar'] = nameAr;
+  } else if (nameEn) {
+    tags.name = nameEn;
+  }
+
+  if (nameEn) {
+    tags['name:en'] = nameEn;
+  }
+
+  if (denom) {
+    tags.denomination = denom;
+  }
+
+  if (female) {
+    tags['female:prayer_room'] = 'yes';
+  }
+
+  if (building) {
+    tags.building = 'mosque';
+  }
+
+  if (wheelchair) {
+    tags.wheelchair = wheelchair;
+  }
+
+  if (wikidata) {
+    tags.wikidata = wikidata;
+  }
+
+  if (!comment) {
+    comment = `Add mosque${tags.name ? ': ' + tags.name : ''} via #sa-worship-map`;
+  }
+
+  try {
+    showToast(t('addMosqueUploading'), 'info');
+    const { changesetId, nodeId } = await OsmApi.addNode({
+      lat,
+      lon,
+      tags,
+      comment,
+      source
+    });
+
+    const nodeUrl = OsmApi.nodeUrl(nodeId);
+    showToast(t('addMosqueSuccess'), 'success', {
+      link: { href: nodeUrl, text: t('addMosqueViewNode') }
+    });
+
+    // Create GeoJSON feature and add to memory datasets immediately
+    const newFeature = {
+      type: 'Feature',
+      properties: {
+        osm_id: nodeId,
+        changeset_id: changesetId,
+        geom_type: 'Point',
+        name: tags.name || 'مسجد',
+        name_en: tags['name:en'] || '',
+        name_original: tags.name || '',
+        name_en_original: tags['name:en'] || '',
+        religion: 'muslim',
+        denomination: tags.denomination || 'unknown',
+        building: tags.building || '',
+        amenity: 'place_of_worship',
+        wheelchair: tags.wheelchair || '',
+        female: tags['female:prayer_room'] || '',
+        version: 1,
+        edited_at: new Date().toISOString(),
+        last_edited_by: OsmApi.userName() || 'You',
+        _newlyAdded: true
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [lon, lat]
+      }
+    };
+
+    allPlaces.push(newFeature);
+    filteredPlaces.push(newFeature);
+
+    if (markerClusterLayer) {
+      const marker = getPlaceMarker(newFeature);
+      markerClusterLayer.addLayer(marker);
+    }
+
+    // If added from a Wikidata suggestion, remove suggestion marker
+    if (pendingMosqueSuggestionQid) {
+      const qid = pendingMosqueSuggestionQid;
+      const sugMarker = suggestionsMarkers.find(m => m.qid === qid);
+      if (sugMarker && suggestionsLayer) {
+        suggestionsLayer.removeLayer(sugMarker);
+      }
+      showToast(t('sugDirectSuccess'), 'success');
+    }
+
+    closeAddMosqueComposer();
+    updateStats();
+    updateDashboardUI();
+    showDetails(newFeature.properties, lat, lon);
+
+  } catch (err) {
+    console.error('Failed to add mosque node to OSM:', err);
+    showToast(t('addMosqueFailed', { msg: err.message }), 'error');
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
   }
 }

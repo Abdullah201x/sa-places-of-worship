@@ -93,8 +93,9 @@
       <!-- Gap Mode: Open Current Map Area in Editor to Survey/Add a Mosque -->
       <div id="gap-josm-box" class="control-group" style="display: none;">
         <h2 class="section-title">إضافة مسجد جديد</h2>
-        <p class="section-hint">بعد تحديد موقع الفجوة باستخدام مؤشر القبلة والخارطة، افتح نطاق العرض الحالي في المحرر لإضافة معلم المسجد.</p>
+        <p class="section-hint">بعد تحديد موقع الفجوة باستخدام مؤشر القبلة والخارطة، أضف المسجد كعقدة مباشرة من هنا أو افتح نطاق العرض في المحررات الخارجية.</p>
         <div class="mapper-buttons">
+          <button type="button" id="btn-open-area-direct" class="mapper-btn direct-editor">⚡ إضافة كعقدة مباشرة (الموقع الحالي)</button>
           <a id="btn-open-area-id" class="mapper-btn id-editor" href="#" target="_blank" rel="noopener noreferrer">إضافة عبر iD Editor (ويب)</a>
           <button id="btn-open-area-josm" class="mapper-btn josm-editor">إضافة عبر JOSM (تحكم عن بعد)</button>
         </div>
@@ -128,6 +129,19 @@
             <span class="slider-switch round"></span>
           </label>
           <span class="switch-label" id="qibla-switch-label">عرض مؤشر القبلة في منتصف الخريطة</span>
+        </div>
+      </div>
+
+      <!-- Add Mosque Node Mode Toggle -->
+      <div class="control-group" id="mosque-mode-section">
+        <h2 class="section-title">إضافة مسجد كعقدة (OSM Node) 🕌</h2>
+        <p class="section-hint">فعّل هذا الوضع ثم انقر في أي مكان على الخريطة لتحديد موقع المسجد وإضافته مباشرة إلى OpenStreetMap دون مغادرة الموقع.</p>
+        <div class="switch-control-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="add-mosque-mode-toggle">
+            <span class="slider-switch round"></span>
+          </label>
+          <span class="switch-label">وضع إضافة مسجد (انقر على الخريطة)</span>
         </div>
       </div>
 
@@ -784,6 +798,125 @@
         
         <div class="auth-footer">
           <span>مصدر البيانات: Geofabrik / OpenStreetMap contributors</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Mosque as OSM Node Overlay -->
+    <div id="add-mosque-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="add-mosque-modal-title">
+      <div class="auth-card add-mosque-card">
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">🕌</div>
+          <h2 id="add-mosque-modal-title">إضافة مسجد كعقدة (OSM Node)</h2>
+          <p>تتم إضافة المسجد مباشرة إلى قاعدة بيانات OpenStreetMap بحسابك كعقدة (Node) مع الوسوم المعتمدة.</p>
+        </div>
+
+        <div class="auth-body">
+          <!-- Coordinates & Hint -->
+          <div class="client-id-config" style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 242, 254, 0.2); padding: 10px 14px; border-radius: 12px; gap: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: var(--font-body); font-size: 11px; color: var(--color-text-muted);">الإحداثيات (WGS84):</span>
+              <span style="font-size: 10.5px; color: #00ff87;">✓ يمكنك سحب المؤشر على الخارطة للضبط</span>
+            </div>
+            <div id="add-mosque-coords-display" style="font-family: monospace; font-size: 13.5px; color: var(--color-primary); direction: ltr; text-align: center; font-weight: 600;">-</div>
+          </div>
+
+          <!-- Arabic Name with Quick Prefix Chips -->
+          <div class="client-id-config">
+            <label for="add-mosque-name-ar">اسم المسجد (بالعربية):</label>
+            <input type="text" id="add-mosque-name-ar" class="auth-input" style="text-align: right;" placeholder="مثال: جامع الإيمان / مسجد النور">
+            <div class="chips-container" id="mosque-prefix-chips" style="margin-top: 4px; gap: 6px;">
+              <button type="button" class="chip prefix-chip" data-prefix="جامع">جامع</button>
+              <button type="button" class="chip prefix-chip" data-prefix="مسجد">مسجد</button>
+              <button type="button" class="chip prefix-chip" data-prefix="مصلى">مصلى</button>
+            </div>
+          </div>
+
+          <!-- English Name with Smart Suggestion -->
+          <div class="client-id-config">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label for="add-mosque-name-en">الاسم بالإنجليزية (name:en):</label>
+              <button type="button" id="btn-suggest-mosque-en" class="quick-fix-btn" style="padding: 2px 8px; font-size: 11px;">✨ اقتراح الاسم الذكي</button>
+            </div>
+            <input type="text" id="add-mosque-name-en" class="auth-input" dir="ltr" placeholder="e.g. Al-Iman Mosque">
+          </div>
+
+          <!-- Denomination Dropdown -->
+          <div class="client-id-config">
+            <label for="add-mosque-denom">المذهب (denomination):</label>
+            <select id="add-mosque-denom" class="auth-input" style="cursor: pointer;">
+              <option value="sunni" selected>سني (Sunni - الافتراضي)</option>
+              <option value="shia">شيعي (Shia)</option>
+              <option value="ibadi">إباضي (Ibadi)</option>
+              <option value="">غير محدد (Unspecified)</option>
+            </select>
+          </div>
+
+          <!-- Additional Options Accordion -->
+          <details class="advanced-tags-details" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 8px 12px;">
+            <summary style="cursor: pointer; font-size: 12px; color: var(--color-secondary); font-weight: 600; user-select: none;">
+              وسوم إضافية اختيارية (مصلى نساء، مبنى، ويكي بيانات)...
+            </summary>
+            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" id="add-mosque-female" value="yes">
+                <span>مصلى نساء (female:prayer_room=yes)</span>
+              </label>
+
+              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" id="add-mosque-building" value="yes">
+                <span>المعلم يمثل مبنى مسجداً مستقلاً (building=mosque)</span>
+              </label>
+
+              <div class="client-id-config" style="margin-top: 2px;">
+                <label for="add-mosque-wheelchair">سهولة وصول ذوي الإعاقة (wheelchair):</label>
+                <select id="add-mosque-wheelchair" class="auth-input" style="cursor: pointer;">
+                  <option value="" selected>-- غير محدد --</option>
+                  <option value="yes">نعم (yes)</option>
+                  <option value="limited">محدود (limited)</option>
+                  <option value="no">لا (no)</option>
+                </select>
+              </div>
+
+              <div class="client-id-config" style="margin-top: 2px;">
+                <label for="add-mosque-wikidata">معرف ويكي بيانات (Wikidata QID):</label>
+                <input type="text" id="add-mosque-wikidata" class="auth-input" dir="ltr" placeholder="مثال: Q12345678">
+              </div>
+            </div>
+          </details>
+
+          <!-- Source & Changeset Comment -->
+          <div class="client-id-config">
+            <label for="add-mosque-source">المصدر (source):</label>
+            <select id="add-mosque-source" class="auth-input" style="cursor: pointer;">
+              <option value="local knowledge" selected>معرفة محلية (Local knowledge)</option>
+              <option value="survey">مسح ميداني (Survey)</option>
+              <option value="Esri World Imagery">صور Esri الجوية (Esri World Imagery)</option>
+              <option value="wikidata">ويكي بيانات (Wikidata)</option>
+            </select>
+          </div>
+
+          <div class="client-id-config">
+            <label for="add-mosque-comment">تعليق مجموعة التغييرات (changeset comment):</label>
+            <input type="text" id="add-mosque-comment" class="auth-input" dir="ltr" maxlength="255">
+          </div>
+
+          <!-- Auth Status / Warning Banner -->
+          <div id="add-mosque-auth-status" class="input-help" style="text-align: center; font-size: 12px; margin: 4px 0;"></div>
+
+          <!-- Submit & Cancel Buttons -->
+          <button type="button" id="btn-submit-add-mosque" class="auth-submit-btn" style="background: linear-gradient(135deg, #00ff87, #60efff); color: #071714; font-weight: 700;">
+            <span>رفع المسجد كعقدة إلى OpenStreetMap 🚀</span>
+          </button>
+
+          <button type="button" id="btn-cancel-add-mosque" class="auth-skip-btn">
+            <span>إلغاء</span>
+          </button>
+        </div>
+
+        <div class="auth-footer">
+          <span>يُنشر المعلم مباشرة على قاعدة بيانات OpenStreetMap مع وسم #sa-worship-map</span>
         </div>
       </div>
     </div>

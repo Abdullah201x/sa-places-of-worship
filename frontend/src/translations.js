@@ -63,6 +63,8 @@ addTranslations({
   sugSatellite: ['🛰️ معاينة بالأقمار الصناعية (Esri)', '🛰️ Satellite preview (Esri)'],
   sugCopyTitle: ['نسخ وسوم المسجد الجاهزة للحافظة', 'Copy ready-made mosque tags to the clipboard'],
   sugCopy: ['📋 نسخ الوسوم', '📋 Copy tags'],
+  sugDirectTitle: ['إضافة المسجد مباشرة كعقدة إلى OpenStreetMap من هذا الموقع', 'Add the mosque directly as a node to OpenStreetMap from this website'],
+  sugDirect: ['⚡ إضافة كعقدة مباشرة', '⚡ Add directly (OSM Node)'],
   sugIdTitle: ['فتح المحرر في متصفح الويب', 'Open the editor in the browser'],
   sugId: ['✏️ فتح في iD', '✏️ Open in iD'],
   sugJosmTitle: ['إرسال نقطة المسجد مباشرة لمحرر JOSM', 'Send the mosque point straight to JOSM'],
@@ -74,6 +76,20 @@ addTranslations({
   sugJosmWorking: ['جارٍ التواصل مع JOSM لتحميل المنطقة وإضافة المسجد...', 'Asking JOSM to load the area and add the mosque...'],
   sugJosmAdded: ['تمت إضافة نقطة المسجد في JOSM بنجاح! راجع الوسوم وموقع المبنى قبل الرفع.', 'Mosque point added in JOSM. Check the tags and position before uploading.'],
   sugJosmAddFailed: ['فشل JOSM في إضافة النقطة. تأكد من تفعيل "Create new objects" في إعدادات Remote Control.', 'JOSM could not add the point. Enable "Create new objects" in the Remote Control settings.'],
+  sugDirectSuccess: ['تمت إضافة مقترح ويكي بيانات كعقدة مسجد على OSM بنجاح!', 'Wikidata suggestion added directly as an OSM mosque node!'],
+
+  // Direct Mosque Node Creation
+  addMosqueSuccess: ['تمت إضافة المسجد كعقدة بنجاح إلى OpenStreetMap!', 'Mosque node added to OpenStreetMap successfully!'],
+  addMosqueViewNode: ['عرض العقدة على OSM', 'View node on OSM'],
+  addMosqueModeActiveToast: ['وضع إضافة مسجد: انقر على أي موقع في الخريطة لتحديد المسجد.', 'Add Mosque mode: click anywhere on the map to place the mosque.'],
+  addMosqueModeDeactivated: ['تم إيقاف وضع إضافة مسجد.', 'Add Mosque mode deactivated.'],
+  addMosqueContextAction: ['إضافة مسجد هنا كعقدة OSM 🕌', 'Add mosque here as OSM node 🕌'],
+  noteContextAction: ['إضافة ملاحظة OSM هنا 📝', 'Add OSM note here 📝'],
+  addMosqueLoginRequired: ['يتطلب رفع المسجد تسجيل الدخول بحساب OpenStreetMap.', 'Adding a mosque requires logging in with an OpenStreetMap account.'],
+  addMosqueUploading: ['جارٍ إنشاء العقدة ورفعها إلى OpenStreetMap...', 'Creating node and uploading to OpenStreetMap...'],
+  addMosqueFailed: ['فشل رفع المسجد: {msg}', 'Failed to add mosque: {msg}'],
+  addMosquePostedAs: ['سيتم النشر بحساب OSM: {name}', 'Will be uploaded as OSM user: {name}'],
+  addMosqueNeedsAuth: ['يجب تسجيل الدخول بحساب OpenStreetMap مع صلاحية write_api لرفع المعالم.', 'You must log in with OpenStreetMap (write_api scope) to upload nodes.'],
 
   // CARTO
   cartoBadgeOn: ['CARTO (مفعّل)', 'CARTO (on)'],
