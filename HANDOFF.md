@@ -233,9 +233,12 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 ## 9. Phase 6: Operations & Monitoring
 
 **Status (2026-10-28):**
-- ✅ In the repo, not yet deployed: `/api/healthz/freshness` (+ 3 tests), Caddy pinned to `caddy:2.11-alpine`, `.github/dependabot.yml` (npm, pip ×2, docker ×3 dirs, github-actions). `node`, `alpine` and `python` tags were already pinned.
-- ⏳ Still to do on the VPS/Coolify (needs the user): rotate the DB password, nightly backup + test restore, UptimeRobot monitors (`/healthz`, `/api/healthz`, `/api/healthz/freshness`), Coolify email notifications.
-- Decisions: UptimeRobot, email alerts, whole-DB nightly dump (14 days) on the VPS only.
+- ✅ Deployed: `/api/healthz/freshness` (GET and HEAD; UptimeRobot checks with HEAD), Caddy pinned to `caddy:2.11-alpine`, `.github/dependabot.yml` (npm, pip ×2, docker ×3 dirs, github-actions). `node`, `alpine` and `python` tags were already pinned.
+- ✅ DB password rotated by the user; verified with a forced `run.py once --force` (load + atomic swap OK, 2026-10-28).
+- ✅ UptimeRobot monitors: `/` (home page), `/api/healthz`, `/api/healthz/freshness` (account `saudiosm@gmail.com`, 5-min checks, email alerts).
+- ✅ Backup/restore verified by hand (2026-10-28): `pg_dump -Fc` of `manara` (6.4 MB) restored into a throwaway DB with identical row counts, then dropped.
+- ⏳ Still to do by the user in the Coolify UI: the **scheduled** nightly backup on `manara-db` (14 days, local), and Telegram notifications (bot token + chat ID entered in Coolify only). Decision changed from email to Telegram.
+- Restore runbook: `docker exec <manara-db> pg_dump -U manara -Fc manara -f /tmp/x.dump`; to test, `CREATE DATABASE manara_restore_test`, `pg_restore -U manara -d manara_restore_test --no-owner /tmp/x.dump`, compare counts, drop it.
 
 - **Backups (DECIDED: on the VPS only):**
   - Coolify scheduled backup of `manara-db`, nightly, kept 14 days, stored on the VPS.
