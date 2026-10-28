@@ -20,7 +20,7 @@ addTranslations({
 // OAuth2 application registered on openstreetmap.org for this site (public
 // PKCE client, scopes read_prefs write_api write_notes, redirect URI
 // https://manara.saudiosm.org/).
-export const DEFAULT_OSM_CLIENT_ID = 'FLWYiombLxXfIjsnoG25hqP5fMQZJD52WdME2gn0b60';
+export const DEFAULT_OSM_CLIENT_ID = 'TTBAYQAUONpxZxCbg_FRe-78y6A8K0DHIj1AylyCn7w';
 
 export const OSM_SCOPES = 'read_prefs write_api write_notes';
 export const CHANGESET_CREATED_BY = 'Saudi Places of Worship Map (https://manara.saudiosm.org)';
