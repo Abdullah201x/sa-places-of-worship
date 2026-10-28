@@ -2,7 +2,7 @@
 
 This document summarises the architecture, live infrastructure, completed phases (Phases 1–3 and Phase 6a), and upcoming roadmap (Phases 5, 4 and 6b) for **Manara** (`https://manara.saudiosm.org`), so another AI coding assistant can seamlessly continue the work.
 
-**Where things stand:** Phases 1–3 and Phase 5a (`/community` stats page) are done. Phase 6a (operations) is done except the Telegram alerts, which the user will set up later. **The next task is Phase 4 (accounts & shared review)** (§7), followed by Phase 5b. Nothing is half-finished in the code; `main` is clean.
+**Where things stand:** Phases 1–3, Phase 4 (accounts & shared review), Phase 5a (`/community` page), Phase 5b (leaderboard, verified edits feed, and SEO pages), and Phase 6a (operations) are done. Phase 6b (final security review) remains. Nothing is half-finished in the code; `main` is clean.
 
 - **Last updated:** 2026-10-28
 - **Repository:** `github.com/Abdullah201x/sa-places-of-worship` (branch `main` auto-deploys via Coolify)
@@ -147,9 +147,9 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 
 1. ✅ **Phase 6a** (done 2026-10-28, see §9): DB password rotated, nightly backups, uptime monitors, freshness check, pinned tags, Dependabot. Only the Telegram alerts remain, and the user will do those.
 2. ✅ **Phase 5a** (done 2026-10-28, see §8): the public `/community` stats page (`frontend/community.html`, `frontend/src/community.js`).
-3. **Phase 4 (NEXT):** accounts and shared review, using the hybrid login model.
-4. **Phase 5b:** the opt-in leaderboard, the recent-edits feed and the SEO pages.
-5. **Phase 6b:** a security review of the Phase 4 code, plus updating the backup scope (§9) once the user tables exist.
+3. ✅ **Phase 4** (done 2026-10-28, see §7): accounts and guarded shared review (hybrid model B).
+4. ✅ **Phase 5b** (done 2026-10-28, see §8): opt-in leaderboard, recent verified edits feed, and SEO pages (/region, /place, /sitemap.xml).
+5. **Phase 6b (NEXT):** final security review and verification.
 
 ---
 

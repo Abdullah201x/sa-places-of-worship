@@ -84,6 +84,19 @@ addTranslations({
   historyColGaps: ['الفجوات', 'Gaps'],
   historyColSuggestions: ['المقترحات', 'Suggestions'],
   historyColAnomalies: ['الشذوذ الهندسي', 'Anomalies'],
+
+  leaderboardEmpty: ['لا يوجد مساهمون مشاركون في لوحة الشرف حالياً.', 'No mappers participating in the leaderboard yet.'],
+  leaderboardFixes: ['{n} إصلاح موثق', '{n} verified fixes'],
+  leaderboardEdits: ['{n} مجموعة تعديلات', '{n} changesets'],
+  editsEmpty: ['لا توجد تعديلات موثقة بالوسم مسجلة بعد.', 'No verified changesets recorded yet.'],
+  editsElementsCount: ['{n} معلماً', '{n} elements'],
+  optInTitle: ['حسابك: {name}', 'Your account: {name}'],
+  optInDesc: ['المشاركة في لوحة الشرف اختيارية تماماً. عند التفعيل، يظهر اسمك ورتبتك بناءً على التعديلات الموثقة بالوسم #sa-worship-map.', 'Participation in the leaderboard is completely opt-in. When enabled, your name and rank appear based on verified edits with #sa-worship-map.'],
+  optInBtnEnable: ['تفعيل المشاركة في لوحة الشرف', 'Opt-in to Leaderboard'],
+  optInBtnDisable: ['إلغاء المشاركة (إخفاء من اللوحة)', 'Opt-out (Hide from Leaderboard)'],
+  optInActiveBadge: ['مشارك نشط في لوحة الشرف', 'Active Leaderboard Participant'],
+  optInInactiveBadge: ['غير مشارك (مخفي)', 'Not participating (Hidden)'],
+  optInGuestNotice: ['سجّل الدخول بحساب OpenStreetMap لإظهار خيارات المشاركة في لوحة الشرف.', 'Log in with your OpenStreetMap account to configure your leaderboard participation.'],
 });
 
 function escapeHtml(str) {
@@ -117,6 +130,10 @@ let tableSortAsc = false;
 
 let activeHistoryRegion = 'ALL';
 let activeHistoryMetric = 'places_count';
+
+let currentUser = null;
+let leaderboardList = [];
+let recentEditsList = [];
 
 async function fetchJson(url) {
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -801,6 +818,131 @@ async function renderHistorySection() {
   `;
 }
 
+function renderUserOptinBox() {
+  const box = document.getElementById('user-optin-box');
+  if (!box) return;
+
+  if (!currentUser) {
+    box.style.display = 'none';
+    return;
+  }
+
+  box.style.display = 'flex';
+  const isOptedIn = Boolean(currentUser.leaderboard_opt_in);
+  const badgeClass = isOptedIn ? 'badge-emerald' : 'badge-muted';
+  const badgeText = isOptedIn ? t('optInActiveBadge') : t('optInInactiveBadge');
+  const btnText = isOptedIn ? t('optInBtnDisable') : t('optInBtnEnable');
+  const btnClass = isOptedIn ? 'community-btn btn-secondary' : 'community-btn btn-primary';
+
+  box.innerHTML = `
+    <div class="user-optin-info">
+      <div class="user-avatar-wrap">
+        ${currentUser.avatar_url ? `<img src="${escapeHtml(currentUser.avatar_url)}" alt="" class="user-avatar-img">` : '<span class="user-avatar-placeholder">👤</span>'}
+      </div>
+      <div>
+        <div class="user-optin-title">
+          <strong>${escapeHtml(t('optInTitle', { name: currentUser.display_name }))}</strong>
+          <span class="user-optin-badge ${badgeClass}">${escapeHtml(badgeText)}</span>
+        </div>
+        <p class="user-optin-desc">${escapeHtml(t('optInDesc'))}</p>
+      </div>
+    </div>
+    <button type="button" id="btn-toggle-optin" class="${btnClass}">${escapeHtml(btnText)}</button>
+  `;
+
+  document.getElementById('btn-toggle-optin')?.addEventListener('click', toggleOptIn);
+}
+
+async function toggleOptIn() {
+  if (!currentUser) return;
+  const newStatus = !currentUser.leaderboard_opt_in;
+  try {
+    const res = await fetch('/api/v1/me', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-Manara-CSRF': '1' },
+      body: JSON.stringify({ leaderboard_opt_in: newStatus }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data.user;
+      renderUserOptinBox();
+      const lbRes = await fetchJson('/api/v1/leaderboard').catch(() => ({ leaderboard: [] }));
+      leaderboardList = lbRes.leaderboard || [];
+      renderLeaderboard();
+    }
+  } catch (err) {
+    console.error('Could not toggle leaderboard opt-in:', err);
+  }
+}
+
+function renderLeaderboard() {
+  const container = document.getElementById('leaderboard-container');
+  if (!container) return;
+
+  if (!leaderboardList.length) {
+    container.innerHTML = `<div class="empty-feed-box">${escapeHtml(t('leaderboardEmpty'))}</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="leaderboard-list">
+      ${leaderboardList.map((m, idx) => {
+        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
+        const medalClass = idx === 0 ? 'rank-gold' : idx === 1 ? 'rank-silver' : idx === 2 ? 'rank-bronze' : 'rank-num';
+        return `
+          <div class="leaderboard-row">
+            <span class="rank-badge ${medalClass}">${medal}</span>
+            <div class="mapper-avatar">
+              ${m.avatar_url ? `<img src="${escapeHtml(m.avatar_url)}" alt="" class="avatar-thumb">` : '<span class="avatar-fallback">👤</span>'}
+            </div>
+            <div class="mapper-meta">
+              <span class="mapper-name">${escapeHtml(m.display_name)}</span>
+              <span class="mapper-osm-total">${escapeHtml(fmtNum(m.osm_changesets))} OSM changesets</span>
+            </div>
+            <div class="mapper-stats">
+              <span class="mapper-stat-val">${escapeHtml(t('leaderboardFixes', { n: fmtNum(m.verified_fixes_count || 0) }))}</span>
+              <span class="mapper-stat-sub">${escapeHtml(t('leaderboardEdits', { n: fmtNum(m.verified_edits_count || 0) }))}</span>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderRecentEdits() {
+  const container = document.getElementById('recent-edits-container');
+  if (!container) return;
+
+  if (!recentEditsList.length) {
+    container.innerHTML = `<div class="empty-feed-box">${escapeHtml(t('editsEmpty'))}</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="recent-edits-list">
+      ${recentEditsList.map(e => `
+        <div class="recent-edit-row">
+          <div class="edit-row-top">
+            <div class="mapper-avatar-mini">
+              ${e.avatar_url ? `<img src="${escapeHtml(e.avatar_url)}" alt="" class="avatar-thumb-mini">` : '<span class="avatar-fallback-mini">👤</span>'}
+            </div>
+            <div class="edit-mapper-name">
+              <strong>${escapeHtml(e.display_name)}</strong>
+              <a href="https://www.openstreetmap.org/changeset/${escapeHtml(e.changeset_id)}" target="_blank" rel="noopener" class="changeset-link" dir="ltr">#${escapeHtml(e.changeset_id)} ↗</a>
+            </div>
+            <span class="edit-time">${escapeHtml(fmtDate(e.verified_at, true))}</span>
+          </div>
+          <div class="edit-comment">${escapeHtml(e.comment || '#sa-worship-map')}</div>
+          <div class="edit-tags-pill">
+            <span class="edit-badge">${escapeHtml(t('editsElementsCount', { n: fmtNum(e.objects_count || 0) }))}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function renderAll() {
   if (!overallStats) return;
   renderMetaBar();
@@ -810,6 +952,9 @@ function renderAll() {
   renderRegionsTable();
   populateHistoryRegionSelect();
   renderHistorySection();
+  renderUserOptinBox();
+  renderLeaderboard();
+  renderRecentEdits();
 }
 
 function bindEvents() {
@@ -881,17 +1026,23 @@ async function loadCommunityData() {
   if (errBox) errBox.style.display = 'none';
 
   try {
-    const [statsRes, regionsRes, historyRes, metaRes] = await Promise.all([
+    const [statsRes, regionsRes, historyRes, metaRes, meRes, lbRes, editsRes] = await Promise.all([
       fetchJson('/api/v1/stats'),
       fetchJson('/api/v1/stats/regions'),
       fetchJson('/api/v1/stats/history?limit=200'),
       fetchJson('/api/v1/meta').catch(() => null),
+      fetchJson('/api/v1/me').catch(() => null),
+      fetchJson('/api/v1/leaderboard').catch(() => ({ leaderboard: [] })),
+      fetchJson('/api/v1/edits/recent').catch(() => ({ edits: [] })),
     ]);
 
     overallStats = statsRes;
     metaData = metaRes;
     regionsData = enrichRegions(regionsRes.regions || []);
     allHistoryRows = historyRes.history || [];
+    currentUser = meRes;
+    leaderboardList = lbRes.leaderboard || [];
+    recentEditsList = editsRes.edits || [];
 
     renderAll();
   } catch (err) {

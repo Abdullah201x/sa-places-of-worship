@@ -247,7 +247,58 @@
         <div id="history-table-wrap" class="history-table-wrap"></div>
       </div>
     </section>
-  </main>
+
+    <!-- 5. Community Leaderboard & Verified Edits Feed -->
+    <section class="community-section" aria-labelledby="sec-community-feed-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="sec-community-feed-title">
+            <span data-lang="ar">مجتمع المساهمين والتعديلات الموثقة</span>
+            <span data-lang="en">Mapper Community &amp; Verified Edits</span>
+          </h2>
+          <p class="section-sub">
+            <span data-lang="ar">لوحة شرف المساهمين المتطوعين وسجل التعديلات الميدانية الموثقة عبر OpenStreetMap بالوسم #sa-worship-map.</span>
+            <span data-lang="en">Leaderboard of volunteer mappers and live stream of verified OpenStreetMap changesets tagged with #sa-worship-map.</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Opt-In User Box (dynamically shown if logged in) -->
+      <div id="user-optin-box" class="user-optin-card" style="display: none;"></div>
+
+      <div class="community-split-grid">
+        <!-- Leaderboard -->
+        <div class="panel-card">
+          <div class="split-head">
+            <h3 class="panel-title">
+              <span data-lang="ar">🏆 لوحة الشرف (المشاركة اختيارية)</span>
+              <span data-lang="en">🏆 Mapper Leaderboard (Opt-In)</span>
+            </h3>
+            <span class="panel-badge">
+              <span data-lang="ar">تعديلات موثقة فقط</span>
+              <span data-lang="en">Verified edits only</span>
+            </span>
+          </div>
+          <div id="leaderboard-container">
+            <div class="skeleton-block" style="min-height: 160px;"></div>
+          </div>
+        </div>
+
+        <!-- Recent Edits -->
+        <div class="panel-card">
+          <div class="split-head">
+            <h3 class="panel-title">
+              <span data-lang="ar">📡 أحدث التعديلات الميدانية</span>
+              <span data-lang="en">📡 Recent Verified Changesets</span>
+            </h3>
+            <span class="panel-badge">#sa-worship-map</span>
+          </div>
+          <div id="recent-edits-container">
+            <div class="skeleton-block" style="min-height: 160px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
 
   <footer class="page-footer community-footer">
     <div class="footer-links">

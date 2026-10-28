@@ -162,6 +162,15 @@ export const OsmApi = {
       if (!data.access_token) throw new Error('no access_token in response');
       localStorage.setItem('osm_access_token', data.access_token);
       localStorage.setItem('osm_granted_scope', data.scope || OSM_SCOPES);
+      try {
+        await fetch('/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Manara-CSRF': '1' },
+          body: JSON.stringify({ access_token: data.access_token })
+        });
+      } catch (sessionErr) {
+        console.warn('Could not establish Manara backend session:', sessionErr);
+      }
       await this.checkAuth();
       trackEvent('Login success');
       showToast(t('authSuccess'));
@@ -192,7 +201,13 @@ export const OsmApi = {
     return false;
   },
 
-  logout(reload = true) {
+  async logout(reload = true) {
+    try {
+      await fetch('/auth/logout', {
+        method: 'POST',
+        headers: { 'X-Manara-CSRF': '1' }
+      });
+    } catch (_) {}
     ['osm_access_token', 'osm_user_display_name', 'osm_granted_scope'].forEach(k => localStorage.removeItem(k));
     if (reload) {
       showToast(t('authLoggedOut'));
@@ -376,6 +391,7 @@ export const OsmApi = {
 
     if (changesetId) {
       trackEvent('Fix uploaded', { objects: results.filter(r => r.status === 'success').length });
+      this.reportEdit(changesetId);
       EditHistory.add({
         changesetId,
         timestamp: Date.now(),
@@ -388,6 +404,18 @@ export const OsmApi = {
       });
     }
     return { changesetId, results };
+  },
+
+  async reportEdit(changesetId) {
+    try {
+      await fetch('/api/v1/edits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Manara-CSRF': '1' },
+        body: JSON.stringify({ changeset_id: Number(changesetId) }),
+      });
+    } catch (e) {
+      console.warn('Could not report edit to backend:', e);
+    }
   },
 
   changesetUrl(changesetId) {

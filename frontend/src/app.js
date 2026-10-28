@@ -1338,6 +1338,7 @@ export function initializeDashboard(poiData, gapData, boundaryData, sizeData, an
   initDateSliders();
 
   ReviewMarks.prune(allPlaces);
+  ReviewMarks.sync().then(() => updateDashboardUI()).catch(() => {});
 
   // Initial display
   updateDashboardUI();

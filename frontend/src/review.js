@@ -61,12 +61,65 @@ export const ReviewMarks = {
 
   set(props, status) {
     this._load()[this.keyOf(props)] = { status, version: props.version, at: Date.now() };
+    if (localStorage.getItem('osm_access_token')) {
+      const type = osmTypeOf(props);
+      fetch(`/api/v1/reviews/${type}/${props.osm_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Manara-CSRF': '1' },
+        body: JSON.stringify({ status, version: props.version })
+      }).catch(e => console.warn('Could not sync review mark to server:', e));
+    }
     this._save();
   },
 
   clear(props) {
     delete this._load()[this.keyOf(props)];
+    if (localStorage.getItem('osm_access_token')) {
+      const type = osmTypeOf(props);
+      fetch(`/api/v1/reviews/${type}/${props.osm_id}`, {
+        method: 'DELETE',
+        headers: { 'X-Manara-CSRF': '1' }
+      }).catch(e => console.warn('Could not delete review mark on server:', e));
+    }
     this._save();
+  },
+
+  async sync() {
+    try {
+      const res = await fetch('/api/v1/reviews');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.marks) return;
+      const local = this._load();
+      let changed = false;
+      for (const [key, serverMark] of Object.entries(data.marks)) {
+        if (!local[key] || local[key].version <= serverMark.version) {
+          local[key] = {
+            status: serverMark.status,
+            version: serverMark.version,
+            at: serverMark.created_at ? new Date(serverMark.created_at).getTime() : Date.now(),
+            verified: serverMark.verified,
+          };
+          changed = true;
+        }
+      }
+      if (changed) this._save();
+
+      // One-time import of legacy local marks upon first authenticated run
+      if (localStorage.getItem('osm_access_token') && !localStorage.getItem('gcc_marks_migrated')) {
+        for (const [key, mark] of Object.entries(local)) {
+          if (!data.marks[key]) {
+            const [type, id] = key.split('/');
+            fetch(`/api/v1/reviews/${type}/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'X-Manara-CSRF': '1' },
+              body: JSON.stringify({ status: mark.status, version: mark.version || 1 }),
+            }).catch(() => {});
+          }
+        }
+        localStorage.setItem('gcc_marks_migrated', '1');
+      }
+    } catch (_) {}
   },
 
   countToday() {

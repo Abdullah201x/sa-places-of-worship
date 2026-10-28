@@ -55,8 +55,9 @@
 		}
 	}
 
-	# FastAPI data service
-	handle /api/* {
+	# FastAPI data, auth, and SEO services
+	@backend path /api/* /auth/* /region/* /place/* /sitemap.xml
+	handle @backend {
 		reverse_proxy {$MANARA_API_URL:http://manara-api:8010} {
 			header_up Host {host}
 			header_up X-Real-IP {client_ip}

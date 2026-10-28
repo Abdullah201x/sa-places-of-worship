@@ -1,0 +1,91 @@
+{% extends "base_seo.html" %}
+
+{% block title %}مساجد وأماكن العبادة في {{ region.name }} ({{ region.name_en }}) | منارة{% endblock %}
+
+{% block description %}دليل وتغطية أماكن العبادة والمساجد في {{ region.name }} ({{ region.code }}) بالمملكة العربية السعودية وفق بيانات OpenStreetMap المفتوحة، مع إحصاءات الفجوات والمقترحات.{% endblock %}
+
+{% block json_ld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "AdministrativeArea",
+  "name": "{{ region.name }}",
+  "alternateName": "{{ region.name_en }}",
+  "identifier": "{{ region.code }}",
+  "url": "{{ canonical_url }}",
+  "containsPlace": [
+    {% for place in top_places[:10] %}
+    {
+      "@type": "Mosque",
+      "name": "{{ place.name }}",
+      "url": "https://manara.saudiosm.org/place/{{ place.osm_type }}/{{ place.osm_id }}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<article>
+  <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px;">
+    <code>{{ region.code }}</code>
+    <h1>{{ region.name }}</h1>
+  </div>
+  <p class="subtitle">{{ region.name_en }} · تغطية أماكن العبادة في OpenStreetMap</p>
+
+  <div class="grid">
+    <div class="stat-card">
+      <span class="stat-val">{{ stats.places_count | default(0) }}</span>
+      <span class="stat-lbl">أماكن العبادة المرصودة</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val" style="color: var(--color-amber);">{{ stats.gaps_count | default(0) }}</span>
+      <span class="stat-lbl">فجوات التغطية السكانية</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val" style="color: #c084fc;">{{ stats.suggestions_count | default(0) }}</span>
+      <span class="stat-lbl">اقتراحات ويكي بيانات</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-val" style="color: var(--color-emerald);">{{ "%.1f"|format(stats.coverage_pct|default(0)) }}%</span>
+      <span class="stat-lbl">نسبة التغطية (OSM / الإجمالي)</span>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 24px;">
+    <a href="/#map=8/{{ center_lat }}/{{ center_lon }}" class="btn">🗺️ استكشاف {{ region.name }} على الخارطة التفاعلية</a>
+    <a href="/community" class="btn">📊 مقارنة المناطق في إحصاءات المجتمع</a>
+  </div>
+
+  <section class="panel">
+    <h2 style="font-size: 19px; margin-top: 0;">أبرز المساجد ودور العبادة المسماة في {{ region.name }}</h2>
+    <p style="font-size: 13.5px; color: var(--color-text-muted);">عينة من أماكن العبادة الموثقة بالاسم في OpenStreetMap داخل نطاق المنطقة.</p>
+    
+    <table class="seo-table">
+      <thead>
+        <tr>
+          <th>اسم المسجد</th>
+          <th>الاسم بالإنجليزية</th>
+          <th>الديانة / المذهب</th>
+          <th>تفاصيل</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in top_places %}
+        <tr>
+          <td><strong>{{ p.name }}</strong></td>
+          <td dir="ltr" style="text-align: end;">{{ p.name_en or '-' }}</td>
+          <td>{{ p.religion or 'مسلم' }} {% if p.denomination %}({{ p.denomination }}){% endif %}</td>
+          <td><a href="/place/{{ p.osm_type }}/{{ p.osm_id }}">عرض المعلم</a></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" style="text-align: center; color: var(--color-text-muted);">لا توجد أماكن مسماة مسجلة بعد.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</article>
+{% endblock %}

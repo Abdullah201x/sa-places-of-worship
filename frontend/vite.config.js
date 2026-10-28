@@ -72,6 +72,9 @@ export default defineConfig({
     proxy: {
       '/api': 'http://127.0.0.1:8010',
       '/auth': 'http://127.0.0.1:8010',
+      '/region': 'http://127.0.0.1:8010',
+      '/place': 'http://127.0.0.1:8010',
+      '/sitemap.xml': 'http://127.0.0.1:8010',
     },
   },
   preview: { port: 8000, strictPort: true, headers: { 'Content-Security-Policy': CSP } },
