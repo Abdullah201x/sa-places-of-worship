@@ -264,7 +264,8 @@ export function openEditDialog(props, fixId) {
         input.type = 'text';
         input.dir = 'ltr';
         input.placeholder = t('editNameEnPlaceholder');
-        const suggested = ArabicText.suggestEnglishName(props.name || '');
+        const arabicName = props.name_original || props['name:ar'] || props.name_ar || props.name_ar_original || props.name || '';
+        const suggested = ArabicText.suggestEnglishName(arabicName);
         if (suggested) {
           input.value = suggested;
           const suggestBtn = document.createElement('button');

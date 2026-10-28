@@ -241,7 +241,8 @@ export function getQualityIssues(props) {
   }
   
   // 2. Missing specific name (empty, or only generic words like "مسجد", "الجامع", "مصلى", "Mosque")
-  if (ArabicText.isGenericMosqueName(props.name_original)) {
+  const rawArabicName = (props.name_original || props['name:ar'] || props.name_ar || props.name_ar_original || '').trim();
+  if (ArabicText.isGenericMosqueName(rawArabicName)) {
     issues.push({
       id: 'missing_name',
       title_ar: 'اسم المسجد مفقود أو افتراضي (مثال: "مسجد")',
@@ -250,14 +251,17 @@ export function getQualityIssues(props) {
   }
   
   // 3. Missing English name translation (missing name:en or identical to Arabic name)
-  const cleanNameAr = (props.name_original || '').trim();
-  const cleanNameEn = (props.name_en_original || '').trim();
-  if (!cleanNameEn || (cleanNameAr && cleanNameAr === cleanNameEn)) {
-    issues.push({
-      id: 'missing_name_en',
-      title_ar: 'الاسم بالإنجليزية مفقود أو مطابق للاسم العربي',
-      title_en: 'English name translation (name:en) is missing or identical to the Arabic name'
-    });
+  // Exclude mosques without a name or name:ar (and mosques with only generic placeholder names)
+  const cleanNameAr = rawArabicName;
+  const cleanNameEn = (props.name_en_original || props['name:en'] || '').trim();
+  if (cleanNameAr && !ArabicText.isGenericMosqueName(cleanNameAr)) {
+    if (!cleanNameEn || cleanNameAr === cleanNameEn) {
+      issues.push({
+        id: 'missing_name_en',
+        title_ar: 'الاسم بالإنجليزية مفقود أو مطابق للاسم العربي',
+        title_en: 'English name translation (name:en) is missing or identical to the Arabic name'
+      });
+    }
   }
   
   // 4. Muslim mosque with missing denomination
@@ -3306,9 +3310,11 @@ export async function submitPendingMosqueNode() {
         osm_id: nodeId,
         changeset_id: changesetId,
         geom_type: 'Point',
-        name: tags.name || 'مسجد',
+        name: tags.name || tags['name:ar'] || 'مسجد',
         name_en: tags['name:en'] || '',
+        name_ar: tags['name:ar'] || '',
         name_original: tags.name || '',
+        name_ar_original: tags['name:ar'] || '',
         name_en_original: tags['name:en'] || '',
         religion: 'muslim',
         denomination: tags.denomination || 'unknown',

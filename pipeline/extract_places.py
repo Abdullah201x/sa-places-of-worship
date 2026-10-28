@@ -12,7 +12,7 @@ from common import (BASE_DIR, configure_utf8_output, find_pbf, is_worship_tagged
 configure_utf8_output()
 
 # Tags taken from a POI node when it is merged into the building it sits in.
-POI_TAG_KEYS = ("name", "name:en", "amenity", "religion", "denomination",
+POI_TAG_KEYS = ("name", "name:en", "name:ar", "amenity", "religion", "denomination",
                 "place_of_worship", "wheelchair", "capacity", "addr:city")
 
 
@@ -83,13 +83,19 @@ def _create_feature(osm_id, lat, lon, tags, geom_type, osm_obj):
         if tags.get("building") == "mosque" or tags.get("amenity") == "mosque":
             religion = "muslim"
 
+    name_ar = tags.get("name:ar", "")
+    name_val = tags.get("name", "")
+    name_en = tags.get("name:en", "")
+
     properties = {
         "osm_id": osm_id,
         "geom_type": geom_type,
-        "name": tags.get("name", ""),
-        "name_en": tags.get("name:en", ""),
-        "name_original": tags.get("name", ""),
-        "name_en_original": tags.get("name:en", ""),
+        "name": name_val or name_ar,
+        "name_en": name_en,
+        "name_ar": name_ar,
+        "name_original": name_val,
+        "name_ar_original": name_ar,
+        "name_en_original": name_en,
         "religion": religion,
         "denomination": tags.get("denomination", "unknown"),
         "building": tags.get("building", ""),
@@ -113,6 +119,8 @@ def _create_feature(osm_id, lat, lon, tags, geom_type, osm_obj):
 
 def _apply_name_fallbacks(properties):
     # Capture any translation if name is empty
+    if not properties["name"] and properties.get("name_ar"):
+        properties["name"] = properties["name_ar"]
     if not properties["name"] and properties["name_en"]:
         properties["name"] = properties["name_en"]
     elif not properties["name_en"] and properties["name"]:

@@ -76,7 +76,7 @@ export const Exporters = {
               p.denomination, lat, lon, p.version, p.edited_at, this._issueTitles(p).join(' | '),
               `https://www.openstreetmap.org/${this._ref(p)}`].map(cell).join(',');
     });
-    this._download(this._filename('csv'), '﻿' + [header.join(','), ...rows].join('\r\n'), 'text/csv;charset=utf-8');
+    this._download(this._filename('csv'), '\ufeff' + [header.join(','), ...rows].join('\r\n'), 'text/csv;charset=utf-8');
     showToast(t('exportDone', { n: fmtNum(list.length) }));
   },
 
@@ -138,8 +138,8 @@ export const Exporters = {
   // tag-based. Geometry/ML/history checks fall back to all places of worship.
   OVERPASS_QUERIES: {
     missing_amenity: 'nwr["building"="mosque"][!"amenity"]({{bbox}});',
-    missing_name: 'nwr["amenity"="place_of_worship"][!"name"]({{bbox}});',
-    missing_name_en: 'nwr["amenity"="place_of_worship"]["name"][!"name:en"]({{bbox}});',
+    missing_name: 'nwr["amenity"="place_of_worship"][!"name"][!"name:ar"]({{bbox}});',
+    missing_name_en: 'nwr["amenity"="place_of_worship"][~"^(name|name:ar)$"~"."][!"name:en"]({{bbox}});',
     missing_denom: 'nwr["amenity"="place_of_worship"]["religion"="muslim"][!"denomination"]({{bbox}});',
     building_yes: 'nwr["building"="yes"]["amenity"="place_of_worship"]["religion"="muslim"]({{bbox}});',
     mapped_as_node: 'node["amenity"="place_of_worship"]({{bbox}});',

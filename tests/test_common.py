@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from common import (axis_deviation, calculate_qibla_azimuth, is_generic_mosque_name,  # noqa: E402
                     normalize_arabic, ring_centroid)
+from extract_places import POI_TAG_KEYS, _create_feature, _apply_name_fallbacks  # noqa: E402
 from import_wikidata_suggestions import clean_name, is_non_mosque_entity  # noqa: E402
 
 
@@ -100,3 +101,62 @@ def test_worship_gaps_schema_and_urgency():
         first = data["cells"][0]
         assert len(first) >= 5
         assert isinstance(first[4], (int, float))
+
+
+def test_poi_tag_keys_includes_name_ar():
+    assert "name:ar" in POI_TAG_KEYS
+    assert "name" in POI_TAG_KEYS
+    assert "name:en" in POI_TAG_KEYS
+
+
+def test_create_feature_preserves_name_ar():
+    from datetime import datetime, timezone
+
+    class MockOsmObj:
+        version = 1
+        timestamp = datetime.now(timezone.utc)
+
+    # Mosque with only name:ar tag
+    f1 = _create_feature(1001, 24.5, 46.5, {"name:ar": "مسجد الهدى"}, "Point", MockOsmObj())
+    assert f1["properties"]["name_ar"] == "مسجد الهدى"
+    assert f1["properties"]["name_ar_original"] == "مسجد الهدى"
+    assert f1["properties"]["name"] == "مسجد الهدى"
+
+    # Mosque with no name at all
+    f2 = _create_feature(1002, 24.5, 46.5, {"religion": "muslim"}, "Point", MockOsmObj())
+    assert f2["properties"]["name_original"] == ""
+    assert f2["properties"]["name_ar"] == ""
+    assert f2["properties"]["name_ar_original"] == ""
+    assert f2["properties"]["name"] == "Mosque"
+
+
+def test_missing_name_en_excludes_unnamed_mosques():
+    """Verify quality issues logic: mosques without name or name:ar must NOT be flagged as missing_name_en."""
+    def check_missing_name_en(props):
+        raw_ar = (props.get("name_original") or props.get("name:ar") or props.get("name_ar") or props.get("name_ar_original") or "").strip()
+        clean_en = (props.get("name_en_original") or props.get("name:en") or "").strip()
+        if raw_ar and not is_generic_mosque_name(raw_ar):
+            if not clean_en or raw_ar == clean_en:
+                return True
+        return False
+
+    # 1. Unnamed mosque (no name, no name:ar) -> NOT flagged
+    assert not check_missing_name_en({"name_original": "", "name_en_original": ""})
+    assert not check_missing_name_en({})
+
+    # 2. Generic name ("مسجد", "Mosque") -> NOT flagged
+    assert not check_missing_name_en({"name_original": "مسجد", "name_en_original": ""})
+    assert not check_missing_name_en({"name_original": "Mosque", "name_en_original": ""})
+
+    # 3. Named mosque with missing English name -> FLAGGED
+    assert check_missing_name_en({"name_original": "جامع الملك فهد", "name_en_original": ""})
+
+    # 4. Named mosque with only name:ar and missing English name -> FLAGGED
+    assert check_missing_name_en({"name:ar": "مسجد قباء", "name_en_original": ""})
+
+    # 5. Named mosque with identical English name -> FLAGGED
+    assert check_missing_name_en({"name_original": "مسجد قباء", "name_en_original": "مسجد قباء"})
+
+    # 6. Named mosque with valid English name -> NOT flagged
+    assert not check_missing_name_en({"name_original": "مسجد قباء", "name_en_original": "Quba Mosque"})
+
