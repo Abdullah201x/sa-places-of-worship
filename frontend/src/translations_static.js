@@ -282,6 +282,8 @@ addStaticTranslations({
   "الاسم بالإنجليزية (name:en):": "English name (name:en):",
   "✨ اقتراح الاسم الذكي": "✨ Smart name suggest",
   "المذهب (denomination):": "Denomination (denomination):",
+  "غير محدد (Unspecified - الافتراضي)": "Unspecified (Default)",
+  "سني (Sunni)": "Sunni",
   "سني (Sunni - الافتراضي)": "Sunni (Default)",
   "شيعي (Shia)": "Shia",
   "إباضي (Ibadi)": "Ibadi",
