@@ -84,3 +84,4 @@ def get_recent_edits(
         "count": len(items),
         "edits": items,
     }
+

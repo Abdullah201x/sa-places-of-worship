@@ -151,3 +151,4 @@ async def report_and_verify_edit(
         "objects_count": len(objects),
         "verified_marks_updated": updated_marks_count,
     }
+

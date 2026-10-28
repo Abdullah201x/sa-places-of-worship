@@ -66,3 +66,4 @@ def init_app_tables(conn):
         CREATE INDEX IF NOT EXISTS idx_edits_osm_uid ON edits (osm_uid);
         CREATE INDEX IF NOT EXISTS idx_edits_created_at ON edits (created_at DESC);
         """)
+

@@ -182,3 +182,4 @@ def admin_revoke_user_marks(
         "status": "ok",
         "revoked_marks_count": deleted_count,
     }
+

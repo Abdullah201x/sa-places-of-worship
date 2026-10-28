@@ -215,3 +215,4 @@ def delete_me(
 
     clear_session_cookie(response, request)
     return {"status": "ok", "deleted": True}
+

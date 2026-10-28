@@ -147,3 +147,4 @@ def require_admin(user: dict = Depends(get_current_user)) -> dict:
             detail="Admin privileges required.",
         )
     return user
+

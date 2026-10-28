@@ -384,3 +384,4 @@ def test_get_sitemap(client, db_mocks):
     assert "<loc>https://manara.saudiosm.org/</loc>" in res.text
     assert "<loc>https://manara.saudiosm.org/region/SA-01</loc>" in res.text
     assert "<loc>https://manara.saudiosm.org/place/way/111</loc>" in res.text
+
