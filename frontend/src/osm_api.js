@@ -47,7 +47,12 @@ export const OsmApi = {
 
   // A custom client ID (advanced settings) wins over the built-in one.
   clientId() {
-    return (localStorage.getItem('osm_oauth_client_id') || '').trim() || DEFAULT_OSM_CLIENT_ID;
+    const custom = (localStorage.getItem('osm_oauth_client_id') || '').trim();
+    if (custom === 'FLWYiombLxXfIjsnoG25hqP5fMQZJD52WdME2gn0b60' || custom === '66V3GYmV7X9ZP9zIimXwk1Pi-R2YWBLz2peCFLjcImE') {
+      localStorage.removeItem('osm_oauth_client_id');
+      return DEFAULT_OSM_CLIENT_ID;
+    }
+    return custom || DEFAULT_OSM_CLIENT_ID;
   },
 
   // Same address with or without index.html, always with a trailing slash,

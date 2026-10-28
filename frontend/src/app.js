@@ -2752,7 +2752,13 @@ export function setupEventListeners() {
   const clientIdInput = document.getElementById('osm-client-id');
   // Only a custom client ID is shown; empty means the built-in one.
   if (clientIdInput) {
-    clientIdInput.value = localStorage.getItem('osm_oauth_client_id') || '';
+    const custom = (localStorage.getItem('osm_oauth_client_id') || '').trim();
+    if (custom === 'FLWYiombLxXfIjsnoG25hqP5fMQZJD52WdME2gn0b60' || custom === '66V3GYmV7X9ZP9zIimXwk1Pi-R2YWBLz2peCFLjcImE') {
+      localStorage.removeItem('osm_oauth_client_id');
+      clientIdInput.value = '';
+    } else {
+      clientIdInput.value = custom;
+    }
   }
 
   const redirectUriDisplay = document.getElementById('osm-redirect-uri-display');
