@@ -11,12 +11,12 @@ router = APIRouter(tags=["health"])
 MAX_DATASET_AGE_HOURS = float(os.environ.get("MANARA_MAX_DATASET_AGE_HOURS", "72"))
 
 
-@router.get("/api/healthz")
+@router.api_route("/api/healthz", methods=["GET", "HEAD"])
 def healthz():
     return {"status": "ok"}
 
 
-@router.get("/api/healthz/freshness")
+@router.api_route("/api/healthz/freshness", methods=["GET", "HEAD"])
 def freshness(conn=Depends(get_db)):
     """503 when the published dataset is older than MANARA_MAX_DATASET_AGE_HOURS,
     so an external monitor also catches a silently failing pipeline."""

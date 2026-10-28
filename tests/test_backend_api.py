@@ -75,6 +75,12 @@ def test_freshness_no_dataset():
     assert res.json()["status"] == "stale"
 
 
+def test_health_endpoints_accept_head(client):
+    # UptimeRobot's free tier checks with HEAD.
+    assert client.head("/api/healthz").status_code == 200
+    assert client.head("/api/healthz/freshness").status_code in (200, 503)
+
+
 def test_suggestions_bbox_validation(client):
     # Missing bbox parameter
     res = client.get("/api/v1/suggestions")
