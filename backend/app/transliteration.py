@@ -407,3 +407,4 @@ def transliterate_mosque_name(arabic_name: str) -> dict:
         "type": mosque_type,
         "confidence": confidence,
     }
+

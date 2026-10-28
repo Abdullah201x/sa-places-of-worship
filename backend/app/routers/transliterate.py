@@ -31,3 +31,4 @@ def transliterate_post(req: TransliterationRequest):
         raise HTTPException(status_code=400, detail="Name cannot be empty.")
     result = transliterate_mosque_name(req.name)
     return result
+

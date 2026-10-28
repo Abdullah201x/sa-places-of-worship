@@ -53,3 +53,4 @@ def test_transliterate_endpoint():
         assert res_post.status_code == 200
         data_post = res_post.json()
         assert data_post["name_en"] == "Al-Taqwa Mosque"
+

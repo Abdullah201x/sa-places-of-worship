@@ -122,3 +122,4 @@ flowchart TD
 2. **Step 2:** Integrate Mosque Amenities (female prayer spaces, wheelchair access, funeral prayer indicators) into the pipeline and UI (Pillar 2).
 3. **Step 3:** Deploy the "Manara Field" PWA / mobile quick verification tool (Pillar 3).
 4. **Step 4:** Transition heavy layers to Vector Tiles (PMTiles / MVT) for lightning-fast performance (Pillar 4).
+
