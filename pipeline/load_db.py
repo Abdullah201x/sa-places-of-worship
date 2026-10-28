@@ -47,7 +47,7 @@ def init_db(conn):
         CREATE INDEX IF NOT EXISTS idx_regions_geom ON regions USING GIST (geom);
 
         CREATE TABLE IF NOT EXISTS places (
-            id SERIAL PRIMARY KEY,
+            id INT PRIMARY KEY,
             osm_type VARCHAR(16) NOT NULL,
             osm_id BIGINT NOT NULL,
             version INT,
@@ -66,7 +66,7 @@ def init_db(conn):
             area_m2 DOUBLE PRECISION,
             anomaly_score DOUBLE PRECISION,
             qibla_dev DOUBLE PRECISION,
-            region_code VARCHAR(10) REFERENCES regions(code),
+            region_code VARCHAR(10),
             dataset_id VARCHAR(64)
         );
         CREATE INDEX IF NOT EXISTS idx_places_osm ON places (osm_type, osm_id);
@@ -76,25 +76,25 @@ def init_db(conn):
         CREATE INDEX IF NOT EXISTS idx_places_religion ON places (religion);
 
         CREATE TABLE IF NOT EXISTS gaps (
-            id SERIAL PRIMARY KEY,
+            id INT PRIMARY KEY,
             grid_x INT NOT NULL,
             grid_y INT NOT NULL,
             road_length_m DOUBLE PRECISION NOT NULL,
             gap_score DOUBLE PRECISION NOT NULL,
             geom GEOMETRY(Point, 4326) NOT NULL,
-            region_code VARCHAR(10) REFERENCES regions(code)
+            region_code VARCHAR(10)
         );
         CREATE INDEX IF NOT EXISTS idx_gaps_geom ON gaps USING GIST (geom);
         CREATE INDEX IF NOT EXISTS idx_gaps_region ON gaps (region_code);
 
         CREATE TABLE IF NOT EXISTS suggestions (
-            id SERIAL PRIMARY KEY,
+            id INT PRIMARY KEY,
             wikidata_id VARCHAR(32) NOT NULL,
             name TEXT DEFAULT '',
             name_norm TEXT DEFAULT '',
             name_en TEXT DEFAULT '',
             geom GEOMETRY(Point, 4326) NOT NULL,
-            region_code VARCHAR(10) REFERENCES regions(code)
+            region_code VARCHAR(10)
         );
         CREATE INDEX IF NOT EXISTS idx_suggestions_wikidata ON suggestions (wikidata_id);
         CREATE INDEX IF NOT EXISTS idx_suggestions_geom ON suggestions USING GIST (geom);
@@ -110,8 +110,8 @@ def init_db(conn):
 
         CREATE TABLE IF NOT EXISTS region_stats_history (
             id SERIAL PRIMARY KEY,
-            version VARCHAR(64) REFERENCES dataset_versions(version),
-            region_code VARCHAR(10) REFERENCES regions(code),
+            version VARCHAR(64),
+            region_code VARCHAR(10),
             places_count INT NOT NULL DEFAULT 0,
             gaps_count INT NOT NULL DEFAULT 0,
             suggestions_count INT NOT NULL DEFAULT 0,
@@ -180,7 +180,7 @@ def load_staging_data(conn, data_dir=BASE_DIR):
             places_data = json.load(f)
 
         places_rows = []
-        for feat in places_data.get("features", []):
+        for idx, feat in enumerate(places_data.get("features", []), start=1):
             p = feat.get("properties", {})
             geom = feat.get("geometry", {})
             coords = geom.get("coordinates", [0, 0])
@@ -188,12 +188,20 @@ def load_staging_data(conn, data_dir=BASE_DIR):
             name = p.get("name", "")
             name_norm = normalize_arabic(name) if name else ""
 
-            area_m2 = sizes.get(osm_id)
+            size_val = sizes.get(osm_id) or sizes.get(str(osm_id))
+            if isinstance(size_val, dict):
+                area_m2 = size_val.get("area_m2")
+            elif isinstance(size_val, (int, float)):
+                area_m2 = float(size_val)
+            else:
+                area_m2 = None
+
             anom_info = anomalies.get(str(osm_id)) or anomalies.get(osm_id) or {}
             anom_score = anom_info.get("anomaly_score") if isinstance(anom_info, dict) else None
-            qibla_dev = anom_info.get("qibla_deviation") if isinstance(anom_info, dict) else None
+            qibla_dev = (anom_info.get("qibla_dev") or anom_info.get("qibla_deviation")) if isinstance(anom_info, dict) else None
 
             places_rows.append((
+                idx,
                 p.get("geom_type", "node"),
                 osm_id,
                 p.get("version"),
@@ -219,17 +227,17 @@ def load_staging_data(conn, data_dir=BASE_DIR):
         with conn.cursor() as cur:
             with cur.copy("""
             COPY places_staging (
-                osm_type, osm_id, version, edited_at, name, name_norm, name_en,
+                id, osm_type, osm_id, version, edited_at, name, name_norm, name_en,
                 religion, denomination, building, amenity, poi_node_id, tags,
                 geom_type, geom, area_m2, anomaly_score, qibla_dev, dataset_id
             ) FROM STDIN
             """) as copy:
                 for r in places_rows:
-                    geom_wkt = f"SRID=4326;POINT({r[14]} {r[15]})"
+                    geom_wkt = f"SRID=4326;POINT({r[15]} {r[16]})"
                     copy.write_row((
-                        r[0], r[1], r[2], r[3], r[4], r[5], r[6],
-                        r[7], r[8], r[9], r[10], r[11], r[12],
-                        r[13], geom_wkt, r[16], r[17], r[18], r[19]
+                        r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7],
+                        r[8], r[9], r[10], r[11], r[12], r[13],
+                        r[14], geom_wkt, r[17], r[18], r[19], r[20]
                     ))
         print(f"  [OK] Ingested {len(places_rows)} places into places_staging.")
 
@@ -239,19 +247,19 @@ def load_staging_data(conn, data_dir=BASE_DIR):
             gaps_data = json.load(f)
         grid_size = gaps_data.get("grid_size", 0.004)
         gaps_rows = []
-        for cell in gaps_data.get("cells", []):
+        for idx, cell in enumerate(gaps_data.get("cells", []), start=1):
             gx, gy, road_len, gap_score = cell[0], cell[1], cell[2], cell[3]
             lon = round(gx * grid_size, 6)
             lat = round(gy * grid_size, 6)
-            gaps_rows.append((gx, gy, road_len, gap_score, lon, lat))
+            gaps_rows.append((idx, gx, gy, road_len, gap_score, lon, lat))
 
         with conn.cursor() as cur:
             with cur.copy("""
-            COPY gaps_staging (grid_x, grid_y, road_length_m, gap_score, geom) FROM STDIN
+            COPY gaps_staging (id, grid_x, grid_y, road_length_m, gap_score, geom) FROM STDIN
             """) as copy:
                 for r in gaps_rows:
-                    geom_wkt = f"SRID=4326;POINT({r[4]} {r[5]})"
-                    copy.write_row((r[0], r[1], r[2], r[3], geom_wkt))
+                    geom_wkt = f"SRID=4326;POINT({r[5]} {r[6]})"
+                    copy.write_row((r[0], r[1], r[2], r[3], r[4], geom_wkt))
         print(f"  [OK] Ingested {len(gaps_rows)} gaps into gaps_staging.")
 
     # 5. Ingest Suggestions
@@ -259,13 +267,15 @@ def load_staging_data(conn, data_dir=BASE_DIR):
         with open(suggestions_file, "r", encoding="utf-8") as f:
             sug_data = json.load(f)
         sug_rows = []
-        for feat in sug_data.get("features", []):
+        for idx, feat in enumerate(sug_data.get("features", []), start=1):
             p = feat.get("properties", {})
             coords = feat.get("geometry", {}).get("coordinates", [0, 0])
-            name = p.get("name", "")
+            name = p.get("name") or p.get("name_ar", "")
             name_norm = normalize_arabic(name) if name else ""
+            wikidata_id = p.get("qid") or p.get("wikidata_id") or p.get("id", "")
             sug_rows.append((
-                p.get("wikidata_id") or p.get("id", ""),
+                idx,
+                wikidata_id,
                 name,
                 name_norm,
                 p.get("name_en", ""),
@@ -275,11 +285,11 @@ def load_staging_data(conn, data_dir=BASE_DIR):
 
         with conn.cursor() as cur:
             with cur.copy("""
-            COPY suggestions_staging (wikidata_id, name, name_norm, name_en, geom) FROM STDIN
+            COPY suggestions_staging (id, wikidata_id, name, name_norm, name_en, geom) FROM STDIN
             """) as copy:
                 for r in sug_rows:
-                    geom_wkt = f"SRID=4326;POINT({r[4]} {r[5]})"
-                    copy.write_row((r[0], r[1], r[2], r[3], geom_wkt))
+                    geom_wkt = f"SRID=4326;POINT({r[5]} {r[6]})"
+                    copy.write_row((r[0], r[1], r[2], r[3], r[4], geom_wkt))
         print(f"  [OK] Ingested {len(sug_rows)} suggestions into suggestions_staging.")
 
     # 6. Spatial Assignment (ST_Within)
@@ -314,25 +324,44 @@ def load_staging_data(conn, data_dir=BASE_DIR):
         """, (version, pbf_date, now_ts, json.dumps(summary)))
 
         cur.execute("""
+        WITH place_counts AS (
+            SELECT region_code,
+                   COUNT(*) AS places_count,
+                   COUNT(*) FILTER (WHERE anomaly_score IS NOT NULL) AS anomalies_count
+            FROM places_staging
+            WHERE region_code IS NOT NULL
+            GROUP BY region_code
+        ),
+        gap_counts AS (
+            SELECT region_code, COUNT(*) AS gaps_count
+            FROM gaps_staging
+            WHERE region_code IS NOT NULL
+            GROUP BY region_code
+        ),
+        sug_counts AS (
+            SELECT region_code, COUNT(*) AS suggestions_count
+            FROM suggestions_staging
+            WHERE region_code IS NOT NULL
+            GROUP BY region_code
+        )
         INSERT INTO region_stats_history (
             version, region_code, places_count, gaps_count, suggestions_count, anomalies_count, recorded_at
         )
         SELECT
             %s AS version,
             r.code AS region_code,
-            COUNT(DISTINCT p.id) AS places_count,
-            COUNT(DISTINCT g.id) AS gaps_count,
-            COUNT(DISTINCT s.id) AS suggestions_count,
-            COUNT(DISTINCT p.id) FILTER (WHERE p.anomaly_score IS NOT NULL) AS anomalies_count,
+            COALESCE(p.places_count, 0),
+            COALESCE(g.gaps_count, 0),
+            COALESCE(s.suggestions_count, 0),
+            COALESCE(p.anomalies_count, 0),
             %s::timestamptz AS recorded_at
         FROM regions_staging r
-        LEFT JOIN places_staging p ON p.region_code = r.code
-        LEFT JOIN gaps_staging g ON g.region_code = r.code
-        LEFT JOIN suggestions_staging s ON s.region_code = r.code
-        GROUP BY r.code
+        LEFT JOIN place_counts p ON p.region_code = r.code
+        LEFT JOIN gap_counts g ON g.region_code = r.code
+        LEFT JOIN sug_counts s ON s.region_code = r.code
         ON CONFLICT (version, region_code) DO NOTHING;
         """, (version, now_ts))
-    print(f"  [OK] Regional history stats recorded for version {version}.")
+        print(f"  [OK] Regional history stats recorded for version {version}.")
 
 
 def swap_staging_to_production(conn):
