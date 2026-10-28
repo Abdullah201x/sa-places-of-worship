@@ -93,9 +93,13 @@ def init_db(conn):
             name TEXT DEFAULT '',
             name_norm TEXT DEFAULT '',
             name_en TEXT DEFAULT '',
+            nearest_osm_m INT,
+            is_unnamed BOOLEAN DEFAULT FALSE,
             geom GEOMETRY(Point, 4326) NOT NULL,
             region_code VARCHAR(10)
         );
+        ALTER TABLE suggestions ADD COLUMN IF NOT EXISTS nearest_osm_m INT;
+        ALTER TABLE suggestions ADD COLUMN IF NOT EXISTS is_unnamed BOOLEAN DEFAULT FALSE;
         CREATE INDEX IF NOT EXISTS idx_suggestions_wikidata ON suggestions (wikidata_id);
         CREATE INDEX IF NOT EXISTS idx_suggestions_geom ON suggestions USING GIST (geom);
         CREATE INDEX IF NOT EXISTS idx_suggestions_name_norm_trgm ON suggestions USING GIN (name_norm gin_trgm_ops);
@@ -282,17 +286,19 @@ def load_staging_data(conn, data_dir=BASE_DIR):
                 name,
                 name_norm,
                 p.get("name_en", ""),
+                p.get("nearest_osm_m"),
+                bool(p.get("is_unnamed", False)),
                 coords[0],
                 coords[1],
             ))
 
         with conn.cursor() as cur:
             with cur.copy("""
-            COPY suggestions_staging (id, wikidata_id, name, name_norm, name_en, geom) FROM STDIN
+            COPY suggestions_staging (id, wikidata_id, name, name_norm, name_en, nearest_osm_m, is_unnamed, geom) FROM STDIN
             """) as copy:
                 for r in sug_rows:
-                    geom_wkt = f"SRID=4326;POINT({r[5]} {r[6]})"
-                    copy.write_row((r[0], r[1], r[2], r[3], r[4], geom_wkt))
+                    geom_wkt = f"SRID=4326;POINT({r[7]} {r[8]})"
+                    copy.write_row((r[0], r[1], r[2], r[3], r[4], r[5], r[6], geom_wkt))
         print(f"  [OK] Ingested {len(sug_rows)} suggestions into suggestions_staging.")
 
     # 6. Spatial Assignment (ST_Within)

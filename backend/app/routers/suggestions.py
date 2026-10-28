@@ -39,6 +39,8 @@ def get_suggestions(
             s.wikidata_id,
             s.name,
             s.name_en,
+            s.nearest_osm_m,
+            s.is_unnamed,
             s.region_code,
             ST_X(s.geom) AS lon,
             ST_Y(s.geom) AS lat
@@ -54,9 +56,13 @@ def get_suggestions(
             "type": "Feature",
             "id": r["wikidata_id"],
             "properties": {
+                "qid": r["wikidata_id"],
                 "wikidata_id": r["wikidata_id"],
                 "name": r["name"],
+                "name_ar": r["name"],
                 "name_en": r["name_en"],
+                "nearest_osm_m": r["nearest_osm_m"],
+                "is_unnamed": bool(r["is_unnamed"]),
                 "region_code": r["region_code"],
             },
             "geometry": {

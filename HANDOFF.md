@@ -1,267 +1,226 @@
-# Manara (manara.saudiosm.org): project handoff
+# Manara (manara.saudiosm.org): Project Handoff
 
-This document summarises the plan to turn the site from a static GitHub Pages app into a real web app on a VPS: what's done, what's in progress, and what's next. It was written at the end of a Claude Code session on 2026-10-28 so another assistant can continue the work.
+This document summarises the architecture, live infrastructure, completed phases (Phases 1–3), and upcoming roadmap (Phases 4–6) for **Manara** (`https://manara.saudiosm.org`), so another AI coding assistant can seamlessly continue the work.
 
-Repo: `github.com/Abdullah201x/sa-places-of-worship`. Coolify deploys from branch `main`. Local checkout: `C:\Users\abdul\Desktop\GCC20260707`.
+- **Last updated:** 2026-10-28
+- **Repository:** `github.com/Abdullah201x/sa-places-of-worship` (branch `main` auto-deploys via Coolify)
+- **Local checkout:** `C:\Users\abdul\Desktop\GCC20260707`
+- **VPS SSH:** `root@159.195.192.148`
 
 ---
 
-## 1. What the project is
+## 1. What the Project Is
 
 Manara is an interactive Leaflet map of places of worship in Saudi Arabia, built from OpenStreetMap data. The UI is Arabic (RTL) by default, with an English toggle. It has three modes:
-- POI density;
-- coverage gaps;
-- a data-improvement mode for mappers: issue detection, a review queue, exports, and in-app tag fixes through the OSM API with OAuth2 PKCE.
+- **POI density** (clustering + heatmap);
+- **Coverage gaps** (road-network grid cells lacking nearby mosques);
+- **Data-improvement mode for mappers**: issue detection, a review queue, Wikidata suggestions (~54.5k missing mosques), exports (GeoJSON, CSV, KML, OSM XML, MapRoulette), and in-app tag fixes through the OSM API with OAuth2 PKCE.
 
-A Python pipeline (osmium, shapely, scikit-learn) turns an OSM `.pbf` extract into these JSON datasets:
+A daily server-side Python pipeline (`pipeline/`, using `osmium`, `shapely`, `scikit-learn`, `psycopg`) turns Geofabrik's public GCC `.pbf` extract into static compressed JSON/GeoJSON datasets **and** loads them atomically into a PostGIS 17 database backing a public read-only FastAPI service (`backend/`).
 
-| File | Contents |
-|---|---|
-| `summary.json` | Counts, `updated_at` (also the frontend's cache-busting version), `pbf_date` |
-| `places_of_worship_sa.geojson` | About 14k places |
-| `worship_gaps_sa.json` | Gap grid |
-| `sa_boundary.geojson` | Country boundary |
-| `mosque_sizes.json` | Footprint areas |
-| `mosque_anomalies.json` | ML anomaly flags and Qibla deviation |
-| `suggested_mosques_sa.geojson` | About 54k Wikidata suggestions, from `osm-x-wikidata/data/sa.json` |
-
-Until now, a desktop updater (`C:\Users\abdul\Desktop\update osm\update_projects.py`) ran the pipeline on Windows and committed the data files to git.
+| Dataset File | Records | Contents |
+|---|---|---|
+| `summary.json` | — | Counts, `updated_at` (also the frontend's cache-busting `?v=` token), `pbf_date` |
+| `places_of_worship_sa.geojson` | ~14,021 | OSM places of worship (`node`, `way`, `relation` centroids + tags, `version`, `edited_at`) |
+| `worship_gaps_sa.json` | ~59,695 | Road-network gap grid cells (`[grid_x, grid_y, road_length_m, gap_score]`) |
+| `sa_boundary.geojson` | 1 | Saudi Arabia national boundary (`ISO3166-1=SA`, `admin_level=2`) |
+| `sa_regions.geojson` | 13 | All 13 Saudi administrative provinces (`SA-01` to `SA-14`, `admin_level=4`) |
+| `mosque_sizes.json` | ~5,686 | Building footprint areas (`{osm_id: {"area_m2": float}}`) |
+| `mosque_anomalies.json` | ~5,686 | IsolationForest anomaly scores (`is_anomaly`, `anomaly_score`) and Qibla deviation (`qibla_dev`) |
+| `suggested_mosques_sa.geojson` | ~54,504 | Wikidata mosques >100 m from any OSM place of worship (`qid`, `name_ar`, `name_en`, `nearest_osm_m`, `is_unnamed`) |
 
 ---
 
-## 2. Hard constraints (must respect)
+## 2. Hard Constraints (MUST RESPECT)
 
-### VPS
+### VPS & Coolify Topology
 See `VPS_HARDWARE_ANALYSIS.md`.
-- 2 vCPU (AMD EPYC Genoa), 3.8 GiB RAM (about 2.3 GiB free), 2 GiB swap, 106 GiB free disk, Debian 13.
-- It runs **Coolify 4.5**, and **Traefik (`coolify-proxy`) owns ports 80/443**. There is no host Caddy or nginx. Never bind host ports 80/443.
-- It also hosts **rahmahealth.net**. Don't touch Rahma's containers.
-- Keep Manara separate from Rahma. The one exception, which the user chose: Manara uses the **shared Umami** (v3.0.3, `analytics.rahmahealth.net`) as its own website, ID `401cdcc1-cbfb-4962-8fc7-9d906f900bff`.
+- **Hardware:** 2 vCPU (AMD EPYC Genoa), 3.8 GiB RAM (~2.2 GiB available with all 4 Manara containers running), 2 GiB swap, 106 GiB free disk, Debian 13.
+- **Orchestrator:** **Coolify 4.5**. **Traefik (`coolify-proxy`) owns host ports 80/443**. There is no host Caddy or nginx. Never bind host ports 80/443.
+- **Neighboring services:** The VPS also hosts **rahmahealth.net** (`nn0yw94zrb6w7lbgpmzt3jko`). **Never touch Rahma's containers.**
+- **Shared Analytics:** Keep Manara completely isolated from Rahma, with the single user-approved exception that Manara uses the **shared Umami** instance (v3.0.3, `analytics.rahmahealth.net`) as its own website, ID `401cdcc1-cbfb-4962-8fc7-9d906f900bff`.
 
-### Memory caps
-- The pipeline container is limited to `cpus: 1.5` and `memory: 1536M`, and must **never exceed 2 GiB**.
-- PostGIS, when added, should be about 512M with `shared_buffers=128MB`.
+### Live Coolify Resources (on Docker network `coolify`)
 
-### OSM compliance (the user is explicit about this)
-- **No bulk reads from api.openstreetmap.org, ever.**
+| Service | Coolify UUID / Container Prefix | Image / Build | Port | Memory Cap | Actual RAM | Notes |
+|---|---|---|---|---|---|---|
+| **Web (Caddy + SPA)** | `qri8jmjjfbuaiwyfwbunrjvn` | Root `Dockerfile` | `:80` | — | ~15 MiB | Public domain `https://manara.saudiosm.org`; mounts `/data/manara/published:/srv/manara/published:ro` |
+| **Pipeline Worker** | `e3xakpyxk2xmq19aqpyvjdjq` (`manara-pipeline`) | `pipeline/Dockerfile` | None | `1.5 GiB` (`1.5 CPU`) | ~17 MiB idle (~970 MiB peak) | Runs `python run.py schedule` (daily 23:30 UTC / 02:30 Riyadh); mounts volume `manara-state:/state` and host `/data/manara/published:/published` |
+| **FastAPI Backend** | `mp6ebt0ybcqvpmk4bke8d56w` (`manara-api`) | `backend/Dockerfile` | `:8010` | `256 MiB` | ~45 MiB | Consistent container name enabled; Docker network alias `manara-api` on `coolify` network; proxied by Caddy `handle /api/*` |
+| **PostGIS Database** | `9uzoip4gqaxybg3e5oymh8sg` (`manara-db`) | `postgis/postgis:17-3.5-alpine` | `:5432` | `512 MiB` | ~241 MiB | Database `manara`, user `manara`, extensions `postgis` and `pg_trgm` enabled |
+
+- **Internal `MANARA_DATABASE_URL`** (configured on both `manara-pipeline` and `manara-api`):
+  ```text
+  postgresql://manara:ZXhAu4Iw2PB5XQauQhAP54AjMe0Yk0vPnNhRPB8ymMl7AnEfH5puAgVLCjrslJqx@9uzoip4gqaxybg3e5oymh8sg:5432/manara
+  ```
+
+### OSM Compliance (Strict Requirement)
+- **No bulk reads from `api.openstreetmap.org`, ever.**
 - Bulk data comes only from **Geofabrik's public** GCC extract (`https://download.geofabrik.de/asia/gcc-states-latest.osm.pbf`):
-  - downloaded **once**;
-  - then kept current with Geofabrik's **daily diffs** using `pyosmium-up-to-date`.
-- The public extract drops `user`, `uid` and `changeset`, but keeps `version` and `timestamp`.
-  - The app only uses the dropped fields for the "last edited by / UID / changeset" rows in the details panel (`frontend/src/app.js` around lines 1730–1770).
-  - Those rows will be **fetched lazily**: one `GET /api/0.6/{type}/{id}.json` from the **user's own browser**, only when a logged-in mapper opens a place, cached in `sessionStorage` by type, id and version. No prefetching.
+  - downloaded **once** to `/state/gcc-states.osm.pbf`;
+  - kept current with Geofabrik's **daily diffs** using `pyosmium-up-to-date`.
+- The public extract drops `user`, `uid`, and `changeset`, but keeps `version` and `timestamp`.
+  - The app only uses the dropped fields for the "last edited by / UID / changeset" rows in the details panel (`frontend/src/app.js`).
+  - Those rows are **fetched lazily**: one `GET /api/0.6/{type}/{id}.json` from the **user's own browser** (`OsmApi.fetchLastEdit` in `frontend/src/osm_api.js`), only when a logged-in mapper opens a place, cached in `sessionStorage` by `osm_meta:${type}/${id}@${version}`. Guests see a GDPR notice and make zero OSM API calls.
 - Server-side OSM writes (Phase 4) must:
   - send User-Agent `Manara/1.0 (+https://manara.saudiosm.org)`;
   - respect 429 `Retry-After`;
-  - apply per-user limits (about 10 changesets per hour, at most 50 objects per changeset);
+  - apply per-user limits (~10 changesets/hour, max 50 objects/changeset);
   - always close changesets;
-  - never offer a "fix all".
+  - never offer a "fix all" button.
 - Map tiles come from Esri and CARTO only, never `tile.openstreetmap.org`.
-- GeoDesk was evaluated and rejected: GOL files don't store `version` or `timestamp`, and the app needs both.
 
 ---
 
-## 3. Phase 1: DONE and live on manara.saudiosm.org
+## 3. Phase 1: DONE & Live (Vite Frontend + Caddy Container)
 
-### Frontend
-- **Vite app in `frontend/`**:
-  - `index.html` (the map), plus `about.html` and `privacy.html` (bilingual; both languages are in `[data-lang]` blocks, and the shared i18n module handles the toggle).
-  - `src/` holds ES modules: `main.js` (entry), `app.js`, `i18n.js`, `translations*.js`, `arabic.js`, `review.js`, `exporters.js`, `osm_api.js`, `editing.js`, `analytics.js`, `page.js`, `leaflet-setup.js`.
-  - `vendor/BoundaryCanvas.js` is pinned to commit `83e6a72`.
-  - The two cross-file assignments became setters: `setCurrentSearchQuery` and `setHideReviewedPlaces`.
-- **Everything is self-hosted:** Leaflet, markercluster and leaflet.heat come from npm, and the fonts from `@fontsource-variable/*`. No CDN, no Google Fonts.
-- **`vite.config.js`:**
-  - `appType: 'mpa'`;
-  - the dev server runs over HTTPS on port 8000 (OSM OAuth needs HTTPS);
-  - a dev/preview middleware serves only the allowlisted dataset names under `/data/` (from `MANARA_DATA_DIR`, default the repo root), plus clean URLs `/about` and `/privacy`;
-  - `npm run preview` sends the production CSP, read from `deploy/Caddyfile.container`.
-- **Two build gotchas, both fixed:**
-  - `cssMinify: 'esbuild'`: Lightning CSS drops the unprefixed `backdrop-filter` when the value uses `var()`, which kills the glass blur in Chrome.
-  - `assetsInlineLimit` never inlines `.woff2` files, because the CSP is `font-src 'self'`.
-- **Data URLs:** the frontend fetches `/data/<file>?v=<summary.updated_at>`.
-- **Umami** (`src/analytics.js`):
-  - The script is injected only when `VITE_UMAMI_WEBSITE_ID` is set, loaded as `/stats/script.js` with `data-host-url="/stats"`.
-  - Delegated click events: mode switch, issue filter, export type, language toggle.
-  - Code events: login success, fix uploaded (count only), note created.
-  - Usernames are never sent.
-- **ODbL:** attribution was added to the map's attribution control and to the MapRoulette GeoJSON export.
-- **Removed:** `serve_ssl.py`, `server.py`, `tests/test_security.py`.
+### Frontend (`frontend/`)
+- **Vite MPA**:
+  - `index.html` (map), `about.html`, `privacy.html` (bilingual `[data-lang]` blocks with shared i18n module).
+  - ES modules in `frontend/src/`: `main.js`, `app.js`, `i18n.js`, `translations*.js`, `arabic.js`, `review.js`, `exporters.js`, `osm_api.js`, `editing.js`, `analytics.js`, `page.js`, `leaflet-setup.js`.
+  - Self-hosted dependencies (Leaflet, markercluster, leaflet.heat, `@fontsource-variable/*`). No CDN, no Google Fonts.
+- **Two build gotchas in `frontend/vite.config.js` (keep intact):**
+  - `cssMinify: 'esbuild'`: Lightning CSS drops unprefixed `backdrop-filter` with `var()`, breaking glass blur in Chrome.
+  - `assetsInlineLimit` never inlines `.woff2` files because CSP enforces `font-src 'self'`.
+- **Umami (`frontend/src/analytics.js`):**
+  - Loaded via `/stats/script.js` with `data-host-url="/stats"`. Only `/stats/script.js` and `/stats/api/send` are proxied by Caddy to `https://analytics.rahmahealth.net`; `/stats/login` returns 404.
 
-### Deployment
-- **Root `Dockerfile`** (Coolify Dockerfile build pack, auto-deploys on push to `main`):
-  1. Node 22 builds the frontend.
-  2. Alpine pre-compresses dist and data (brotli q11 plus gzip -9).
-  3. `caddy:2-alpine` serves on :80, with a `HEALTHCHECK` on `/healthz`.
-- **`deploy/Caddyfile.container`:**
-  - `admin off`, `auto_https off`, and `trusted_proxies static private_ranges` (Traefik is in front).
-  - Security headers: HSTS, nosniff, Referrer-Policy, Permissions-Policy, and a strict **CSP** listing every external host the app uses.
-  - Caching: `/data/*` is immutable when the request has `?v=` and `no-cache` otherwise; `/assets/*` is immutable; pages are `no-cache`; `try_files {path} {path}.html`; `precompressed br gzip`.
-  - `/stats/script.js` and `/stats/api/send` **only** are proxied to `https://analytics.rahmahealth.net`, with `Host` rewritten, the visitor IP in `CF-Connecting-IP` and `True-Client-IP` (Traefik overwrites `X-Forwarded-For`), and cookies stripped. Everything else under `/stats` is a 404.
-- **Coolify Traefik dynamic config `analytics-saudiosm.yaml`:** the user removed a `manara-stats-https` router that had been sending all of `/stats` to Umami and caused a blank dashboard page. It now only routes `analytics.saudiosm.org` to `http://10.0.2.2:3000`, which is the shared Umami.
-- **GitHub Pages:** `404.html` plus `.nojekyll` redirect the old Pages URLs to manara.saudiosm.org.
-- **Other files:** `.github/workflows/ci.yml` runs pytest, plus `npm ci`, lint and build. `.gitattributes` forces LF line endings for `*.sh` and `deploy/**`. `.dockerignore` keeps the build context small.
+---
 
-### Verified live
-- All 14,017 places load, with no console errors.
-- The only external host contacted is `server.arcgisonline.com`.
-- The places file is served at 303 KB with brotli (7.4 MB raw).
-- `.git`, `.py` files and the Dockerfile return 404.
-- Analytics events arrive in Umami.
+## 4. Phase 2: DONE & Live (Server-Side Daily Pipeline)
 
-### Phase 1 commits on `main`
+1. **GDPR-clean extraction (`pipeline/extract_places.py`):**
+   - Removed `last_edited_by`, `user_id`, and `changeset_id` from `places_of_worship_sa.geojson`. Kept `version` and `edited_at`.
+2. **In-browser lazy contributor fetch (`frontend/src/osm_api.js` & `frontend/src/app.js`):**
+   - `OsmApi.fetchLastEdit(type, id, version)` fetches `/api/0.6/{type}/{id}.json` only for logged-in mappers when inspecting a single place, with race-condition guards and `sessionStorage` caching.
+3. **Automated daily runner (`pipeline/run.py` & `pipeline/Dockerfile`):**
+   - Runs `python run.py schedule` (daily at `23:30` UTC).
+   - Updates `/state/gcc-states.osm.pbf` via `pyosmium-up-to-date`, checks `osmosis_replication_sequence_number`, fetches Wikidata `sa.json` with ETag caching, runs all pipeline steps in `/state/work`, pre-compresses `.br` and `.gz`, publishes to `/published/v<TIMESTAMP>`, atomically swaps relative symlink `current -> v<TIMESTAMP>`, and retains the 2 most recent versions.
+4. **Live dynamic `/data/*` serving (`deploy/Caddyfile.container`):**
+   - Serves from `/srv/manara/published/current` when present, falling back to baked `/srv/manara/data`.
+5. **Desktop updater retired:**
+   - Removed `"gcc"` entry from `C:\Users\abdul\Desktop\update osm\update_projects.py`.
+
+---
+
+## 5. Phase 3: Backend & PostGIS DONE & Live (Frontend Wiring Optional/Next)
+
+### Completed & Verified Live on `https://manara.saudiosm.org`
+1. **Saudi Regions Extractor (`pipeline/extract_regions.py` + `tests/test_extract_regions.py`):**
+   - Extracts all 13 Saudi administrative provinces (`ISO3166-2` `SA-01` through `SA-14`, `admin_level=4`) from the PBF into `sa_regions.geojson` (all 1,479 boundary ways resolved, 100% valid polygons).
+2. **PostGIS Atomic Loader (`pipeline/load_db.py`):**
+   - Runs as the final step of `pipeline/run.py` whenever `MANARA_DATABASE_URL` (or `DATABASE_URL`) is set (exits cleanly with 0 when unset).
+   - Creates `postgis` and `pg_trgm` extensions and production schema (`regions`, `places`, `gaps`, `suggestions`, `dataset_versions`, `region_stats_history`).
+   - Bulk-loads staging tables via PostgreSQL `COPY`, maps `Point`/`Polygon`/`Relation` to OSM types `node`/`way`/`relation`, assigns `region_code` spatially via `ST_Within(geom, regions.geom)`, records regional history snapshots using CTE aggregations (avoiding multi-table Cartesian joins), and swaps staging tables into production in a single atomic transaction (~9–14s total runtime).
+3. **FastAPI Geospatial Data Service (`backend/` + `tests/test_backend_api.py`):**
+   - Deployed as `manara-api` on port `8010`, proxied by Caddy via `handle /api/*` (`{$MANARA_API_URL:http://manara-api:8010}`).
+   - Rate-limited with `slowapi` (`120/minute`), connection-pooled with `psycopg_pool`, and tested in CI (`.github/workflows/ci.yml` runs all 42 pytest unit tests + frontend lint & build).
+   - **Live Endpoints:**
+     - `GET /api/healthz` -> `{"status":"ok"}`
+     - `GET /api/v1/meta` -> active dataset version (`v20261028T001156Z`), `pbf_date`, counts, and `summary.json` metadata.
+     - `GET /api/v1/stats` -> overall counts (`total_places: 14021`, `muslim_places: 13999`, `anomaly_places: 86`, `qibla_deviated_places: 605`, `total_gaps: 59695`, `total_suggestions: 54504`, `total_regions: 13`).
+     - `GET /api/v1/stats/regions` -> per-province breakdown (`SA-01`..`SA-14`) of places, gaps, suggestions, anomalies (`anomaly_score < 0`), and Qibla deviations (`qibla_dev >= 20°`).
+     - `GET /api/v1/stats/history?region=SA-01&limit=50` -> time-series snapshots from `region_stats_history`.
+     - `GET /api/v1/places/{type}/{id}` -> single place GeoJSON Feature (`type` in `node|way|relation`) with province name (`region_code`, `region_name`, `region_name_en`), footprint area, anomaly score, and Qibla deviation.
+     - `GET /api/v1/suggestions?bbox=minLon,minLat,maxLon,maxLat&limit=100` -> GiST spatial bounding-box query (max span `3.0°`, limit `1..500`). Returns GeoJSON FeatureCollection with properties `{qid, wikidata_id, name, name_ar, name_en, nearest_osm_m, is_unnamed, region_code}` matching `buildSuggestionPopup` in `frontend/src/app.js`.
+     - `GET /api/v1/search?q=<query>&limit=20` -> Arabic-normalized (`normalize_arabic`) `pg_trgm` trigram similarity + English `ILIKE` search across places.
+     - `GET /api/docs` -> OpenAPI / Swagger UI.
+
+### Optional Frontend Enhancement (Remaining from Phase 3)
+- Currently, `frontend/src/app.js` still downloads the static `/data/suggested_mosques_sa.geojson` (1.1 MB Brotli / 10.9 MB raw, 54,504 features) when the user toggles Suggestions mode.
+- Now that `GET /api/v1/suggestions?bbox=...` is live and returns the exact property structure expected by `buildSuggestionPopup` (`qid`, `name_ar`, `name_en`, `nearest_osm_m`, `is_unnamed`, `region_code`), the frontend can optionally be updated to fetch suggestions dynamically by viewport bbox on `moveend` (or keep the static pre-compressed bundle if client-side instant filtering/clustering of all 54k points is preferred).
+
+### Phase 2 & 3 Commits on `main`
 | Commit | Content |
 |---|---|
-| `11e1f6c` | Vite migration (user commit) |
-| `d42781c` | Dockerfile and `Caddyfile.container` |
-| `7351840` | Build fix |
-| `197ebfc` | Umami proxy, pre-compression, consolidation |
-| `98e61a9` | Proxy only the tracker endpoints |
+| `9380707` | Phase 2 pipeline container, GDPR property cleanup, lazy contributor fetch, `extract_regions.py` |
+| `5e8ef9c` | Phase 3 FastAPI backend (`backend/`), PostGIS loader (`pipeline/load_db.py`), Caddy `/api/*` proxy, API unit tests |
+| `96243b7` | Fix staging `COPY` explicit IDs, dict extraction for `mosque_sizes.json`, and CTE optimization for `region_stats_history` |
+| `20aec39` | Install backend deps in GitHub Actions CI, map `osm_type` (`node`/`way`/`relation`), and use `anomaly_score < 0` in stats |
 
 ---
 
-## 4. Phase 2: IN PROGRESS (the server-side pipeline). Uncommitted local changes.
+## 6. Phase 4: Next Up — Accounts & Shared Review
 
-### Already done locally (not committed)
-1. **`git mv` of the pipeline into `pipeline/`:** `common.py`, `extract_sa_boundary.py`, `extract_places.py`, `calculate_gaps.py`, `calculate_mosque_sizes.py`, `detect_geometry_anomalies.py`, `import_wikidata_suggestions.py`, `validate_data.py`, `requirements.txt`.
-2. **`pipeline/common.py`:**
-   - `CODE_DIR` is the script folder.
-   - `BASE_DIR` is now the **data dir**: `MANARA_DATA_DIR`, defaulting to the repo root, so local behaviour is unchanged.
-   - `extract_sa_boundary.py` and `import_wikidata_suggestions.py` now import `BASE_DIR` from `common` instead of defining their own.
-3. **`import_wikidata_suggestions.py`:** the source is `--source`, else the `MANARA_WIKIDATA_SOURCE` env var, else `find_source()`.
-4. **`validate_data.py`:** the "previous summary" comes from the `MANARA_PREVIOUS_SUMMARY` file when set (on the server, the published `current/summary.json`), else `git show HEAD:summary.json`.
-5. **Test and CI paths:** `pytest.ini` has `pythonpath = pipeline`, and `ci.yml` installs from `pipeline/requirements.txt`. `pytest` passes (35 tests).
-6. **New `pipeline/run.py`, the server runner (written, NOT yet tested):**
-   - Commands: `python run.py once [--force]` and `python run.py schedule` (daily at `MANARA_RUN_AT_UTC`, default `23:30`, which is 02:30 Riyadh; it runs immediately if nothing has been published yet).
-   - **Extract:** the first run downloads the public extract to `$MANARA_STATE_DIR/gcc-states.osm.pbf`. Later runs use `pyosmium-up-to-date -v --tmpdir`. That tool returns 0 both for "updated" and "no new data", so the runner detects a change by comparing the header's `osmosis_replication_sequence_number` before and after. It stops early if nothing changed (unless `--force`, or nothing has been published yet).
-   - **Wikidata:** downloads `https://raw.githubusercontent.com/Abdullah201x/osm-x-wikidata/main/data/sa.json` with an ETag conditional GET. The URL was verified public (8.9 MB).
-   - **Steps:** each runs as a subprocess in a fresh `$STATE/work`, with the env vars `MANARA_DATA_DIR`, `OSM_PBF`, `MANARA_WIKIDATA_SOURCE`, `MANARA_PREVIOUS_SUMMARY` and `PYTHONUNBUFFERED`. The boundary step runs with `--force`, and `validate_data.py` is last.
-   - **Publish:** copies the 7 files plus `.br`/`.gz` into `$MANARA_PUBLISH_DIR/v<updated_at>/`, then atomically swaps a **relative** symlink `current -> v...`, keeps 2 versions, and writes `$STATE/status.json`. It uses a lock file (stale after 3 h).
-   - **Needs:** the `brotli` pip package, plus `osmium` (which provides `pyosmium-up-to-date`).
-7. **Measured peak memory** on the full 288 MB GCC extract (Windows, `psutil`). Scratch copy: `%TEMP%\manara-pipeline-measure`; results in `%TEMP%\measure.out`:
-
-   | Step | Peak | Time |
-   |---|---|---|
-   | `extract_sa_boundary.py` | 873 MiB | 13 s |
-   | `extract_places.py` | 894 MiB | 102 s |
-   | `calculate_gaps.py` | 895 MiB | 77 s |
-   | `calculate_mosque_sizes.py` | 872 MiB | 23 s |
-   | `detect_geometry_anomalies.py` | **970 MiB (highest)** | 24 s |
-   | `import_wikidata_suggestions.py` | 140 MiB | 2 s |
-   | **Total** | | **about 4 min** |
-
-   Conclusion: the highest peak is 970 MiB, which **fits the 1.5 GiB cap** with about 550 MiB to spare, so no restructuring is needed. If the data grows past about 1.3 GiB, either:
-   - pass `idx='sparse_file_array,/state/nodes.idx'` to `apply_file(..., locations=True)` (keeps node locations on disk), or
-   - clip the GCC extract to Saudi Arabia first with `osmium extract -p sa_boundary.geojson` (needs the `osmium-tool` apt package).
-8. **Geofabrik facts:**
-   - The public `gcc-states-updates/state.txt` uses the same sequence numbers as the internal feed (public 3867 vs local internal file 3866).
-   - The local file's header points at the internal URL (`osm-internal.download.geofabrik.de`), so the server must start from a **public** download.
-
-### Phase 2 Completed & Verified Live
-1. **`pipeline/extract_places.py`**: removed `last_edited_by`, `user_id` and `changeset_id`; kept `version` and `edited_at`.
-2. **Frontend lazy fetch**:
-   - `OsmApi.fetchLastEdit(type, id, version)` implemented in `frontend/src/osm_api.js` with `sessionStorage` caching (`osm_meta:${type}/${id}@${version}`).
-   - `showDetails` in `frontend/src/app.js` lazily loads contributor rows for authenticated mappers with race-condition selection guards. Guests remain under GDPR notice without network calls.
-3. **`pipeline/Dockerfile`**:
-   - Base `python:3.12-slim` + `libexpat1` + `pipeline/requirements.txt` + `brotli`.
-   - Mounts `/state` (Docker volume `manara-state`) and `/published` (host mount `/data/manara/published`).
-4. **Coolify setup**:
-   - Created `manara-pipeline` container (ID `db86741a3c9a`) on VPS with `cpus: 1.5`, `memory: 1536M`, scheduled to run daily at 23:30 UTC.
-5. **Web container dynamic serving**:
-   - `deploy/Caddyfile.container` serves `/data/*` dynamically from `/srv/manara/published/current` with fallback to baked data.
-   - Tested live: Brotli compression verified (`Content-Encoding: br`, 257 KB for 14k places).
-6. **Execution & change detection verified**:
-   - Initial run executed in 255s inside container, publishing `v20261027T232444Z` to `/data/manara/published`.
-   - Second run correctly detected sequence 3867 was current: `"No new OSM data since the last run; nothing to do"`.
-7. **Desktop updater retired**:
-   - Removed `"gcc"` entry from `C:\Users\abdul\Desktop\update osm\update_projects.py`.
-8. **README updated**:
-   - `README.md` updated to reflect `pipeline/` directory, prerequisites, and automated runner options.
-
----
-
-## 5. Phase 3: data API (FastAPI and PostGIS, read-only and public)
-
-- **PostGIS** as its own Coolify database resource (image `postgis/postgis:16-3.4`, about 512M, `shared_buffers=128MB`), with migrations through Alembic.
-- **Add `pipeline/load_db.py`** (run by `run.py` after validation). It loads the data into staging tables in one transaction and swaps them in:
-  - `places(osm_type, osm_id, version, edited_at, tags jsonb, name, name_norm, name_en, religion, denomination, geom_type, geom, area_m2, anomaly_score, qibla_dev, region_code, dataset_id)`, with a GiST index on `geom` and a `pg_trgm` index on `name_norm`. `name_norm` is built with `common.normalize_arabic`, which matches `frontend/src/arabic.js`.
-  - Also `gaps`, `suggestions`, `regions` (13 provinces, admin_level=4, from a new `extract_regions.py`), `dataset_versions`, and `region_stats_history` (a snapshot per run, for progress charts).
-  - Each place gets a region assigned with `ST_Within`.
-- **FastAPI service** (`backend/app/`): a Coolify app with a domain path or subdomain, about 200M. Caddy proxies `/api/*` to it on the Coolify network.
-  - `GET /api/v1/meta`
-  - `GET /api/v1/suggestions?bbox=&limit=` replaces the 11 MB suggestions download. It's only called in suggestions mode, above a minimum zoom.
-  - `GET /api/v1/search?q=` (Arabic-aware)
-  - `GET /api/v1/places/{type}/{id}`
-  - `GET /api/v1/stats`, `/stats/regions`, `/stats/history`
-  - `GET /api/healthz`
-  - Pydantic validation, caps on bbox size and limit, slowapi rate limits, same-origin CORS only.
-- Issue thresholds the user can adjust (size, Qibla) **stay in the browser**, applied to the compact places bundle.
-- Add `/api` to the CSP's `connect-src` (already covered by `'self'`).
-
-## 6. Phase 4: accounts and shared review
-
-- **Server-side OSM OAuth2.** Register a new confidential app on osm.org with redirect `https://manara.saudiosm.org/auth/callback` and scopes `read_prefs write_api write_notes`. Endpoints: `/auth/login`, `/auth/callback` (code plus PKCE plus state), `POST /auth/logout`, `GET /api/v1/me`.
-- **Identity** comes only from `user/details` on the server, never from client input. (The removed Flask attempt in commit `71db35d` trusted a `user_name` sent by the client. Don't repeat that.)
-- **Tokens** are Fernet-encrypted in a `sessions` table. The cookie is `__Host-manara_session` (HttpOnly, Secure, SameSite=Lax).
-- **Every write** checks the `Origin` header and requires an `X-Manara-CSRF` header.
-- **Remove all token handling from `localStorage`** (`osm_api.js`, `app.js`).
-- **Tables:** `users`, `sessions`, `review_marks` (unique per object, with user and version), `review_events`, `edits`, `batch_queue`.
-- **`ReviewMarks`** (`review.js`) keeps its API but becomes server-backed, falling back to `localStorage` when the user is logged out.
-- **Edit proxy** `POST /api/v1/osm/changesets`:
-  - The server re-fetches each object, checks the version, and **allows only** the tag keys `amenity`, `building`, `name:en` and `denomination` (the quick fixes in `editing.js`).
-  - It uploads, always closes the changeset, and records the edit.
+- **Server-side OSM OAuth2:**
+  - Register a confidential OAuth2 app on `openstreetmap.org` (and `master.apis.dev.openstreetmap.org` for testing) with redirect URI `https://manara.saudiosm.org/auth/callback` and scopes `read_prefs write_api write_notes`.
+  - Endpoints in `backend/app/routers/auth.py`: `GET /auth/login`, `GET /auth/callback` (code + PKCE + state), `POST /auth/logout`, `GET /api/v1/me`.
+  - Note: also add `handle /auth/*` to `deploy/Caddyfile.container` (proxying to `{$MANARA_API_URL:http://manara-api:8010}`, matching `frontend/vite.config.js` which already proxies `/auth`).
+- **Identity & Security:**
+  - Identity (`osm_uid`, `display_name`, `avatar_url`) must come **only** from server-side `GET /api/0.6/user/details.json` using the OAuth token — never from client input.
+  - Store OAuth access tokens **Fernet-encrypted** (`MANARA_FERNET_KEY`) in a `sessions` table.
+  - Set session cookie `__Host-manara_session` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`).
+  - Require `Origin: https://manara.saudiosm.org` and custom header `X-Manara-CSRF: 1` on every `POST`/`PUT`/`DELETE` request.
+  - Remove client-side OAuth token storage from `localStorage` (`frontend/src/osm_api.js`, `frontend/src/app.js`).
+- **Database Tables (add to PostGIS):**
+  - `users(osm_uid BIGINT PRIMARY KEY, display_name TEXT, avatar_url TEXT, created_at TIMESTAMPTZ, last_login_at TIMESTAMPTZ, leaderboard_opt_out BOOLEAN DEFAULT FALSE)`
+  - `sessions(session_id TEXT PRIMARY KEY, osm_uid BIGINT REFERENCES users(osm_uid), encrypted_token TEXT, created_at TIMESTAMPTZ, expires_at TIMESTAMPTZ)`
+  - `review_marks(osm_type VARCHAR(16), osm_id BIGINT, version INT, status VARCHAR(32), osm_uid BIGINT REFERENCES users(osm_uid), updated_at TIMESTAMPTZ, PRIMARY KEY (osm_type, osm_id))`
+  - `review_events(id SERIAL PRIMARY KEY, osm_type VARCHAR(16), osm_id BIGINT, version INT, status VARCHAR(32), osm_uid BIGINT, created_at TIMESTAMPTZ)`
+  - `edits(id SERIAL PRIMARY KEY, osm_uid BIGINT, changeset_id BIGINT, osm_type VARCHAR(16), osm_id BIGINT, old_version INT, new_version INT, tags_changed JSONB, created_at TIMESTAMPTZ)`
+- **Shared `ReviewMarks` (`frontend/src/review.js`):**
+  - Keep existing interface, backed by server API (`GET /api/v1/reviews`, `POST /api/v1/reviews`) when logged in, falling back to `localStorage` for guests.
+  - Provide a one-time import of existing `localStorage` review marks after first login (imported marks do not count toward the edit leaderboard).
+- **Server-Side Edit Proxy (`POST /api/v1/osm/changesets`):**
+  - Re-fetches the live OSM object from `api.openstreetmap.org`, verifies `version` matches to prevent conflicts, and **strictly allowlists** only the tag keys `amenity`, `building`, `name:en`, and `denomination` (matching `frontend/src/editing.js`).
+  - Enforces per-user rate limits (max 10 changesets/hour, max 50 elements/changeset), sets User-Agent `Manara/1.0 (+https://manara.saudiosm.org)`, uploads diff, **always closes the changeset**, and records the edit in `edits`.
   - Signed-in notes go through `POST /api/v1/osm/notes`; anonymous notes stay in the browser.
-- **One-time import** of the existing `localStorage` marks and history after first login. Imported history doesn't count toward the leaderboard.
-- **Backups:** a nightly `pg_dump` of the user tables, kept for 14 days and copied off-site.
-- **Test against `master.apis.dev.openstreetmap.org` first.**
-
-## 7. Phase 5: community and public pages
-
-- **`/stats` page (Vite):**
-  - per-region coverage, issues by type, progress over time from `region_stats_history`, and a recent-edits feed;
-  - a leaderboard of server-recorded edits only, with an opt-out;
-  - charts with uPlot or Chart.js, bilingual and RTL.
-- **Note the path clash:** `/stats/*` is the Umami tracker path. Either use `/community` for this page, or move the tracker to another path such as `/a/`, updating both `analytics.js` and the Caddyfile.
-- **Server-rendered pages** `/place/{type}/{id}` and `/region/{code}` (Jinja): OG tags, `Place` JSON-LD, `hreflang`, OSM attribution, and links to OSM/iD/JOSM.
-- **`sitemap.xml` and `robots.txt`** regenerated each run. `robots.txt` already disallows `/stats/`.
-- **Admin role** via an env allowlist of OSM uids. There is no pipeline-trigger endpoint.
-
-## 8. Phase 6: operations
-
-- CI already runs tests and the build. Coolify deploys on push to `main`.
-- Monitoring:
-  - `/healthz` (web);
-  - `status.json`, which the API exposes as part of `/api/v1/meta`;
-  - alert if the dataset is older than 3 days.
-- Docker log rotation, pinned image tags, and backups (Phase 4).
+- **Backups:**
+  - Nightly `pg_dump` of the user/review/history tables (`users`, `sessions`, `review_marks`, `review_events`, `edits`, `dataset_versions`, `region_stats_history`), retained for 14 days.
 
 ---
 
-## 9. Useful verification commands
+## 7. Phase 5: Community & Public Pages
+
+- **Community / Stats Page (`/community` in Vite):**
+  - **Important path note:** `/stats/*` is reserved for the Umami analytics proxy in Caddy (`deploy/Caddyfile.container`). Use `/community` (or `/dashboard`) for the public statistics page to avoid colliding with `/stats/*`.
+  - Displays per-province coverage from `GET /api/v1/stats/regions`, progress over time from `GET /api/v1/stats/history`, issues breakdown, recent edits feed, and an opt-out mapper leaderboard.
+- **SEO / Server-Rendered Pages:**
+  - `/place/{type}/{id}` and `/region/{code}` with OpenGraph tags, `Place` JSON-LD, `hreflang`, OSM attribution, and deep links to OSM / iD / JOSM.
+- **`sitemap.xml` and `robots.txt`:**
+  - Regenerated on pipeline runs (`robots.txt` already disallows `/stats/`).
+
+---
+
+## 8. Phase 6: Operations & Monitoring
+
+- **Health & Freshness Monitoring:**
+  - Web health check: `https://manara.saudiosm.org/healthz`
+  - API & DB health check: `https://manara.saudiosm.org/api/healthz`
+  - Dataset freshness check: `https://manara.saudiosm.org/api/v1/meta` (`published_at` and `pbf_date`; alert if >3 days old).
+- **Docker log rotation & pinned image tags.**
+
+---
+
+## 9. Useful Verification Commands
 
 ```bash
-# Frontend
-cd frontend && npm ci && npx eslint src && npm run build && npx vite preview   # https://localhost:8000, production CSP
+# 1. Run full Python test suite (42 tests: common, regions extractor, FastAPI endpoints)
+python -m pytest tests/ -q
 
-# Pipeline tests
-python -m pytest -q
+# 2. Frontend lint, build & local HTTPS preview (https://localhost:8000)
+cd frontend && npm ci && npm run lint && npm run build && npm run preview
 
-# Live checks
-curl -s -o /dev/null -w '%{http_code}\n' https://manara.saudiosm.org/healthz        # 200
-curl -s -o /dev/null -w '%{http_code}\n' https://manara.saudiosm.org/stats/login    # 404 (correct)
-curl -sI -H 'Accept-Encoding: br' 'https://manara.saudiosm.org/data/places_of_worship_sa.geojson?v=x'  # Content-Encoding: br
+# 3. Live production health & API checks
+curl -s https://manara.saudiosm.org/healthz
+curl -s https://manara.saudiosm.org/api/healthz
+curl -s https://manara.saudiosm.org/api/v1/meta
+curl -s https://manara.saudiosm.org/api/v1/stats
+curl -s https://manara.saudiosm.org/api/v1/stats/regions
+curl -s "https://manara.saudiosm.org/api/v1/suggestions?bbox=46.6,24.6,46.8,24.8&limit=5"
+
+# 4. Check VPS containers & memory usage over SSH
+ssh root@159.195.192.148 "docker stats --no-stream && free -h"
+
+# 5. Manually trigger pipeline + PostGIS load on VPS (only if needed)
+ssh root@159.195.192.148 'CID=$(docker ps --filter name=e3xakpyxk2xmq19aqpyvjdjq --format "{{.Names}}" | head -n 1); docker exec $CID python run.py once --force'
 ```
 
-A headless-browser smoke test was used before. It runs `playwright-core` with the local Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe` and checks:
-- no console errors or CSP violations;
-- markers appear at zoom 13 around Riyadh;
-- the suggestions badge shows 54,508;
-- CSV export works;
-- the only external host is `server.arcgisonline.com`.
+---
 
-When testing against production, intercept `**/stats/api/send` so no fake visit is recorded.
+## 10. Working Preferences from the User
 
-## 10. Working preferences from the user
-
-- Ask before outward-facing actions: pushing or merging to `main` deploys to production.
-- Never risk an OSM block. State explicitly how each data-fetching feature complies.
-- Keep Rahma and Manara separate, except for the shared Umami website.
+- **Always respond in English** by default, while preserving Arabic strings in code/translations intact.
+- **Ask before outward-facing actions** unless explicitly given the green light: pushing to `main` triggers automatic Coolify deployments on production.
+- **Never risk an OSM block:** state explicitly how any OSM-related feature complies with OSM API & Geofabrik usage policies.
+- **Never touch Rahma Health containers** on the VPS.
