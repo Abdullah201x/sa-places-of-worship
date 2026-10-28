@@ -285,7 +285,7 @@ docker exec $C rm -f /tmp/restore.dmp
 ## 10. Useful Verification Commands
 
 ```bash
-# 1. Run full Python test suite (46 tests: common, regions extractor, FastAPI endpoints)
+# 1. Run full Python test suite (72 tests: common, regions extractor, Phase 4/5b, transliteration NLP, FastAPI endpoints)
 python -m pytest tests/ -q
 
 # 2. Frontend lint, build & local HTTPS preview (https://localhost:8000)
@@ -299,6 +299,7 @@ curl -s https://manara.saudiosm.org/api/v1/meta
 curl -s https://manara.saudiosm.org/api/v1/stats
 curl -s https://manara.saudiosm.org/api/v1/stats/regions
 curl -s "https://manara.saudiosm.org/api/v1/suggestions?bbox=46.6,24.6,46.8,24.8&limit=5"
+curl -s "https://manara.saudiosm.org/api/v1/transliterate?name=%D8%AC%D8%A7%D9%85%D8%B9%20%D8%A7%D9%84%D9%85%D9%84%D9%83%20%D9%81%D9%87%D8%AF"
 
 # 4. Check VPS containers & memory usage over SSH
 ssh root@159.195.192.148 "docker stats --no-stream && free -h"
