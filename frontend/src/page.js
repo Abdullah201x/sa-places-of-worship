@@ -1,4 +1,4 @@
-// Entry point of the content pages (about, privacy). Each page holds both
+// Entry point of the content pages (about, privacy, community). Each page holds both
 // languages in [data-lang] blocks; CSS shows the one matching <html lang>,
 // and the shared i18n module handles the toggle and the remembered choice.
 import './styles/fonts.css';
@@ -9,6 +9,7 @@ import { initAnalytics } from './analytics.js';
 addTranslations({
   aboutTitle: ['عن المشروع | منارة: خارطة أماكن العبادة', 'About | Manara: Saudi Places of Worship Map'],
   privacyTitle: ['الخصوصية | منارة: خارطة أماكن العبادة', 'Privacy | Manara: Saudi Places of Worship Map'],
+  communityTitle: ['إحصاءات المجتمع والتغطية | منارة: خارطة أماكن العبادة', 'Community & Coverage Stats | Manara: Saudi Places of Worship Map'],
 });
 
 document.getElementById('btn-toggle-lang').addEventListener('click', () => {

@@ -2,7 +2,7 @@
 
 This document summarises the architecture, live infrastructure, completed phases (Phases 1–3 and Phase 6a), and upcoming roadmap (Phases 5, 4 and 6b) for **Manara** (`https://manara.saudiosm.org`), so another AI coding assistant can seamlessly continue the work.
 
-**Where things stand:** Phases 1–3 are live. Phase 6a (operations) is done except the Telegram alerts, which the user will set up later. **The next task is Phase 5a, the public `/community` page** (§8). Nothing is half-finished in the code; `main` is clean.
+**Where things stand:** Phases 1–3 and Phase 5a (`/community` stats page) are done. Phase 6a (operations) is done except the Telegram alerts, which the user will set up later. **The next task is Phase 4 (accounts & shared review)** (§7), followed by Phase 5b. Nothing is half-finished in the code; `main` is clean.
 
 - **Last updated:** 2026-10-28
 - **Repository:** `github.com/Abdullah201x/sa-places-of-worship` (branch `main` auto-deploys via Coolify)
@@ -146,8 +146,8 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 ## 6. Recommended Order for the Remaining Work
 
 1. ✅ **Phase 6a** (done 2026-10-28, see §9): DB password rotated, nightly backups, uptime monitors, freshness check, pinned tags, Dependabot. Only the Telegram alerts remain, and the user will do those.
-2. **Phase 5a (NEXT):** the public `/community` stats page. It needs no accounts.
-3. **Phase 4:** accounts and shared review, using the hybrid login model.
+2. ✅ **Phase 5a** (done 2026-10-28, see §8): the public `/community` stats page (`frontend/community.html`, `frontend/src/community.js`).
+3. **Phase 4 (NEXT):** accounts and shared review, using the hybrid login model.
 4. **Phase 5b:** the opt-in leaderboard, the recent-edits feed and the SEO pages.
 5. **Phase 6b:** a security review of the Phase 4 code, plus updating the backup scope (§9) once the user tables exist.
 
@@ -214,7 +214,7 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 
 ## 8. Phase 5: Community & Public Pages
 
-- **5a. `/community` (Vite page, needs no accounts) — NEXT TASK:**
+- ✅ **5a. `/community` (Vite page, needs no accounts) — DONE (2026-10-28):**
   - per-province coverage (`/api/v1/stats/regions`), progress over time (`/api/v1/stats/history`), and an issue breakdown (`/api/v1/stats`);
   - bilingual and RTL.
   - Do **not** use `/stats/*`: that path is reserved for the Umami proxy.

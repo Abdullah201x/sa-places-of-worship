@@ -5,6 +5,7 @@
 import { addStaticTranslations } from './i18n.js';
 addStaticTranslations({
   "روابط الموقع": "Site links",
+  "إحصاءات المجتمع": "Community stats",
   "عن المشروع": "About",
   "الخصوصية": "Privacy",
   "تسجيل الدخول عبر OpenStreetMap": "Log in with OpenStreetMap",

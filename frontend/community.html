@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إحصاءات المجتمع والتغطية | منارة: خارطة أماكن العبادة</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕌%3C/text%3E%3C/svg%3E">
+  <link rel="canonical" href="https://manara.saudiosm.org/community">
+  <meta name="description" content="إحصاءات التغطية وجودة البيانات لأماكن العبادة في مناطق المملكة العربية السعودية الثلاث عشرة على OpenStreetMap، مع متابعة التقدم الزمني وفجوات التغطية.">
+</head>
+<body data-title-key="communityTitle" class="community-page">
+  <header class="page-header community-header">
+    <div class="page-header-nav">
+      <a href="/" class="back-map-link">
+        <span data-lang="ar">→ العودة إلى الخارطة</span>
+        <span data-lang="en">← Back to the map</span>
+      </a>
+      <nav class="page-top-links" aria-label="روابط الصفحات">
+        <a href="/about"><span data-lang="ar">عن المشروع</span><span data-lang="en">About</span></a>
+        <a href="/privacy"><span data-lang="ar">الخصوصية</span><span data-lang="en">Privacy</span></a>
+      </nav>
+    </div>
+    <button type="button" id="btn-toggle-lang" lang="en">English</button>
+  </header>
+
+  <main class="community-main">
+    <!-- Hero Intro -->
+    <section class="community-hero">
+      <div data-lang="ar">
+        <h1>إحصاءات المجتمع والتغطية</h1>
+        <p class="community-lead">
+          لوحة متابعة عامة لتغطية أماكن العبادة وجودة بياناتها في جميع المناطق الإدارية الثلاث عشرة للمملكة العربية السعودية، تُحدَّث يومياً من مستخلص <a href="https://www.openstreetmap.org">OpenStreetMap</a> لدول الخليج ومقترحات <a href="https://www.wikidata.org">ويكي بيانات</a>.
+        </p>
+      </div>
+      <div data-lang="en" lang="en" dir="ltr">
+        <h1>Community &amp; Coverage Statistics</h1>
+        <p class="community-lead">
+          Public dashboard tracking OpenStreetMap place-of-worship coverage, data quality issues, and unmapped gaps across all 13 administrative provinces of Saudi Arabia, updated daily from the <a href="https://www.openstreetmap.org">OpenStreetMap</a> GCC extract and <a href="https://www.wikidata.org">Wikidata</a>.
+        </p>
+      </div>
+
+      <div id="community-meta-bar" class="community-meta-bar" aria-live="polite">
+        <span class="meta-pill" id="meta-version-pill">
+          <span data-lang="ar">جارٍ تحميل بيانات الإحصاءات...</span>
+          <span data-lang="en">Loading live statistics...</span>
+        </span>
+      </div>
+    </section>
+
+    <!-- Error banner (hidden unless API fails) -->
+    <div id="community-error" class="community-error" style="display: none;" role="alert">
+      <p id="community-error-text"></p>
+      <button type="button" id="btn-retry-load" class="community-btn">
+        <span data-lang="ar">إعادة المحاولة</span>
+        <span data-lang="en">Retry</span>
+      </button>
+    </div>
+
+    <!-- 1. National Summary KPI Cards -->
+    <section class="community-section" aria-labelledby="sec-overview-title">
+      <div class="section-heading">
+        <h2 id="sec-overview-title">
+          <span data-lang="ar">نظرة عامة على مستوى المملكة</span>
+          <span data-lang="en">Kingdom-Wide Overview</span>
+        </h2>
+      </div>
+      <div id="kpi-grid" class="kpi-grid">
+        <div class="kpi-card skeleton-card"></div>
+        <div class="kpi-card skeleton-card"></div>
+        <div class="kpi-card skeleton-card"></div>
+        <div class="kpi-card skeleton-card"></div>
+        <div class="kpi-card skeleton-card"></div>
+        <div class="kpi-card skeleton-card"></div>
+      </div>
+    </section>
+
+    <!-- 2. Issue & Data Quality Breakdown -->
+    <section class="community-section" aria-labelledby="sec-issues-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="sec-issues-title">
+            <span data-lang="ar">تفصيل جودة البيانات وفرص التحسين</span>
+            <span data-lang="en">Data Quality &amp; Improvement Breakdown</span>
+          </h2>
+          <p class="section-sub">
+            <span data-lang="ar">تحليل التمثيل الهندسي للمباني والفحوصات المكانية وفجوات البيانات التي يمكن للمساهمين معالجتها.</span>
+            <span data-lang="en">Breakdown of building geometry representation, spatial audit checks, and missing mosques ready for mapper review.</span>
+          </p>
+        </div>
+        <a href="/#mode=improve" class="community-action-link">
+          <span data-lang="ar">فتح وضع تحسين البيانات على الخارطة ←</span>
+          <span data-lang="en">Open Improvement Mode on the map →</span>
+        </a>
+      </div>
+
+      <div id="issues-breakdown-container" class="issues-breakdown-grid">
+        <div class="panel-card skeleton-block"></div>
+        <div class="panel-card skeleton-block"></div>
+      </div>
+    </section>
+
+    <!-- 3. Per-Province Coverage -->
+    <section class="community-section" aria-labelledby="sec-regions-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="sec-regions-title">
+            <span data-lang="ar">التغطية حسب المناطق الإدارية (١٣ منطقة)</span>
+            <span data-lang="en">Coverage by Administrative Province (13 Regions)</span>
+          </h2>
+          <p class="section-sub">
+            <span data-lang="ar">مقارنة الأماكن المرصودة وفجوات التغطية واقتراحات ويكي بيانات والفحوصات الهندسية لكل منطقة إدارية.</span>
+            <span data-lang="en">Compare mapped places, road-network coverage gaps, Wikidata suggestions, and geometry checks across every province.</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="controls-bar">
+          <div class="control-chips" id="region-metric-tabs" role="tablist" aria-label="مؤشر المقارنة بين المناطق">
+            <button type="button" class="metric-chip active" data-metric="places_count" role="tab" aria-selected="true">
+              <span data-lang="ar">🕌 الأماكن المرصودة</span>
+              <span data-lang="en">🕌 Mapped Places</span>
+            </button>
+            <button type="button" class="metric-chip" data-metric="coverage_pct" role="tab" aria-selected="false">
+              <span data-lang="ar">📊 نسبة التغطية (OSM مقابل المقترحات)</span>
+              <span data-lang="en">📊 Coverage Ratio (OSM vs Suggestions)</span>
+            </button>
+            <button type="button" class="metric-chip" data-metric="gaps_count" role="tab" aria-selected="false">
+              <span data-lang="ar">🟧 فجوات التغطية</span>
+              <span data-lang="en">🟧 Coverage Gaps</span>
+            </button>
+            <button type="button" class="metric-chip" data-metric="suggestions_count" role="tab" aria-selected="false">
+              <span data-lang="ar">🟣 اقتراحات ويكي بيانات</span>
+              <span data-lang="en">🟣 Wikidata Suggestions</span>
+            </button>
+            <button type="button" class="metric-chip" data-metric="qibla_deviated_count" role="tab" aria-selected="false">
+              <span data-lang="ar">🕋 انحراف القبلة (≥ 20°)</span>
+              <span data-lang="en">🕋 Qibla Deviation (≥ 20°)</span>
+            </button>
+            <button type="button" class="metric-chip" data-metric="anomalies_count" role="tab" aria-selected="false">
+              <span data-lang="ar">🤖 الشذوذ الهندسي</span>
+              <span data-lang="en">🤖 Geometry Anomalies</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Visual Horizontal Bar Chart -->
+        <div id="regions-bars-container" class="regions-bars-container" aria-live="polite"></div>
+
+        <!-- Full Sortable Table -->
+        <div class="table-scroll-wrap">
+          <table class="community-table" id="regions-table">
+            <thead>
+              <tr>
+                <th data-sort="name" class="sortable-th">
+                  <span data-lang="ar">المنطقة الإدارية</span>
+                  <span data-lang="en">Province</span>
+                  <span class="sort-indicator"></span>
+                </th>
+                <th data-sort="places_count" class="sortable-th num-col active-sort">
+                  <span data-lang="ar">الأماكن المرصودة</span>
+                  <span data-lang="en">Mapped Places</span>
+                  <span class="sort-indicator">↓</span>
+                </th>
+                <th data-sort="coverage_pct" class="sortable-th num-col">
+                  <span data-lang="ar">نسبة التغطية</span>
+                  <span data-lang="en">Coverage Ratio</span>
+                  <span class="sort-indicator"></span>
+                </th>
+                <th data-sort="gaps_count" class="sortable-th num-col">
+                  <span data-lang="ar">فجوات التغطية</span>
+                  <span data-lang="en">Coverage Gaps</span>
+                  <span class="sort-indicator"></span>
+                </th>
+                <th data-sort="suggestions_count" class="sortable-th num-col">
+                  <span data-lang="ar">اقتراحات ويكي بيانات</span>
+                  <span data-lang="en">Wikidata Suggestions</span>
+                  <span class="sort-indicator"></span>
+                </th>
+                <th data-sort="qibla_deviated_count" class="sortable-th num-col">
+                  <span data-lang="ar">انحراف القبلة</span>
+                  <span data-lang="en">Qibla Deviation</span>
+                  <span class="sort-indicator"></span>
+                </th>
+                <th data-sort="anomalies_count" class="sortable-th num-col">
+                  <span data-lang="ar">شذوذ هندسي</span>
+                  <span data-lang="en">ML Anomalies</span>
+                  <span class="sort-indicator"></span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="regions-tbody"></tbody>
+            <tfoot id="regions-tfoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Progress Over Time -->
+    <section class="community-section" aria-labelledby="sec-history-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="sec-history-title">
+            <span data-lang="ar">التقدم عبر الزمن</span>
+            <span data-lang="en">Progress Over Time</span>
+          </h2>
+          <p class="section-sub">
+            <span data-lang="ar">سجل اللقطات اليومية لقاعدة البيانات بعد كل تحديث آلي لمستخلص OpenStreetMap.</span>
+            <span data-lang="en">Daily dataset snapshots recorded automatically after each OpenStreetMap pipeline run.</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="history-controls-row">
+          <div class="history-select-group">
+            <label for="history-region-select" class="control-label">
+              <span data-lang="ar">النطاق الجغرافي:</span>
+              <span data-lang="en">Region filter:</span>
+            </label>
+            <select id="history-region-select" class="community-select">
+              <option value="ALL">جميع مناطق المملكة (13 منطقة)</option>
+            </select>
+          </div>
+
+          <div class="control-chips" id="history-metric-tabs" role="tablist" aria-label="مؤشر السجل الزمني">
+            <button type="button" class="metric-chip active" data-hmetric="places_count" role="tab" aria-selected="true">
+              <span data-lang="ar">الأماكن المرصودة</span>
+              <span data-lang="en">Mapped Places</span>
+            </button>
+            <button type="button" class="metric-chip" data-hmetric="gaps_count" role="tab" aria-selected="false">
+              <span data-lang="ar">فجوات التغطية</span>
+              <span data-lang="en">Coverage Gaps</span>
+            </button>
+            <button type="button" class="metric-chip" data-hmetric="suggestions_count" role="tab" aria-selected="false">
+              <span data-lang="ar">اقتراحات ويكي بيانات</span>
+              <span data-lang="en">Wikidata Suggestions</span>
+            </button>
+            <button type="button" class="metric-chip" data-hmetric="anomalies_count" role="tab" aria-selected="false">
+              <span data-lang="ar">الشذوذ الهندسي</span>
+              <span data-lang="en">Geometry Anomalies</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="history-chart-wrap" class="history-chart-wrap" aria-live="polite"></div>
+        <div id="history-table-wrap" class="history-table-wrap"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page-footer community-footer">
+    <div class="footer-links">
+      <a href="/"><span data-lang="ar">الخارطة التفاعلية</span><span data-lang="en">Interactive map</span></a>
+      <span>·</span>
+      <a href="/about"><span data-lang="ar">عن المشروع</span><span data-lang="en">About</span></a>
+      <span>·</span>
+      <a href="/privacy"><span data-lang="ar">سياسة الخصوصية</span><span data-lang="en">Privacy policy</span></a>
+      <span>·</span>
+      <a href="https://github.com/Abdullah201x/sa-places-of-worship" rel="noopener" target="_blank">GitHub</a>
+    </div>
+    <div class="footer-osm-credit">
+      <span data-lang="ar">بيانات الخارطة © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">المساهمون في OpenStreetMap</a> (ODbL)</span>
+      <span data-lang="en">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL)</span>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/community.js"></script>
+</body>
+</html>
