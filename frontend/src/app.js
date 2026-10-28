@@ -43,6 +43,7 @@ export let filteredGaps = [];
 export let currentMode = 'poi'; // 'poi', 'gap', or 'improve'
 export let currentReligionFilter = 'all';
 export let currentImprovementFilter = 'all';
+export let currentGapUrgencyFilter = 'all'; // 'all' or 'high_urgency'
 export let currentSearchQuery = '';
 export function setCurrentSearchQuery(q) {
   currentSearchQuery = q;
@@ -1432,13 +1433,17 @@ export function gapScoreToColor(t) {
 export function parseGapGrid(gapData) {
   if (gapData.grid_size) GAP_GRID_SIZE_DEG = gapData.grid_size;
   const g = GAP_GRID_SIZE_DEG;
-  return (gapData.cells || []).map(([gx, gy, roadLength, score]) => ({
-    gx, gy,
-    lat: (gy + 0.5) * g,
-    lon: (gx + 0.5) * g,
-    road_length_m: roadLength,
-    gap_score: score
-  }));
+  return (gapData.cells || []).map(cell => {
+    const [gx, gy, roadLength, score, urgency] = cell;
+    return {
+      gx, gy,
+      lat: (gy + 0.5) * g,
+      lon: (gx + 0.5) * g,
+      road_length_m: roadLength,
+      gap_score: score,
+      urgency_score: urgency !== undefined ? urgency : score
+    };
+  });
 }
 
 // Builds a sparse Map<"x,y", gap_score> from the gap grid's own cell
@@ -1934,6 +1939,8 @@ export function updateDashboardUI() {
     dateFilterSection.style.display = 'block';
     gapInfoBox.style.display = 'none';
     gapJosmBox.style.display = 'none';
+    const gapFilterBoxPoi = document.getElementById('gap-filter-box');
+    if (gapFilterBoxPoi) gapFilterBoxPoi.style.display = 'none';
   } else if (currentMode === 'improve') {
     // Quality Improvement Mode controls
     totalCountLabel.innerText = t('labelTotalImprove');
@@ -1944,6 +1951,8 @@ export function updateDashboardUI() {
     dateFilterSection.style.display = 'block';
     gapInfoBox.style.display = 'none';
     gapJosmBox.style.display = 'none';
+    const gapFilterBoxImp = document.getElementById('gap-filter-box');
+    if (gapFilterBoxImp) gapFilterBoxImp.style.display = 'none';
 
     // Toggle sub-control visibility based on active improvement filter
     const sizeControls = document.getElementById('size-threshold-controls');
@@ -1965,6 +1974,8 @@ export function updateDashboardUI() {
     detailsPanel.style.display = 'none'; // Grid gaps do not have individual clickable POI cards
     gapInfoBox.style.display = 'flex';
     gapJosmBox.style.display = 'block';
+    const gapFilterBox = document.getElementById('gap-filter-box');
+    if (gapFilterBox) gapFilterBox.style.display = 'block';
     updateIdEditorAreaLink();
   }
 
@@ -2005,6 +2016,11 @@ export function updateStats() {
 // entry point for any change to filters, thresholds or mode).
 export function filterData() {
   if (currentMode === 'gap') {
+    if (currentGapUrgencyFilter === 'high_urgency') {
+      filteredGaps = allGaps.filter(c => (c.urgency_score || 0) >= 50);
+    } else {
+      filteredGaps = [...allGaps];
+    }
     updateMapLayers();
     updateStats();
     updateReviewNavUI();
@@ -2186,6 +2202,17 @@ export function setupEventListeners() {
       chip.classList.add('active');
       
       currentReligionFilter = chip.getAttribute('data-religion');
+      filterData();
+    });
+  });
+
+  // Gap Urgency Filter Chips Selector
+  const gapUrgencyChips = document.querySelectorAll('#gap-urgency-filters .chip');
+  gapUrgencyChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      gapUrgencyChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentGapUrgencyFilter = chip.getAttribute('data-gap-urgency');
       filterData();
     });
   });

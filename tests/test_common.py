@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -85,3 +86,17 @@ def test_qibla_azimuth_from_madinah_points_south():
 ])
 def test_axis_deviation(axis, qibla, expected):
     assert axis_deviation(axis, qibla) == pytest.approx(expected)
+
+
+def test_worship_gaps_schema_and_urgency():
+    gaps_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "worship_gaps_sa.json")
+    if os.path.exists(gaps_path):
+        with open(gaps_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        assert "grid_size" in data
+        assert "fields" in data
+        assert "urgency_score" in data["fields"]
+        assert len(data["cells"]) > 0
+        first = data["cells"][0]
+        assert len(first) >= 5
+        assert isinstance(first[4], (int, float))

@@ -24,7 +24,7 @@ A daily server-side Python pipeline (`pipeline/`, using `osmium`, `shapely`, `sc
 |---|---|---|
 | `summary.json` | — | Counts, `updated_at` (also the frontend's cache-busting `?v=` token), `pbf_date` |
 | `places_of_worship_sa.geojson` | ~14,021 | OSM places of worship (`node`, `way`, `relation` centroids + tags, `version`, `edited_at`) |
-| `worship_gaps_sa.json` | ~59,695 | Road-network gap grid cells (`[grid_x, grid_y, road_length_m, gap_score]`) |
+| `worship_gaps_sa.json` | ~59,695 | Road-network gap grid cells (`[grid_x, grid_y, road_length_m, gap_score, urgency_score]`) |
 | `sa_boundary.geojson` | 1 | Saudi Arabia national boundary (`ISO3166-1=SA`, `admin_level=2`) |
 | `sa_regions.geojson` | 13 | All 13 Saudi administrative provinces (`SA-01` to `SA-14`, `admin_level=4`) |
 | `mosque_sizes.json` | ~5,686 | Building footprint areas (`{osm_id: {"area_m2": float}}`) |

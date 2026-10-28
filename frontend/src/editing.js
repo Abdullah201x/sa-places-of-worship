@@ -3,6 +3,7 @@
 // fixes that were reviewed one by one, then uploads them in one changeset
 // (the osm x wikidata batch pattern). There is deliberately no "fix all".
 import { addTranslations, t, fmtNum, fmtDate, onLanguageChange } from './i18n.js';
+import { ArabicText } from './arabic.js';
 import { ReviewMarks, refreshAfterReviewChange } from './review.js';
 import { Exporters } from './exporters.js';
 import { OsmApi, EditHistory } from './osm_api.js';
@@ -15,6 +16,7 @@ addTranslations({
   fix_missing_amenity: ['إضافة amenity=place_of_worship', 'Add amenity=place_of_worship'],
   fix_building_yes: ['تعديل building=yes إلى building=mosque', 'Change building=yes to building=mosque'],
   fix_missing_name_en: ['إضافة الاسم بالإنجليزية (name:en)', 'Add the English name (name:en)'],
+  suggestNameEnBtn: ['✨ اقتراح الاسم الذكي (GASGI)', '✨ Smart Suggest (GASGI)'],
   fix_missing_denom: ['تحديد المذهب (denomination)', 'Set the denomination'],
   editDialogTitle: ['مراجعة التعديل قبل الرفع', 'Review the edit before uploading'],
   editTarget: ['العنصر:', 'Element:'],
@@ -262,6 +264,23 @@ export function openEditDialog(props, fixId) {
         input.type = 'text';
         input.dir = 'ltr';
         input.placeholder = t('editNameEnPlaceholder');
+        const suggested = ArabicText.suggestEnglishName(props.name || '');
+        if (suggested) {
+          input.value = suggested;
+          const suggestBtn = document.createElement('button');
+          suggestBtn.type = 'button';
+          suggestBtn.className = 'quick-fix-btn';
+          suggestBtn.style.marginTop = '6px';
+          suggestBtn.style.fontSize = '0.82rem';
+          suggestBtn.style.padding = '4px 8px';
+          suggestBtn.style.cursor = 'pointer';
+          suggestBtn.textContent = `${t('suggestNameEnBtn')}: "${suggested}"`;
+          suggestBtn.addEventListener('click', () => {
+            input.value = suggested;
+            input.dispatchEvent(new Event('input'));
+          });
+          wrap.appendChild(suggestBtn);
+        }
       } else {
         lbl.textContent = t('editDenomLabel');
         input = document.createElement('select');

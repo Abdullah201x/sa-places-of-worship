@@ -24,12 +24,13 @@ HIGHWAY_WEIGHTS = {
 }
 DEFAULT_HIGHWAY_WEIGHT = 1.0
 
+
 class DrivableRoadExtractor(osmium.SimpleHandler):
     def __init__(self, boundary_prep, bounds):
         super().__init__()
         self.boundary_prep = boundary_prep
         self.minx, self.miny, self.maxx, self.maxy = bounds
-        # (centroid_lon, centroid_lat, highway-weighted length in meters)
+        # (centroid_lon, centroid_lat, highway-weighted length in meters, residential_length_m)
         self.roads = []
 
     def way(self, w):
@@ -64,9 +65,12 @@ class DrivableRoadExtractor(osmium.SimpleHandler):
                                     dy = (coords[i+1][1] - coords[i][1]) * M_PER_DEG_LAT
                                     length_m += math.hypot(dx, dy)
                                 weight = HIGHWAY_WEIGHTS.get(h_type, DEFAULT_HIGHWAY_WEIGHT)
-                                self.roads.append((centroid_lon, centroid_lat, length_m * weight))
+                                is_residential = h_type in ('residential', 'living_street')
+                                res_len_m = length_m if is_residential else 0.0
+                                self.roads.append((centroid_lon, centroid_lat, length_m * weight, res_len_m))
                 except osmium.InvalidLocationError:
                     pass
+
 
 def main():
     pbf_path = find_pbf(BASE_DIR)
@@ -100,13 +104,6 @@ def main():
     # neighborhood mosque spacing) so a cell no longer spans both
     # "next to a mosque" and "far from one".
     GRID_SIZE = 0.004
-    # Candidacy still requires >=2 distinct ways in a cell (not just one road
-    # passing through empty land) - this stays a *way count*, unaffected by
-    # the length-based scoring change below, so rural/desert candidacy is
-    # unchanged from before. Weighted road length is only used afterwards, to
-    # score *how* underserved a candidate cell is without being inflated by
-    # OSM way-splitting (tag changes fragment ways into many short segments,
-    # especially in cities).
     MIN_ROADS_PER_CELL = 2
     MIN_GAP_DISTANCE_M = 750   # walkable distance; below this, not a gap
     MAX_GAP_SCORE_DISTANCE_M = 3000
@@ -120,7 +117,7 @@ def main():
 
     print("Mapping roads to grid...")
     grid = {}
-    for lon, lat, weighted_length_m in extractor.roads:
+    for lon, lat, weighted_length_m, res_len_m in extractor.roads:
         grid_x = int(lon / GRID_SIZE)
         grid_y = int(lat / GRID_SIZE)
         key = (grid_x, grid_y)
@@ -128,23 +125,26 @@ def main():
         if key in grid:
             cell = grid[key]
             cell["road_length_m"] += weighted_length_m
+            cell["res_length_m"] += res_len_m
             cell["sum_lon"] += lon
             cell["sum_lat"] += lat
             cell["n"] += 1
         else:
             grid[key] = {
                 "road_length_m": weighted_length_m,
+                "res_length_m": res_len_m,
                 "sum_lon": lon,
                 "sum_lat": lat,
                 "n": 1
             }
 
     # 5. Identify coverage gaps by actual distance to the nearest place of worship
-    print("Computing coverage gaps...")
+    print("Computing coverage gaps and AI urgency scores...")
     candidate_keys = []
     candidate_points = []      # (lon, lat) in degrees, for output/containment
     candidate_points_m = []    # projected meters, for nearest-distance query
     candidate_lengths = []
+    candidate_res_lengths = []
 
     for key, cell in grid.items():
         if cell["n"] < MIN_ROADS_PER_CELL:
@@ -157,6 +157,7 @@ def main():
         candidate_points.append((rep_lon, rep_lat))
         candidate_points_m.append(Point(rep_lon * M_PER_DEG_LON, rep_lat * M_PER_DEG_LAT))
         candidate_lengths.append(cell["road_length_m"])
+        candidate_res_lengths.append(cell["res_length_m"])
 
     gap_cells = []
     if candidate_points_m:
@@ -179,24 +180,38 @@ def main():
                 continue  # close enough to a mosque -> not a gap
 
             road_length_m = candidate_lengths[i]
+            res_length_m = candidate_res_lengths[i]
 
             # Gap intensity blends road-length density (as before, but now
             # scale-invariant to OSM way-splitting) with how far the nearest
-            # mosque actually is, so a gap right next to a mosque in the same
-            # coarse area no longer masks a genuinely underserved spot.
+            # mosque actually is.
             distance_factor = min(distance_m, MAX_GAP_SCORE_DISTANCE_M) / MIN_GAP_DISTANCE_M
             gap_score = (1.0 + math.log(max(road_length_m, 1.0))) * distance_factor
 
-            gap_cells.append([key[0], key[1], round(road_length_m), round(gap_score, 3)])
+            # Residential Urgency Score (0 to 100):
+            # Prioritizes inhabited neighborhoods (high residential road length) far from mosques,
+            # while down-ranking isolated highway interchanges or uninhabited desert tracts.
+            res_ratio = res_length_m / max(road_length_m, 1.0)
+            if res_length_m > 0:
+                raw_urgency = math.log1p(res_length_m) * (1.0 + res_ratio) * distance_factor * 4.5
+                urgency_score = min(100.0, max(1.0, round(raw_urgency, 1)))
+            else:
+                urgency_score = min(25.0, round(gap_score * 0.4, 1))
+
+            gap_cells.append([
+                key[0], key[1],
+                round(road_length_m),
+                round(gap_score, 3),
+                urgency_score
+            ])
 
     print(f"Detected {len(gap_cells)} coverage gap areas across Saudi Arabia.")
 
     # 6. Save gaps as a compact grid. A cell's position is implied by its grid
-    # index (cell (gx, gy) spans [gx*grid_size, (gx+1)*grid_size) in lon/lat),
-    # so there's no need for a GeoJSON point per cell.
+    # index (cell (gx, gy) spans [gx*grid_size, (gx+1)*grid_size) in lon/lat).
     write_json(output_path, {
         "grid_size": GRID_SIZE,
-        "fields": ["gx", "gy", "road_length_m", "gap_score"],
+        "fields": ["gx", "gy", "road_length_m", "gap_score", "urgency_score"],
         "cells": gap_cells,
     })
     if os.path.exists(legacy_output_path):
@@ -204,6 +219,7 @@ def main():
     update_summary("gaps", {"count": len(gap_cells)}, pbf_path)
 
     print(f"Coverage gaps written to {output_path}")
+
 
 if __name__ == "__main__":
     main()

@@ -81,9 +81,11 @@ def init_db(conn):
             grid_y INT NOT NULL,
             road_length_m DOUBLE PRECISION NOT NULL,
             gap_score DOUBLE PRECISION NOT NULL,
+            urgency_score DOUBLE PRECISION DEFAULT 0.0,
             geom GEOMETRY(Point, 4326) NOT NULL,
             region_code VARCHAR(10)
         );
+        ALTER TABLE gaps ADD COLUMN IF NOT EXISTS urgency_score DOUBLE PRECISION DEFAULT 0.0;
         CREATE INDEX IF NOT EXISTS idx_gaps_geom ON gaps USING GIST (geom);
         CREATE INDEX IF NOT EXISTS idx_gaps_region ON gaps (region_code);
 
@@ -256,17 +258,18 @@ def load_staging_data(conn, data_dir=BASE_DIR):
         gaps_rows = []
         for idx, cell in enumerate(gaps_data.get("cells", []), start=1):
             gx, gy, road_len, gap_score = cell[0], cell[1], cell[2], cell[3]
+            urgency_score = cell[4] if len(cell) > 4 else round(gap_score, 1)
             lon = round(gx * grid_size, 6)
             lat = round(gy * grid_size, 6)
-            gaps_rows.append((idx, gx, gy, road_len, gap_score, lon, lat))
+            gaps_rows.append((idx, gx, gy, road_len, gap_score, urgency_score, lon, lat))
 
         with conn.cursor() as cur:
             with cur.copy("""
-            COPY gaps_staging (id, grid_x, grid_y, road_length_m, gap_score, geom) FROM STDIN
+            COPY gaps_staging (id, grid_x, grid_y, road_length_m, gap_score, urgency_score, geom) FROM STDIN
             """) as copy:
                 for r in gaps_rows:
-                    geom_wkt = f"SRID=4326;POINT({r[5]} {r[6]})"
-                    copy.write_row((r[0], r[1], r[2], r[3], r[4], geom_wkt))
+                    geom_wkt = f"SRID=4326;POINT({r[6]} {r[7]})"
+                    copy.write_row((r[0], r[1], r[2], r[3], r[4], r[5], geom_wkt))
         print(f"  [OK] Ingested {len(gaps_rows)} gaps into gaps_staging.")
 
     # 5. Ingest Suggestions

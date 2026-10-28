@@ -81,6 +81,15 @@
         <span>توضح فجوات التغطية الخلايا الجغرافية المأهولة بالسكان (بناءً على شبكة الطرق المكتشفة) والتي تحتوي على <strong>صفر</strong> من المساجد أو أماكن العبادة. تمثل البؤر الحمراء والبرتقالية عجزاً كبيراً في التغطية.</span>
       </div>
 
+      <!-- Gap Priority Urgency Filter -->
+      <div id="gap-filter-box" class="control-group" style="display: none;">
+        <h2 class="section-title">أولوية الفجوة السكنية (AI)</h2>
+        <div class="chips-container" id="gap-urgency-filters" role="group" aria-label="تصفية فجوات التغطية حسب الأولوية">
+          <button type="button" class="chip active" data-gap-urgency="all">جميع الفجوات</button>
+          <button type="button" class="chip" data-gap-urgency="high_urgency">🔥 الفجوات السكنية الحرجة فقط (أولوية ≥ 50)</button>
+        </div>
+      </div>
+
       <!-- Gap Mode: Open Current Map Area in Editor to Survey/Add a Mosque -->
       <div id="gap-josm-box" class="control-group" style="display: none;">
         <h2 class="section-title">إضافة مسجد جديد</h2>

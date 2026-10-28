@@ -19,6 +19,7 @@ from app.routers import (
     seo,
     stats,
     suggestions,
+    transliterate,
 )
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
@@ -75,4 +76,5 @@ app.include_router(places.router)
 app.include_router(suggestions.router)
 app.include_router(search.router)
 app.include_router(stats.router)
+app.include_router(transliterate.router)
 app.include_router(seo.router)
