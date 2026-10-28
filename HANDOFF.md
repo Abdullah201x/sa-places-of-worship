@@ -117,6 +117,7 @@ See `VPS_HARDWARE_ANALYSIS.md`.
    - Rate-limited with `slowapi` (`120/minute`), connection-pooled with `psycopg_pool`, and tested in CI (`.github/workflows/ci.yml` runs all 42 pytest unit tests + frontend lint & build).
    - **Live Endpoints:**
      - `GET /api/healthz` -> `{"status":"ok"}`
+     - `GET /api/healthz/freshness` -> 200 with `{status, version, published_at, age_hours}`; **503** when the newest `dataset_versions.published_at` is older than `MANARA_MAX_DATASET_AGE_HOURS` (default 72) or missing. For the external monitor.
      - `GET /api/v1/meta` -> active dataset version (`v20261028T001156Z`), `pbf_date`, counts, and `summary.json` metadata.
      - `GET /api/v1/stats` -> overall counts (`total_places: 14021`, `muslim_places: 13999`, `anomaly_places: 86`, `qibla_deviated_places: 605`, `total_gaps: 59695`, `total_suggestions: 54504`, `total_regions: 13`).
      - `GET /api/v1/stats/regions` -> per-province breakdown (`SA-01`..`SA-14`) of places, gaps, suggestions, anomalies (`anomaly_score < 0`), and Qibla deviations (`qibla_dev >= 20°`).
@@ -230,6 +231,11 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 ---
 
 ## 9. Phase 6: Operations & Monitoring
+
+**Status (2026-10-28):**
+- ✅ In the repo, not yet deployed: `/api/healthz/freshness` (+ 3 tests), Caddy pinned to `caddy:2.11-alpine`, `.github/dependabot.yml` (npm, pip ×2, docker ×3 dirs, github-actions). `node`, `alpine` and `python` tags were already pinned.
+- ⏳ Still to do on the VPS/Coolify (needs the user): rotate the DB password, nightly backup + test restore, UptimeRobot monitors (`/healthz`, `/api/healthz`, `/api/healthz/freshness`), Coolify email notifications.
+- Decisions: UptimeRobot, email alerts, whole-DB nightly dump (14 days) on the VPS only.
 
 - **Backups (DECIDED: on the VPS only):**
   - Coolify scheduled backup of `manara-db`, nightly, kept 14 days, stored on the VPS.

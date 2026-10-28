@@ -1,6 +1,7 @@
 import os
 import sys
 import pytest
+from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"))
@@ -32,6 +33,46 @@ def test_healthz_endpoint(client):
     res = client.get("/api/healthz")
     assert res.status_code == 200
     assert res.json() == {"status": "ok"}
+
+
+def _freshness_client(row):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+    mock_cur.fetchone.return_value = row
+
+    def override_get_db():
+        yield mock_conn
+
+    app.dependency_overrides[get_db] = override_get_db
+    return TestClient(app, raise_server_exceptions=False)
+
+
+def test_freshness_fresh_dataset():
+    published = datetime.now(timezone.utc) - timedelta(hours=5)
+    with _freshness_client({"version": "v1", "published_at": published}) as c:
+        res = c.get("/api/healthz/freshness")
+    app.dependency_overrides.clear()
+    assert res.status_code == 200
+    assert res.json()["status"] == "ok"
+    assert res.json()["version"] == "v1"
+
+
+def test_freshness_stale_dataset():
+    published = datetime.now(timezone.utc) - timedelta(days=4)
+    with _freshness_client({"version": "v1", "published_at": published}) as c:
+        res = c.get("/api/healthz/freshness")
+    app.dependency_overrides.clear()
+    assert res.status_code == 503
+    assert res.json()["status"] == "stale"
+
+
+def test_freshness_no_dataset():
+    with _freshness_client(None) as c:
+        res = c.get("/api/healthz/freshness")
+    app.dependency_overrides.clear()
+    assert res.status_code == 503
+    assert res.json()["status"] == "stale"
 
 
 def test_suggestions_bbox_validation(client):

@@ -40,7 +40,7 @@ RUN find /srv/manara -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' 
        -exec gzip -9 -k {} \; -exec brotli -q 11 -k {} \;
 
 # Stage 3: Fast, secure Caddy edge container
-FROM caddy:2-alpine
+FROM caddy:2.11-alpine
 
 COPY deploy/Caddyfile.container /etc/caddy/Caddyfile
 COPY --from=compress /srv/manara /srv/manara
