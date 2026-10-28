@@ -387,7 +387,8 @@ export const OsmApi = {
           ref: `node/${nodeId}`,
           label: tags.name || tags['name:ar'] || tags['name:en'] || 'Mosque',
           version: 1,
-          summary: `Created node/${nodeId} (${tags.amenity || 'place_of_worship'})`
+          summary: `Created node/${nodeId} (${tags.amenity || 'place_of_worship'})`,
+          wikidata: tags.wikidata || ''
         }]
       });
       return { changesetId, nodeId };

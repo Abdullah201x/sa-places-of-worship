@@ -385,3 +385,27 @@ def test_get_sitemap(client, db_mocks):
     assert "<loc>https://manara.saudiosm.org/region/SA-01</loc>" in res.text
     assert "<loc>https://manara.saudiosm.org/place/way/111</loc>" in res.text
 
+
+def test_datasets_suggestions_not_containing_existing_osm_place():
+    import json
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    places_path = os.path.join(base_dir, "places_of_worship_sa.geojson")
+    sug_path = os.path.join(base_dir, "suggested_mosques_sa.geojson")
+
+    if not os.path.exists(places_path) or not os.path.exists(sug_path):
+        pytest.skip("Dataset files not present")
+
+    with open(places_path, "r", encoding="utf-8") as f:
+        places = json.load(f)["features"]
+    with open(sug_path, "r", encoding="utf-8") as f:
+        suggestions = json.load(f)["features"]
+
+    # Verify node 14325238501 (مسجد النووي) is in places
+    node_ids = {f["properties"].get("osm_id") for f in places}
+    assert 14325238501 in node_ids
+
+    # Verify Q138075660 is not in suggested mosques
+    sug_qids = {f["properties"].get("qid") for f in suggestions}
+    assert "Q138075660" not in sug_qids
+
+

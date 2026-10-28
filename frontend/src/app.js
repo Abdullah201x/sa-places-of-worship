@@ -2,7 +2,7 @@ import { currentLang, t, fmtNum, fmtDate, onLanguageChange, setLanguage } from '
 import { ArabicText } from './arabic.js';
 import { ReviewMarks, hideReviewedPlaces, setHideReviewedPlaces, isHiddenByReview, markCurrentPlace, clearCurrentMark, renderReviewActions, rebuildReviewQueue, navigateReview, updateReviewNavUI, Permalink, updatePermalinkSoon, setupKeyboardShortcuts } from './review.js';
 import { Exporters } from './exporters.js';
-import { OsmApi } from './osm_api.js';
+import { OsmApi, EditHistory } from './osm_api.js';
 import { renderQuickFixes, setupEditing } from './editing.js';
 import { trackEvent } from './analytics.js';
 export let map;
@@ -26,6 +26,43 @@ export let addMosqueMode = false;
 export let pendingMosqueLatLng = null;
 export let pendingMosqueMarker = null;
 export let pendingMosqueSuggestionQid = null;
+
+// Local record of added suggestions so they remain hidden across page reloads.
+export const AddedSuggestions = {
+  KEY: 'gcc_added_suggestions',
+
+  list() {
+    try {
+      return JSON.parse(localStorage.getItem(this.KEY)) || [];
+    } catch (_) {
+      return [];
+    }
+  },
+
+  has(qid) {
+    if (!qid) return false;
+    return this.list().includes(qid);
+  },
+
+  add(qid) {
+    if (!qid) return;
+    const list = this.list();
+    if (!list.includes(qid)) {
+      list.push(qid);
+      try {
+        localStorage.setItem(this.KEY, JSON.stringify(list));
+      } catch (_) {}
+    }
+  },
+
+  remove(qid) {
+    if (!qid) return;
+    const list = this.list().filter(q => q !== qid);
+    try {
+      localStorage.setItem(this.KEY, JSON.stringify(list));
+    } catch (_) {}
+  }
+};
 
 // Appended to every submitted note (preset or free text) so mappers processing
 // it know which site it came from - the same convention StreetComplete/MAPS.ME
@@ -479,7 +516,6 @@ export let currentSuggestionFilter = 'all'; // 'all' | 'named' | 'unnamed'
 export function setSuggestionsVisible(visible) {
   const toggle = document.getElementById('suggestions-toggle');
   const subcontrols = document.getElementById('suggestions-subcontrols');
-  const badge = document.getElementById('suggestions-badge');
 
   if (!visible) {
     if (suggestionsLayer && map.hasLayer(suggestionsLayer)) {
@@ -508,23 +544,27 @@ export function setSuggestionsVisible(visible) {
 
   fetchJson('suggested_mosques_sa.geojson')
     .then(data => {
-      suggestionsAllFeatures = data.features || [];
-      const meta = data.metadata || {};
+      const rawFeatures = data.features || [];
+      const addedSet = new Set(AddedSuggestions.list());
+      allPlaces.forEach(p => {
+        const wd = p.properties && (p.properties.wikidata || p.properties.qid);
+        if (wd) addedSet.add(wd);
+      });
+      try {
+        const history = EditHistory.list();
+        history.forEach(h => {
+          (h.items || []).forEach(it => {
+            if (it.wikidata) addedSet.add(it.wikidata);
+          });
+        });
+      } catch (_) {}
 
-      const countAll = meta.total_suggestions || suggestionsAllFeatures.length;
-      const countNamed = meta.named_suggestions || suggestionsAllFeatures.filter(f => !f.properties.is_unnamed).length;
-      const countUnnamed = meta.unnamed_suggestions || (countAll - countNamed);
+      suggestionsAllFeatures = rawFeatures.filter(f => {
+        const qid = f.properties && f.properties.qid;
+        return qid && !addedSet.has(qid);
+      });
 
-      if (badge) {
-        badge.innerText = t('sugBadge', { n: fmtNum(countAll) });
-        badge.style.display = 'inline-block';
-      }
-      const elAll = document.getElementById('sug-count-all');
-      const elNamed = document.getElementById('sug-count-named');
-      const elUnnamed = document.getElementById('sug-count-unnamed');
-      if (elAll) elAll.innerText = fmtNum(countAll);
-      if (elNamed) elNamed.innerText = fmtNum(countNamed);
-      if (elUnnamed) elUnnamed.innerText = fmtNum(countUnnamed);
+      updateSuggestionsCounts();
 
       suggestionsLayer = L.markerClusterGroup({
         showCoverageOnHover: false,
@@ -563,6 +603,7 @@ export function setSuggestionsVisible(visible) {
           weight: 1.5
         });
 
+        marker.qid = props.qid;
         marker._sugProperties = props;
         marker._sugCoords = [lat, lon];
         marker.bindPopup(() => buildSuggestionPopup(props, lat, lon));
@@ -577,7 +618,7 @@ export function setSuggestionsVisible(visible) {
       }
       if (subcontrols) subcontrols.style.display = 'flex';
 
-      showToast(t('sugLoaded', { n: fmtNum(countAll) }));
+      showToast(t('sugLoaded', { n: fmtNum(suggestionsAllFeatures.length) }));
       updateSuggestionsViewportCount();
     })
     .catch(err => {
@@ -590,6 +631,54 @@ export function setSuggestionsVisible(visible) {
       suggestionsLoading = false;
       if (label) label.innerText = originalLabel;
     });
+}
+
+export function updateSuggestionsCounts() {
+  const total = suggestionsAllFeatures.length;
+  const named = suggestionsAllFeatures.filter(f => !f.properties?.is_unnamed).length;
+  const unnamed = total - named;
+
+  const badge = document.getElementById('suggestions-badge');
+  if (badge) {
+    badge.innerText = t('sugBadge', { n: fmtNum(total) });
+    badge.style.display = total > 0 ? 'inline-block' : 'none';
+  }
+  const elAll = document.getElementById('sug-count-all');
+  const elNamed = document.getElementById('sug-count-named');
+  const elUnnamed = document.getElementById('sug-count-unnamed');
+  if (elAll) elAll.innerText = fmtNum(total);
+  if (elNamed) elNamed.innerText = fmtNum(named);
+  if (elUnnamed) elUnnamed.innerText = fmtNum(unnamed);
+
+  updateSuggestionsViewportCount();
+}
+
+export function removeSuggestion(qid) {
+  if (!qid) return;
+
+  AddedSuggestions.add(qid);
+
+  const markerIdx = suggestionsMarkers.findIndex(m => (m.qid || m._sugProperties?.qid) === qid);
+  if (markerIdx !== -1) {
+    const marker = suggestionsMarkers[markerIdx];
+    if (suggestionsLayer && suggestionsLayer.hasLayer(marker)) {
+      suggestionsLayer.removeLayer(marker);
+    }
+    suggestionsMarkers.splice(markerIdx, 1);
+  }
+
+  const featIdx = suggestionsAllFeatures.findIndex(f => f.properties?.qid === qid);
+  if (featIdx !== -1) {
+    suggestionsAllFeatures.splice(featIdx, 1);
+  }
+
+  delete suggestionsByQid[qid];
+
+  if (map) {
+    map.closePopup();
+  }
+
+  updateSuggestionsCounts();
 }
 
 export function applySuggestionsFilter() {
@@ -2173,13 +2262,7 @@ export function refreshLanguageDependentUI() {
   updateDashboardUI();
   if (selectedPlace) showDetails(selectedPlace.properties, selectedPlace.lat, selectedPlace.lon);
   if (suggestionsAllFeatures.length) {
-    const named = suggestionsAllFeatures.filter(f => !f.properties.is_unnamed).length;
-    const badge = document.getElementById('suggestions-badge');
-    if (badge) badge.innerText = t('sugBadge', { n: fmtNum(suggestionsAllFeatures.length) });
-    document.getElementById('sug-count-all').innerText = fmtNum(suggestionsAllFeatures.length);
-    document.getElementById('sug-count-named').innerText = fmtNum(named);
-    document.getElementById('sug-count-unnamed').innerText = fmtNum(suggestionsAllFeatures.length - named);
-    updateSuggestionsViewportCount();
+    updateSuggestionsCounts();
   }
 }
 
@@ -3216,6 +3299,7 @@ export function openAddMosqueFromSuggestion(qid) {
   const s = suggestionsByQid[qid];
   if (!s) return;
   if (map) {
+    map.closePopup();
     map.setView([s.lat, s.lon], Math.max(17, map.getZoom()), { animate: true });
   }
   openAddMosqueComposer(s.lat, s.lon, {
@@ -3328,6 +3412,7 @@ export async function submitPendingMosqueNode() {
         amenity: 'place_of_worship',
         wheelchair: tags.wheelchair || '',
         female: tags['female:prayer_room'] || '',
+        wikidata: tags.wikidata || '',
         version: 1,
         edited_at: new Date().toISOString(),
         last_edited_by: OsmApi.userName() || 'You',
@@ -3348,12 +3433,11 @@ export async function submitPendingMosqueNode() {
     }
 
     // If added from a Wikidata suggestion, remove suggestion marker
-    if (pendingMosqueSuggestionQid) {
-      const qid = pendingMosqueSuggestionQid;
-      const sugMarker = suggestionsMarkers.find(m => m.qid === qid);
-      if (sugMarker && suggestionsLayer) {
-        suggestionsLayer.removeLayer(sugMarker);
-      }
+    const qidMatch = wikidata.match(/Q[0-9]+/i);
+    const cleanWikidataQid = qidMatch ? qidMatch[0].toUpperCase() : wikidata;
+    const qidToRemove = pendingMosqueSuggestionQid || (cleanWikidataQid && (suggestionsByQid[cleanWikidataQid] || suggestionsMarkers.some(m => (m.qid || m._sugProperties?.qid) === cleanWikidataQid)) ? cleanWikidataQid : null);
+    if (qidToRemove) {
+      removeSuggestion(qidToRemove);
       showToast(t('sugDirectSuccess'), 'success');
     }
 
