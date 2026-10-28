@@ -1,6 +1,8 @@
 # Manara (manara.saudiosm.org): Project Handoff
 
-This document summarises the architecture, live infrastructure, completed phases (Phases 1–3), and upcoming roadmap (Phases 4–6) for **Manara** (`https://manara.saudiosm.org`), so another AI coding assistant can seamlessly continue the work.
+This document summarises the architecture, live infrastructure, completed phases (Phases 1–3 and Phase 6a), and upcoming roadmap (Phases 5, 4 and 6b) for **Manara** (`https://manara.saudiosm.org`), so another AI coding assistant can seamlessly continue the work.
+
+**Where things stand:** Phases 1–3 are live. Phase 6a (operations) is done except the Telegram alerts, which the user will set up later. **The next task is Phase 5a, the public `/community` page** (§8). Nothing is half-finished in the code; `main` is clean.
 
 - **Last updated:** 2026-10-28
 - **Repository:** `github.com/Abdullah201x/sa-places-of-worship` (branch `main` auto-deploys via Coolify)
@@ -114,7 +116,7 @@ See `VPS_HARDWARE_ANALYSIS.md`.
    - Bulk-loads staging tables via PostgreSQL `COPY`, maps `Point`/`Polygon`/`Relation` to OSM types `node`/`way`/`relation`, assigns `region_code` spatially via `ST_Within(geom, regions.geom)`, records regional history snapshots using CTE aggregations (avoiding multi-table Cartesian joins), and swaps staging tables into production in a single atomic transaction (~9–14s total runtime).
 3. **FastAPI Geospatial Data Service (`backend/` + `tests/test_backend_api.py`):**
    - Deployed as `manara-api` on port `8010`, proxied by Caddy via `handle /api/*` (`{$MANARA_API_URL:http://manara-api:8010}`).
-   - Rate-limited with `slowapi` (`120/minute`), connection-pooled with `psycopg_pool`, and tested in CI (`.github/workflows/ci.yml` runs all 42 pytest unit tests + frontend lint & build).
+   - Rate-limited with `slowapi` (`120/minute`), connection-pooled with `psycopg_pool`, and tested in CI (`.github/workflows/ci.yml` runs all 46 pytest unit tests + frontend lint & build).
    - **Live Endpoints:**
      - `GET /api/healthz` -> `{"status":"ok"}`
      - `GET /api/healthz/freshness` -> 200 with `{status, version, published_at, age_hours}`; **503** when the newest `dataset_versions.published_at` is older than `MANARA_MAX_DATASET_AGE_HOURS` (default 72) or missing. For the external monitor.
@@ -143,13 +145,11 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 
 ## 6. Recommended Order for the Remaining Work
 
-1. **Phase 6a (before any user data exists):**
-   - rotate the DB password;
-   - set up backups, uptime monitoring and the freshness check.
-2. **Phase 5a:** the public `/community` stats page. It needs no accounts.
+1. ✅ **Phase 6a** (done 2026-10-28, see §9): DB password rotated, nightly backups, uptime monitors, freshness check, pinned tags, Dependabot. Only the Telegram alerts remain, and the user will do those.
+2. **Phase 5a (NEXT):** the public `/community` stats page. It needs no accounts.
 3. **Phase 4:** accounts and shared review, using the hybrid login model.
 4. **Phase 5b:** the opt-in leaderboard, the recent-edits feed and the SEO pages.
-5. **Phase 6b:** hardening (pinned tags, Dependabot, a security review of the Phase 4 code).
+5. **Phase 6b:** a security review of the Phase 4 code, plus updating the backup scope (§9) once the user tables exist.
 
 ---
 
@@ -214,10 +214,15 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 
 ## 8. Phase 5: Community & Public Pages
 
-- **5a. `/community` (Vite page, needs no accounts):**
-  - per-province coverage (`/api/v1/stats/regions`), progress over time (`/api/v1/stats/history`), and an issue breakdown;
+- **5a. `/community` (Vite page, needs no accounts) — NEXT TASK:**
+  - per-province coverage (`/api/v1/stats/regions`), progress over time (`/api/v1/stats/history`), and an issue breakdown (`/api/v1/stats`);
   - bilingual and RTL.
   - Do **not** use `/stats/*`: that path is reserved for the Umami proxy.
+  - **No backend changes are needed:** all three endpoints are live (§5). Follow the pattern of `frontend/about.html` / `privacy.html` (shared `i18n.js`, `page.js`, `styles/page.css`; `about.html` is the template: `<body data-title-key=...>`, `[data-lang]` blocks, language toggle button `#btn-toggle-lang`). Register the page in **both** places in `frontend/vite.config.js`: the `PAGES` set (line ~51, the dev/preview rewrite of `/about` and `/privacy`) and `build.rollupOptions.input` (line ~86). In production Caddy already serves `/community` through its `try_files {path} {path}.html` rule once `community.html` is built. Also link to it from `index.html`/`about.html` if the user wants it discoverable, and add `canonical`/description meta like `about.html`.
+  - `region_stats_history` only started filling on 2026-10-28 (one snapshot per pipeline run, two so far), so the time-series chart starts nearly empty. The page must handle 0–2 points gracefully.
+  - Charts: the user has not chosen a library. The recommended approach is plain CSS bars and inline SVG, with no new dependency (the site is fully self-hosted, no CDN). Ask the user before adding a chart library.
+  - The CSP in `deploy/Caddyfile.container` is `default-src 'self'` with `connect-src 'self' ...`, so same-origin `/api/*` calls work with no CSP change. Any new external host would need one.
+  - No OSM API calls, nothing stored, so there is no OSM compliance risk. State this in the plan.
 - **5b. After Phase 4:**
   - **opt-in** leaderboard (verified edits only; `users.leaderboard_opt_in`);
   - recent verified edits feed, read from the `edits` table. No OSM polling.
@@ -232,35 +237,55 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 
 ## 9. Phase 6: Operations & Monitoring
 
-**Status (2026-10-28):**
-- ✅ Deployed: `/api/healthz/freshness` (GET and HEAD; UptimeRobot checks with HEAD), Caddy pinned to `caddy:2.11-alpine`, `.github/dependabot.yml` (npm, pip ×2, docker ×3 dirs, github-actions). `node`, `alpine` and `python` tags were already pinned.
-- ✅ DB password rotated by the user; verified with a forced `run.py once --force` (load + atomic swap OK, 2026-10-28).
-- ✅ UptimeRobot monitors: `/` (home page), `/api/healthz`, `/api/healthz/freshness` (account `saudiosm@gmail.com`, 5-min checks, email alerts).
-- ✅ Backup/restore verified by hand (2026-10-28): `pg_dump -Fc` of `manara` (6.4 MB) restored into a throwaway DB with identical row counts, then dropped.
-- ⏳ Still to do by the user in the Coolify UI: the **scheduled** nightly backup on `manara-db` (14 days, local), and Telegram notifications (bot token + chat ID entered in Coolify only). Decision changed from email to Telegram.
-- Restore runbook: `docker exec <manara-db> pg_dump -U manara -Fc manara -f /tmp/x.dump`; to test, `CREATE DATABASE manara_restore_test`, `pg_restore -U manara -d manara_restore_test --no-owner /tmp/x.dump`, compare counts, drop it.
+**Phase 6a is DONE (2026-10-28), except the Telegram alerts.** Everything below is live and was checked.
 
+### Done and verified
+- **DB password rotated** by the user in Coolify (`MANARA_DATABASE_URL` on both `manara-api` and `manara-pipeline`). A forced `run.py once --force` afterwards loaded all tables and swapped them atomically (24 s), so reads and writes both work. The old password is still in git history (commit `1450983`); that is why it was rotated.
+- **Freshness check:** `GET /api/healthz/freshness` returns 200 with `{status, version, published_at, age_hours}`, or **503** when the newest `dataset_versions.published_at` is older than `MANARA_MAX_DATASET_AGE_HOURS` (default 72) or missing. Code in `backend/app/routers/healthz.py`, tests in `tests/test_backend_api.py`.
+- **Health routes answer GET and HEAD.** UptimeRobot checks with `HEAD`; the routes were `GET`-only at first and returned 405, which made two monitors go red (fixed in `0e4f733`). Keep `methods=["GET", "HEAD"]` on any new health route.
+- **UptimeRobot** (the user's free account, 5-minute checks, email alerts) has three monitors: `https://manara.saudiosm.org` (home page), `/api/healthz`, `/api/healthz/freshness`. The Caddy-only `/healthz` is not monitored (the home page covers the web container).
 - **Backups (DECIDED: on the VPS only):**
-  - Coolify scheduled backup of `manara-db`, nightly, kept 14 days, stored on the VPS.
-  - Only the user tables need it (`users`, `sessions`, `review_marks`, `review_events`, `edits`); the data tables are rebuilt by the pipeline.
-  - Do one test restore.
-  - ⚠️ Risk the user accepted: losing the VPS disk loses the user data. **Optional safety net:** a weekly manual copy of the newest dump to the desktop.
-- **Monitoring:**
-  - a free external monitor (UptimeRobot or Better Stack) on `/healthz` and `/api/healthz`;
-  - add `GET /api/healthz/freshness`, which returns **503 when the published dataset is more than 3 days old**, so the monitor also catches a silently failing pipeline.
-- **Coolify notifications** (email, Telegram or Discord) for failed deployments and crashed containers.
+  - Coolify scheduled backup on `manara-db`: database `manara`, frequency `daily` (00:00 UTC, 03:00 Riyadh, after the 23:30 UTC pipeline run), **14 days** local retention, no S3.
+  - Files: `/data/coolify/backups/databases/root-team-0/manara-db-9uzoip4gqaxybg3e5oymh8sg/pg-dump-manara-*.dmp` (custom format, about 6.7 MB).
+  - The scope is the **whole `manara` database**, not only the user tables (this replaced the earlier plan, because the user tables do not exist yet and the dump is small). Nothing needs changing when Phase 4 adds tables.
+  - Verified: a manual `pg_dump -Fc` restored into a throwaway database with identical row counts (14,021 places, 59,695 gaps, 54,504 suggestions, 13 regions, 2 dataset versions), and Coolify's own dump lists all the data tables in `pg_restore -l`.
+  - ⚠️ Risk the user accepted: losing the VPS disk loses the backups too. **Optional safety net:** a weekly manual `scp` of the newest dump to the desktop. Not set up.
 - **Hygiene:**
-  - pin image tags (`caddy:2.11-alpine`, `node:22-alpine`, `python:3.12-slim`, `postgis/postgis:17-3.5-alpine`);
-  - enable Dependabot for npm and pip;
-  - run a security review of the Phase 4 auth code before it goes live;
-  - rotate any secret that has ever been written into a doc or commit.
+  - Image tags pinned: `caddy:2.11-alpine` (changed), `node:22-alpine`, `alpine:3.22` and `python:3.12-slim` (already pinned), `postgis/postgis:17-3.5-alpine` (set in Coolify).
+  - `.github/dependabot.yml`: weekly updates for npm (`/frontend`), pip (`/backend`, `/pipeline`), docker (`/`, `/backend`, `/pipeline`) and github-actions. Expect its first PRs on GitHub; review them rather than auto-merging, because a merge to `main` deploys to production.
+
+### Still to do
+- **Coolify Telegram notifications** (user will do this later; it replaces the earlier email plan): a bot token from `@BotFather` and a chat ID, entered only in the Coolify UI under Notifications → Telegram. Enable failed deployments and container stopped. When done, also set "Missing backup alert after" on the backup schedule to about 36 hours (it is `0`, which means off).
+- **Phase 6b:** a security review of the Phase 4 auth code before it goes live; rotate any secret that ever lands in a doc or commit.
+
+### Restore runbook
+Never restore over the live `manara` database without the user's explicit OK. To test a backup:
+```bash
+ssh root@159.195.192.148
+C=$(docker ps --filter name=9uzoip4gqaxybg3e5oymh8sg --format "{{.Names}}" | head -n1)
+# copy the newest Coolify dump into the DB container
+F=$(ls -t /data/coolify/backups/databases/root-team-0/manara-db-*/pg-dump-manara-*.dmp | head -1)
+docker cp "$F" $C:/tmp/restore.dmp
+docker exec $C psql -U manara -d postgres -c "CREATE DATABASE manara_restore_test;"
+docker exec $C pg_restore -U manara -d manara_restore_test --no-owner /tmp/restore.dmp
+docker exec $C psql -U manara -d manara_restore_test -Atc "select count(*) from places"   # compare with the live DB
+docker exec $C psql -U manara -d postgres -c "DROP DATABASE manara_restore_test;"
+docker exec $C rm -f /tmp/restore.dmp
+```
+
+### Coolify 4.5 UI quirks (learned the hard way)
+- The backup schedule page has **no Save button**. Fields save on blur: press Enter to make a chip, then Tab or click outside, and wait for the toast. **"Back Up Now" does not save the form** and runs with whatever is stored.
+- Always confirm a setting really stuck by reading Coolify's own DB (read-only):
+  `ssh root@159.195.192.148 'docker exec coolify-db psql -U coolify -d coolify -Atc "select frequency, databases_to_backup, database_backup_retention_days_locally, enabled from scheduled_database_backups;"'`
+  and recent runs with `select status, size, filename from scheduled_database_backup_executions order by id desc limit 3;`.
+- The default `databases_to_backup` is `postgres` (an empty 5.7 KB dump). A good dump is named `pg-dump-manara-*` and is several MB.
 
 ---
 
 ## 10. Useful Verification Commands
 
 ```bash
-# 1. Run full Python test suite (42 tests: common, regions extractor, FastAPI endpoints)
+# 1. Run full Python test suite (46 tests: common, regions extractor, FastAPI endpoints)
 python -m pytest tests/ -q
 
 # 2. Frontend lint, build & local HTTPS preview (https://localhost:8000)
@@ -269,6 +294,7 @@ cd frontend && npm ci && npm run lint && npm run build && npm run preview
 # 3. Live production health & API checks
 curl -s https://manara.saudiosm.org/healthz
 curl -s https://manara.saudiosm.org/api/healthz
+curl -s https://manara.saudiosm.org/api/healthz/freshness   # 200 normally, 503 when the dataset is stale
 curl -s https://manara.saudiosm.org/api/v1/meta
 curl -s https://manara.saudiosm.org/api/v1/stats
 curl -s https://manara.saudiosm.org/api/v1/stats/regions
@@ -293,3 +319,11 @@ ssh root@159.195.192.148 'CID=$(docker ps --filter name=e3xakpyxk2xmq19aqpyvjdjq
   - Never write them into docs, code, commit messages, logs or chat.
   - In docs, refer to the variable name (for example `MANARA_DATABASE_URL`).
   - If a secret ever lands in git, **rotate it**; deleting the line doesn't remove it from history.
+- **Plan first, then build; commit locally, but ask before every `git push`** (a push to `main` redeploys production). Earlier approval of one push does not cover the next. After a push, check the live endpoints with `curl` (Coolify takes about 1–2 minutes to rebuild).
+- **The user is not a sysadmin.** Explain terms plainly (for example SMTP, cron) and give exact click-by-click steps for Coolify and third-party UIs. Never ask the user to paste a secret into chat.
+
+### Environment gotchas (Windows dev machine)
+- The shell is Git Bash/PowerShell on Windows. Python's default encoding there is cp1252, so a script that reads a repo file containing Arabic must pass `encoding="utf-8"`; otherwise it crashes (this happened with `tests/test_backend_api.py`).
+- Git prints "LF will be replaced by CRLF" warnings on commit. They are harmless.
+- `ssh root@159.195.192.148 ... docker exec ... run.py once --force` takes about 2 minutes. The SSH connection may reset right after the final `Published v...` line; that is harmless. Confirm with `curl -s https://manara.saudiosm.org/api/healthz/freshness`.
+- Do not run `once --force` casually: peak memory is about 970 MiB on a VPS with about 2.3 GiB available and a neighbour (Rahma) on it.
