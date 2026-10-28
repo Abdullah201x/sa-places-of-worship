@@ -20,6 +20,10 @@ def init_pool():
         min_size=1,
         max_size=10,
         kwargs={"row_factory": dict_row, "autocommit": True},
+        # Test each connection before handing it out, so connections killed by
+        # a database restart (e.g. when Coolify applies a config change) are
+        # replaced instead of failing the request with a 500.
+        check=ConnectionPool.check_connection,
         open=True,
     )
     print("[INFO] Database connection pool initialized.")

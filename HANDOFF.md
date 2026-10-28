@@ -49,9 +49,9 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 | **FastAPI Backend** | `mp6ebt0ybcqvpmk4bke8d56w` (`manara-api`) | `backend/Dockerfile` | `:8010` | `256 MiB` | ~45 MiB | Consistent container name enabled; Docker network alias `manara-api` on `coolify` network; proxied by Caddy `handle /api/*` |
 | **PostGIS Database** | `9uzoip4gqaxybg3e5oymh8sg` (`manara-db`) | `postgis/postgis:17-3.5-alpine` | `:5432` | `512 MiB` | ~241 MiB | Database `manara`, user `manara`, extensions `postgis` and `pg_trgm` enabled |
 
-- **Internal `MANARA_DATABASE_URL`** (configured on both `manara-pipeline` and `manara-api`):
+- **Internal `MANARA_DATABASE_URL`** (configured on both `manara-pipeline` and `manara-api`). **Secrets live only in Coolify environment variables, never in docs or git.** The password that used to be written here (commit `1450983`) must be rotated:
   ```text
-  postgresql://manara:ZXhAu4Iw2PB5XQauQhAP54AjMe0Yk0vPnNhRPB8ymMl7AnEfH5puAgVLCjrslJqx@9uzoip4gqaxybg3e5oymh8sg:5432/manara
+  postgresql://manara:<see Coolify env var MANARA_DATABASE_URL>@9uzoip4gqaxybg3e5oymh8sg:5432/manara
   ```
 
 ### OSM Compliance (Strict Requirement)
@@ -140,59 +140,115 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 
 ---
 
-## 6. Phase 4: Next Up — Accounts & Shared Review
+## 6. Recommended Order for the Remaining Work
 
-- **Server-side OSM OAuth2:**
-  - Register a confidential OAuth2 app on `openstreetmap.org` (and `master.apis.dev.openstreetmap.org` for testing) with redirect URI `https://manara.saudiosm.org/auth/callback` and scopes `read_prefs write_api write_notes`.
-  - Endpoints in `backend/app/routers/auth.py`: `GET /auth/login`, `GET /auth/callback` (code + PKCE + state), `POST /auth/logout`, `GET /api/v1/me`.
-  - Note: also add `handle /auth/*` to `deploy/Caddyfile.container` (proxying to `{$MANARA_API_URL:http://manara-api:8010}`, matching `frontend/vite.config.js` which already proxies `/auth`).
-- **Identity & Security:**
-  - Identity (`osm_uid`, `display_name`, `avatar_url`) must come **only** from server-side `GET /api/0.6/user/details.json` using the OAuth token — never from client input.
-  - Store OAuth access tokens **Fernet-encrypted** (`MANARA_FERNET_KEY`) in a `sessions` table.
-  - Set session cookie `__Host-manara_session` (`HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`).
-  - Require `Origin: https://manara.saudiosm.org` and custom header `X-Manara-CSRF: 1` on every `POST`/`PUT`/`DELETE` request.
-  - Remove client-side OAuth token storage from `localStorage` (`frontend/src/osm_api.js`, `frontend/src/app.js`).
-- **Database Tables (add to PostGIS):**
-  - `users(osm_uid BIGINT PRIMARY KEY, display_name TEXT, avatar_url TEXT, created_at TIMESTAMPTZ, last_login_at TIMESTAMPTZ, leaderboard_opt_out BOOLEAN DEFAULT FALSE)`
-  - `sessions(session_id TEXT PRIMARY KEY, osm_uid BIGINT REFERENCES users(osm_uid), encrypted_token TEXT, created_at TIMESTAMPTZ, expires_at TIMESTAMPTZ)`
-  - `review_marks(osm_type VARCHAR(16), osm_id BIGINT, version INT, status VARCHAR(32), osm_uid BIGINT REFERENCES users(osm_uid), updated_at TIMESTAMPTZ, PRIMARY KEY (osm_type, osm_id))`
-  - `review_events(id SERIAL PRIMARY KEY, osm_type VARCHAR(16), osm_id BIGINT, version INT, status VARCHAR(32), osm_uid BIGINT, created_at TIMESTAMPTZ)`
-  - `edits(id SERIAL PRIMARY KEY, osm_uid BIGINT, changeset_id BIGINT, osm_type VARCHAR(16), osm_id BIGINT, old_version INT, new_version INT, tags_changed JSONB, created_at TIMESTAMPTZ)`
-- **Shared `ReviewMarks` (`frontend/src/review.js`):**
-  - Keep existing interface, backed by server API (`GET /api/v1/reviews`, `POST /api/v1/reviews`) when logged in, falling back to `localStorage` for guests.
-  - Provide a one-time import of existing `localStorage` review marks after first login (imported marks do not count toward the edit leaderboard).
-- **Server-Side Edit Proxy (`POST /api/v1/osm/changesets`):**
-  - Re-fetches the live OSM object from `api.openstreetmap.org`, verifies `version` matches to prevent conflicts, and **strictly allowlists** only the tag keys `amenity`, `building`, `name:en`, and `denomination` (matching `frontend/src/editing.js`).
-  - Enforces per-user rate limits (max 10 changesets/hour, max 50 elements/changeset), sets User-Agent `Manara/1.0 (+https://manara.saudiosm.org)`, uploads diff, **always closes the changeset**, and records the edit in `edits`.
-  - Signed-in notes go through `POST /api/v1/osm/notes`; anonymous notes stay in the browser.
-- **Backups:**
-  - Nightly `pg_dump` of the user/review/history tables (`users`, `sessions`, `review_marks`, `review_events`, `edits`, `dataset_versions`, `region_stats_history`), retained for 14 days.
+1. **Phase 6a (before any user data exists):**
+   - rotate the DB password;
+   - set up backups, uptime monitoring and the freshness check.
+2. **Phase 5a:** the public `/community` stats page. It needs no accounts.
+3. **Phase 4:** accounts and shared review, using the hybrid login model.
+4. **Phase 5b:** the opt-in leaderboard, the recent-edits feed and the SEO pages.
+5. **Phase 6b:** hardening (pinned tags, Dependabot, a security review of the Phase 4 code).
 
 ---
 
-## 7. Phase 5: Community & Public Pages
+## 7. Phase 4: Accounts & Shared Review (DECIDED: hybrid login model)
 
-- **Community / Stats Page (`/community` in Vite):**
-  - **Important path note:** `/stats/*` is reserved for the Umami analytics proxy in Caddy (`deploy/Caddyfile.container`). Use `/community` (or `/dashboard`) for the public statistics page to avoid colliding with `/stats/*`.
-  - Displays per-province coverage from `GET /api/v1/stats/regions`, progress over time from `GET /api/v1/stats/history`, issues breakdown, recent edits feed, and an opt-out mapper leaderboard.
-- **SEO / Server-Rendered Pages:**
-  - `/place/{type}/{id}` and `/region/{code}` with OpenGraph tags, `Place` JSON-LD, `hreflang`, OSM attribution, and deep links to OSM / iD / JOSM.
-- **`sitemap.xml` and `robots.txt`:**
-  - Regenerated on pipeline runs (`robots.txt` already disallows `/stats/`).
+### Login model "B. Hybrid" (chosen by the user)
+- **OSM edits stay in the browser**, exactly as today: PKCE OAuth in `frontend/src/osm_api.js`, uploads from `editing.js`. Nothing about OSM writes moves to the server.
+- **Manara session (`POST /auth/session`):**
+  - After a successful browser OSM login, the frontend sends the access token **once** to `POST /auth/session`.
+  - The server calls `GET https://api.openstreetmap.org/api/0.6/user/details.json` with it **once**, reads `id`, `display_name`, `img.href`, `account_created` and `changesets.count`, upserts `users`, then **discards the token**. It is never stored or logged.
+  - It returns cookie `__Host-manara_session` (random 256-bit ID, stored **hashed** in `sessions`; `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`; 30-day rolling expiry).
+- **Other endpoints:** `POST /auth/logout` (deletes the session row) and `GET /api/v1/me`.
+- **Caddy:** add `handle /auth/*` to `deploy/Caddyfile.container`, proxied to `{$MANARA_API_URL:http://manara-api:8010}`.
+- **CSRF:** every state-changing request (`POST`/`PUT`/`DELETE`) needs `Origin: https://manara.saudiosm.org` plus the header `X-Manara-CSRF: 1`. Reject anything else with 403.
+- **Rate limits:** `/auth/session` 10/min per IP; writes 60/min per user.
+- **OSM compliance:**
+  - one `user/details` read per login, triggered by the user;
+  - one `GET /api/0.6/changeset/{id}` read per reported changeset (below);
+  - both with User-Agent `Manara/1.0 (+https://manara.saudiosm.org)`, honouring 429 `Retry-After`;
+  - no polling, and no bulk reads.
+
+### Tables (PostGIS DB, created by an Alembic migration in `backend/`)
+- `users(osm_uid BIGINT PK, display_name TEXT, avatar_url TEXT, osm_changesets INT, osm_account_created TIMESTAMPTZ, created_at, last_login_at, leaderboard_opt_in BOOLEAN DEFAULT FALSE, is_admin BOOLEAN DEFAULT FALSE)`
+  - `is_admin` comes from the env allowlist `MANARA_ADMIN_UIDS`.
+- `sessions(token_hash TEXT PK, osm_uid BIGINT REFERENCES users, created_at, expires_at, last_seen_at)`
+- `review_marks(osm_type, osm_id, osm_uid, status, version, verified_changeset BIGINT NULL, created_at, PRIMARY KEY (osm_type, osm_id, osm_uid))`
+  - One row **per user**; shared visibility is decided at query time (below).
+- `review_events(id, osm_type, osm_id, osm_uid, status, version, created_at)`: append-only audit log.
+- `edits(changeset_id BIGINT PK, osm_uid, objects JSONB, comment TEXT, verified_at TIMESTAMPTZ, created_at)`
+
+### Shared review marks: "guarded sharing" (chosen)
+- **`skipped` is personal:** it is only ever applied to the user who set it.
+- **`fixed` hides an issue from everyone only if:**
+  - the user has at least `MANARA_MIN_CHANGESETS` (default 10) OSM changesets, **and**
+  - either the mark has a `verified_changeset` that touched that object, **or** no newer dataset has arrived yet.
+  - A `fixed` mark without a verified edit expires automatically when the next pipeline run still shows the issue at the same `version`.
+- **Version rule (as today):** any mark expires when the object's `version` increases.
+- **Admins** can revoke all marks by a user (`DELETE /api/v1/admin/users/{uid}/marks`).
+- **API:**
+  - `GET /api/v1/reviews`: the shared marks plus the caller's own marks;
+  - `PUT /api/v1/reviews/{type}/{id}` with `{status, version}`;
+  - `DELETE /api/v1/reviews/{type}/{id}`.
+- **`ReviewMarks` in `frontend/src/review.js`** keeps its interface. It is server-backed when logged in and uses `localStorage` for guests. After the first login it offers a one-time import of the `localStorage` marks; imported marks are personal and unverified.
+
+### Edit recording and verification
+- After a successful upload, the browser calls `POST /api/v1/edits {changeset_id}`.
+- The server fetches `GET /api/0.6/changeset/{id}` **once** and accepts it only if:
+  - `uid` equals the session user;
+  - the `hashtags` or `comment` tag contains `#sa-worship-map`;
+  - the changeset is closed.
+- It then stores the edited objects (`/api/0.6/changeset/{id}/download`, also one read) and sets `verified_changeset` on that user's matching `fixed` marks.
+- Only verified edits count for the leaderboard and the feed. Edit history imported from `localStorage` is shown to its owner only.
+
+### Privacy page
+- Update `frontend/privacy.html`. It must cover:
+  - the Manara session cookie (strictly necessary, so no banner is needed);
+  - what is stored per user: OSM uid, display name, avatar URL, changeset count, marks, verified edits;
+  - that the leaderboard is **opt-in**;
+  - how to delete an account. Add `DELETE /api/v1/me`, which removes the user's rows and their marks.
 
 ---
 
-## 8. Phase 6: Operations & Monitoring
+## 8. Phase 5: Community & Public Pages
 
-- **Health & Freshness Monitoring:**
-  - Web health check: `https://manara.saudiosm.org/healthz`
-  - API & DB health check: `https://manara.saudiosm.org/api/healthz`
-  - Dataset freshness check: `https://manara.saudiosm.org/api/v1/meta` (`published_at` and `pbf_date`; alert if >3 days old).
-- **Docker log rotation & pinned image tags.**
+- **5a. `/community` (Vite page, needs no accounts):**
+  - per-province coverage (`/api/v1/stats/regions`), progress over time (`/api/v1/stats/history`), and an issue breakdown;
+  - bilingual and RTL.
+  - Do **not** use `/stats/*`: that path is reserved for the Umami proxy.
+- **5b. After Phase 4:**
+  - **opt-in** leaderboard (verified edits only; `users.leaderboard_opt_in`);
+  - recent verified edits feed, read from the `edits` table. No OSM polling.
+- **SEO pages** (FastAPI with Jinja, `Cache-Control: public, max-age=3600`):
+  - `/region/{code}`: 13 rich pages.
+  - `/place/{type}/{id}`: **only named places are indexable**; generic or unnamed places get `noindex`.
+  - All of them: OG tags, `Place` JSON-LD, `hreflang` ar/en, OSM attribution, and links to OSM/iD/JOSM.
+  - `sitemap.xml` regenerated after each pipeline load.
+- **Wikidata suggestions:** keep the static pre-compressed bundle in the frontend (1.1 MB brotli, cached, filtered instantly). `/api/v1/suggestions` stays for other uses.
 
 ---
 
-## 9. Useful Verification Commands
+## 9. Phase 6: Operations & Monitoring
+
+- **Backups (DECIDED: on the VPS only):**
+  - Coolify scheduled backup of `manara-db`, nightly, kept 14 days, stored on the VPS.
+  - Only the user tables need it (`users`, `sessions`, `review_marks`, `review_events`, `edits`); the data tables are rebuilt by the pipeline.
+  - Do one test restore.
+  - ⚠️ Risk the user accepted: losing the VPS disk loses the user data. **Optional safety net:** a weekly manual copy of the newest dump to the desktop.
+- **Monitoring:**
+  - a free external monitor (UptimeRobot or Better Stack) on `/healthz` and `/api/healthz`;
+  - add `GET /api/healthz/freshness`, which returns **503 when the published dataset is more than 3 days old**, so the monitor also catches a silently failing pipeline.
+- **Coolify notifications** (email, Telegram or Discord) for failed deployments and crashed containers.
+- **Hygiene:**
+  - pin image tags (`caddy:2.11-alpine`, `node:22-alpine`, `python:3.12-slim`, `postgis/postgis:17-3.5-alpine`);
+  - enable Dependabot for npm and pip;
+  - run a security review of the Phase 4 auth code before it goes live;
+  - rotate any secret that has ever been written into a doc or commit.
+
+---
+
+## 10. Useful Verification Commands
 
 ```bash
 # 1. Run full Python test suite (42 tests: common, regions extractor, FastAPI endpoints)
@@ -218,9 +274,13 @@ ssh root@159.195.192.148 'CID=$(docker ps --filter name=e3xakpyxk2xmq19aqpyvjdjq
 
 ---
 
-## 10. Working Preferences from the User
+## 11. Working Preferences from the User
 
 - **Always respond in English** by default, while preserving Arabic strings in code/translations intact.
 - **Ask before outward-facing actions** unless explicitly given the green light: pushing to `main` triggers automatic Coolify deployments on production.
 - **Never risk an OSM block:** state explicitly how any OSM-related feature complies with OSM API & Geofabrik usage policies.
 - **Never touch Rahma Health containers** on the VPS.
+- **Secrets live only in Coolify environment variables:** database URLs and passwords, API keys, OAuth client secrets, encryption keys.
+  - Never write them into docs, code, commit messages, logs or chat.
+  - In docs, refer to the variable name (for example `MANARA_DATABASE_URL`).
+  - If a secret ever lands in git, **rotate it**; deleting the line doesn't remove it from history.
