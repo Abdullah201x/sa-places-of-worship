@@ -19,7 +19,7 @@ RUN npm run build
 
 # Stage 2: Precompress once at build time, so the 2-vCPU VPS doesn't gzip
 # ~20 MB of data for every new visitor; Caddy serves the .br/.gz copies.
-FROM alpine:3.22 AS compress
+FROM alpine:3.24 AS compress
 
 RUN apk add --no-cache brotli gzip
 
