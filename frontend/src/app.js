@@ -555,6 +555,16 @@ export function setSuggestionsVisible(visible) {
         history.forEach(h => {
           (h.items || []).forEach(it => {
             if (it.wikidata) addedSet.add(it.wikidata);
+            if (it.ref && it.ref.startsWith('node/') && it.label) {
+              const normLabel = ArabicText.normalize(it.label, true);
+              rawFeatures.forEach(f => {
+                const fProps = f.properties || {};
+                if (fProps.name_ar && ArabicText.normalize(fProps.name_ar, true) === normLabel) {
+                  addedSet.add(fProps.qid);
+                  AddedSuggestions.add(fProps.qid);
+                }
+              });
+            }
           });
         });
       } catch (_) {}
