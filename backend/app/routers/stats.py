@@ -11,7 +11,7 @@ def get_overall_stats(conn=Depends(get_db)):
         SELECT
             (SELECT COUNT(*) FROM places) AS total_places,
             (SELECT COUNT(*) FROM places WHERE religion = 'muslim') AS muslim_places,
-            (SELECT COUNT(*) FROM places WHERE anomaly_score IS NOT NULL) AS anomaly_places,
+            (SELECT COUNT(*) FROM places WHERE anomaly_score < 0) AS anomaly_places,
             (SELECT COUNT(*) FROM places WHERE qibla_dev >= 20.0) AS qibla_deviated_places,
             (SELECT COUNT(*) FROM gaps) AS total_gaps,
             (SELECT COUNT(*) FROM suggestions) AS total_suggestions,
@@ -25,20 +25,40 @@ def get_overall_stats(conn=Depends(get_db)):
 def get_region_stats(conn=Depends(get_db)):
     with conn.cursor() as cur:
         cur.execute("""
+        WITH place_counts AS (
+            SELECT region_code,
+                   COUNT(*) AS places_count,
+                   COUNT(*) FILTER (WHERE anomaly_score < 0) AS anomalies_count,
+                   COUNT(*) FILTER (WHERE qibla_dev >= 20.0) AS qibla_deviated_count
+            FROM places
+            WHERE region_code IS NOT NULL
+            GROUP BY region_code
+        ),
+        gap_counts AS (
+            SELECT region_code, COUNT(*) AS gaps_count
+            FROM gaps
+            WHERE region_code IS NOT NULL
+            GROUP BY region_code
+        ),
+        sug_counts AS (
+            SELECT region_code, COUNT(*) AS suggestions_count
+            FROM suggestions
+            WHERE region_code IS NOT NULL
+            GROUP BY region_code
+        )
         SELECT 
             r.code,
             r.name,
             r.name_en,
-            COUNT(DISTINCT p.id) AS places_count,
-            COUNT(DISTINCT g.id) AS gaps_count,
-            COUNT(DISTINCT s.id) AS suggestions_count,
-            COUNT(DISTINCT p.id) FILTER (WHERE p.anomaly_score IS NOT NULL) AS anomalies_count,
-            COUNT(DISTINCT p.id) FILTER (WHERE p.qibla_dev >= 20.0) AS qibla_deviated_count
+            COALESCE(p.places_count, 0) AS places_count,
+            COALESCE(g.gaps_count, 0) AS gaps_count,
+            COALESCE(s.suggestions_count, 0) AS suggestions_count,
+            COALESCE(p.anomalies_count, 0) AS anomalies_count,
+            COALESCE(p.qibla_deviated_count, 0) AS qibla_deviated_count
         FROM regions r
-        LEFT JOIN places p ON p.region_code = r.code
-        LEFT JOIN gaps g ON g.region_code = r.code
-        LEFT JOIN suggestions s ON s.region_code = r.code
-        GROUP BY r.code, r.name, r.name_en
+        LEFT JOIN place_counts p ON p.region_code = r.code
+        LEFT JOIN gap_counts g ON g.region_code = r.code
+        LEFT JOIN sug_counts s ON s.region_code = r.code
         ORDER BY r.code ASC;
         """)
         rows = cur.fetchall()

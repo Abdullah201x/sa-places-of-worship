@@ -200,9 +200,12 @@ def load_staging_data(conn, data_dir=BASE_DIR):
             anom_score = anom_info.get("anomaly_score") if isinstance(anom_info, dict) else None
             qibla_dev = (anom_info.get("qibla_dev") or anom_info.get("qibla_deviation")) if isinstance(anom_info, dict) else None
 
+            geom_type = p.get("geom_type", "Point")
+            osm_type = {"Point": "node", "Polygon": "way", "Relation": "relation"}.get(geom_type, geom_type.lower())
+
             places_rows.append((
                 idx,
-                p.get("geom_type", "node"),
+                osm_type,
                 osm_id,
                 p.get("version"),
                 p.get("edited_at"),
@@ -215,7 +218,7 @@ def load_staging_data(conn, data_dir=BASE_DIR):
                 p.get("amenity", ""),
                 p.get("poi_node_id"),
                 json.dumps(p),
-                p.get("geom_type", "Point"),
+                geom_type,
                 coords[0],
                 coords[1],
                 area_m2,
@@ -327,7 +330,7 @@ def load_staging_data(conn, data_dir=BASE_DIR):
         WITH place_counts AS (
             SELECT region_code,
                    COUNT(*) AS places_count,
-                   COUNT(*) FILTER (WHERE anomaly_score IS NOT NULL) AS anomalies_count
+                   COUNT(*) FILTER (WHERE anomaly_score < 0) AS anomalies_count
             FROM places_staging
             WHERE region_code IS NOT NULL
             GROUP BY region_code
