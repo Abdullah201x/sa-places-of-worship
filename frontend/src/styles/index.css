@@ -1655,6 +1655,33 @@ h1 {
   background: rgba(0, 0, 0, 0.4);
 }
 
+.auth-input[aria-invalid="true"] {
+  border-color: #ff5c7a;
+}
+
+/* Mosque preset fields rendered from src/presets.js */
+.preset-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preset-fields:empty {
+  display: none;
+}
+
+.preset-fields select.auth-input {
+  cursor: pointer;
+}
+
+.preset-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .input-help {
   font-family: var(--font-body);
   font-size: 11px;

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import idSchemaPlugin from './id-schema-plugin.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -65,7 +66,7 @@ const dataPlugin = {
 // https://localhost:8000/ (the redirect URI registered for local testing).
 export default defineConfig({
   appType: 'mpa',
-  plugins: [basicSsl(), dataPlugin],
+  plugins: [basicSsl(), dataPlugin, idSchemaPlugin()],
   server: {
     port: 8000,
     strictPort: true,

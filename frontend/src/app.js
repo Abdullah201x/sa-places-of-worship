@@ -3,7 +3,8 @@ import { ArabicText } from './arabic.js';
 import { ReviewMarks, hideReviewedPlaces, setHideReviewedPlaces, isHiddenByReview, markCurrentPlace, clearCurrentMark, renderReviewActions, rebuildReviewQueue, navigateReview, updateReviewNavUI, Permalink, updatePermalinkSoon, setupKeyboardShortcuts } from './review.js';
 import { Exporters } from './exporters.js';
 import { OsmApi, EditHistory } from './osm_api.js';
-import { renderQuickFixes, setupEditing } from './editing.js';
+import { renderQuickFixes, setupEditing, createFieldRow, readFieldValues, showFieldErrors } from './editing.js';
+import { MOSQUE_PRESET, outdatedRules, describeUpgrade, tagsFromValues, validateValues } from './presets.js';
 import { trackEvent } from './analytics.js';
 export let map;
 export let heatmapLayer = null;
@@ -374,6 +375,18 @@ export function getQualityIssues(props) {
       id: 'duplicate_poi',
       title_ar: 'مكرر: المبنى ونقطة داخله كلاهما موسوم كدار عبادة — يُفضّل نقل الوسوم إلى المبنى وحذف النقطة',
       title_en: 'Mapped twice: both the building and a point inside it are tagged as the place of worship'
+    });
+  }
+
+  // 12. Outdated or non-standard values that the preset's upgrade rules fix
+  // (iD's deprecated.json plus Manara's, e.g. denomination=سني -> sunni).
+  const outdated = outdatedRules(props);
+  if (outdated.length) {
+    const changes = describeUpgrade(props, outdated);
+    issues.push({
+      id: 'outdated_tags',
+      title_ar: `وسوم قديمة أو بصيغة غير معتمدة (${changes.join('، ')})`,
+      title_en: `Outdated or non-standard tags (${changes.join(', ')})`
     });
   }
 
@@ -2715,6 +2728,11 @@ export function setupEventListeners() {
         closeAddMosqueComposer();
       }
     });
+    // The preset field labels come from JavaScript, not the static HTML
+    // translations: re-render them in the new language, keeping the values.
+    onLanguageChange(() => {
+      if (!mosqueOverlay.classList.contains('hidden')) renderAddMosqueFields(readFieldValues(mosqueOverlay));
+    });
   }
 
   // 8. OSM OAuth 2.0 Auth Controls
@@ -3226,16 +3244,25 @@ export function removeMosqueMarker() {
   }
 }
 
+// name:ar and name:en stay in index.html for their prefix chips and
+// suggestion button; the mosque preset's other fields render from presets.js.
+export const STATIC_MOSQUE_FIELDS = ['name:ar', 'name:en'];
+
+export function renderAddMosqueFields(values = {}) {
+  [['add-mosque-fields', MOSQUE_PRESET.fields], ['add-mosque-more-fields', MOSQUE_PRESET.moreFields]].forEach(([id, fieldIds]) => {
+    const box = document.getElementById(id);
+    if (!box) return;
+    box.replaceChildren(...fieldIds
+      .filter(fieldId => !STATIC_MOSQUE_FIELDS.includes(fieldId))
+      .map(fieldId => createFieldRow(fieldId, values[fieldId], 'add-mosque-field')));
+  });
+}
+
 export function openAddMosqueComposer(lat, lon, prefill = {}) {
   const overlay = document.getElementById('add-mosque-overlay');
   const coordsDisplay = document.getElementById('add-mosque-coords-display');
   const nameArInput = document.getElementById('add-mosque-name-ar');
   const nameEnInput = document.getElementById('add-mosque-name-en');
-  const denomSelect = document.getElementById('add-mosque-denom');
-  const femaleCheck = document.getElementById('add-mosque-female');
-  const buildingCheck = document.getElementById('add-mosque-building');
-  const wheelchairSelect = document.getElementById('add-mosque-wheelchair');
-  const wikidataInput = document.getElementById('add-mosque-wikidata');
   const sourceSelect = document.getElementById('add-mosque-source');
   const commentInput = document.getElementById('add-mosque-comment');
   const authStatus = document.getElementById('add-mosque-auth-status');
@@ -3256,11 +3283,15 @@ export function openAddMosqueComposer(lat, lon, prefill = {}) {
   const nameAr = prefill.name_ar || prefill.name || '';
   nameArInput.value = nameAr;
   nameEnInput.value = prefill.name_en || '';
-  denomSelect.value = prefill.denomination || '';
-  femaleCheck.checked = Boolean(prefill.female);
-  buildingCheck.checked = Boolean(prefill.building);
-  wheelchairSelect.value = prefill.wheelchair || '';
-  wikidataInput.value = prefill.wikidata || prefill.qid || '';
+  nameArInput.removeAttribute('aria-invalid');
+  nameEnInput.removeAttribute('aria-invalid');
+  renderAddMosqueFields({
+    denomination: prefill.denomination,
+    'female:prayer_room': Boolean(prefill.female),
+    building: Boolean(prefill.building),
+    wheelchair: prefill.wheelchair,
+    wikidata: prefill.wikidata || prefill.qid,
+  });
   sourceSelect.value = prefill.source || (prefill.qid ? 'wikidata' : 'local knowledge');
 
   const defaultComment = prefill.comment || `Add mosque${nameAr ? ': ' + nameAr : ''} via #sa-worship-map`;
@@ -3335,54 +3366,21 @@ export async function submitPendingMosqueNode() {
   }
 
   const { lat, lon } = pendingMosqueLatLng;
+  const overlay = document.getElementById('add-mosque-overlay');
+  const values = readFieldValues(overlay);
+  const fieldError = showFieldErrors(overlay, validateValues(MOSQUE_PRESET, values));
+  if (fieldError) {
+    showToast(fieldError, 'error');
+    return;
+  }
   const submitBtn = document.getElementById('btn-submit-add-mosque');
   if (submitBtn) submitBtn.disabled = true;
 
-  const tags = {
-    amenity: 'place_of_worship',
-    religion: 'muslim',
-  };
-
-  const nameAr = (document.getElementById('add-mosque-name-ar')?.value || '').trim();
-  const nameEn = (document.getElementById('add-mosque-name-en')?.value || '').trim();
-  const denom = (document.getElementById('add-mosque-denom')?.value || '').trim();
-  const female = document.getElementById('add-mosque-female')?.checked;
-  const building = document.getElementById('add-mosque-building')?.checked;
-  const wheelchair = (document.getElementById('add-mosque-wheelchair')?.value || '').trim();
-  const wikidata = (document.getElementById('add-mosque-wikidata')?.value || '').trim();
+  // The preset's addTags plus every filled-in field (presets.js).
+  const tags = tagsFromValues(MOSQUE_PRESET, values);
+  const wikidata = tags.wikidata || '';
   const source = (document.getElementById('add-mosque-source')?.value || '').trim();
   let comment = (document.getElementById('add-mosque-comment')?.value || '').trim();
-
-  if (nameAr) {
-    tags.name = nameAr;
-    tags['name:ar'] = nameAr;
-  } else if (nameEn) {
-    tags.name = nameEn;
-  }
-
-  if (nameEn) {
-    tags['name:en'] = nameEn;
-  }
-
-  if (denom) {
-    tags.denomination = denom;
-  }
-
-  if (female) {
-    tags['female:prayer_room'] = 'yes';
-  }
-
-  if (building) {
-    tags.building = 'mosque';
-  }
-
-  if (wheelchair) {
-    tags.wheelchair = wheelchair;
-  }
-
-  if (wikidata) {
-    tags.wikidata = wikidata;
-  }
 
   if (!comment) {
     comment = `Add mosque${tags.name ? ': ' + tags.name : ''} via #sa-worship-map`;
@@ -3422,6 +3420,7 @@ export async function submitPendingMosqueNode() {
         amenity: 'place_of_worship',
         wheelchair: tags.wheelchair || '',
         female: tags['female:prayer_room'] || '',
+        capacity: tags.capacity || '',
         wikidata: tags.wikidata || '',
         version: 1,
         edited_at: new Date().toISOString(),

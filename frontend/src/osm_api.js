@@ -4,6 +4,7 @@
 import { addTranslations, t } from './i18n.js';
 import { showToast, showLoadingText } from './app.js';
 import { trackEvent } from './analytics.js';
+import { MAX_TAG_LENGTH, upgradeTags } from './presets.js';
 
 addTranslations({
   authNeedClientId: ['لا يوجد معرّف عميل مدمج لهذا العنوان. أدخل معرّف العميل (Client ID) في الإعدادات المتقدمة.', 'No built-in client ID for this address. Enter a client ID under advanced settings.'],
@@ -25,7 +26,6 @@ export const DEFAULT_OSM_CLIENT_ID = 'TTBAYQAUONpxZxCbg_FRe-78y6A8K0DHIj1AylyCn7
 export const OSM_SCOPES = 'read_prefs write_api write_notes';
 export const CHANGESET_CREATED_BY = 'Saudi Places of Worship Map (https://manara.saudiosm.org)';
 export const CHANGESET_HASHTAGS = '#sa-worship-map';
-export const MAX_TAG_LENGTH = 255; // OSM rejects longer tag values
 
 export const OsmApi = {
   environment() {
@@ -297,10 +297,13 @@ export const OsmApi = {
     return meta;
   },
 
-  // edits = { set: {k: v}, setIfMissing: {k: v}, del: [k] }. Returns the
-  // resulting tags, or null when the edit would change nothing.
+  // edits = { upgrade: [rule], set: {k: v}, setIfMissing: {k: v}, del: [k] }.
+  // upgrade holds preset upgrade rules (presets.js), matched against the
+  // element's current tags so a rule that no longer applies changes nothing.
+  // Returns the resulting tags, or null when the edit would change nothing.
   applyEditsToTags(tags, edits) {
-    const result = { ...tags };
+    let result = { ...tags };
+    if (edits.upgrade) result = upgradeTags(result, edits.upgrade).tags;
     Object.entries(edits.set || {}).forEach(([k, v]) => { result[k] = v; });
     Object.entries(edits.setIfMissing || {}).forEach(([k, v]) => {
       if (!(k in result)) result[k] = v;

@@ -415,6 +415,20 @@
             </div>
           </button>
 
+          <button type="button" class="improve-item chip" data-improve="outdated_tags" data-category="metadata" aria-label="تصفية حسب وسوم قديمة">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-tag">🏷️</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">وسوم قديمة أو بصيغة غير معتمدة</div>
+                <div class="improve-item-meta">مثل denomination=سني بدلاً من sunni</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-outdated_tags">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
           <button type="button" class="improve-item chip" data-improve="duplicate_poi" data-category="metadata" aria-label="تصفية حسب مكان مرسوم مرتين">
             <div class="improve-item-right">
               <div class="improve-item-icon icon-tag">👯</div>
@@ -825,7 +839,7 @@
           <!-- Arabic Name with Quick Prefix Chips -->
           <div class="client-id-config">
             <label for="add-mosque-name-ar">اسم المسجد (بالعربية):</label>
-            <input type="text" id="add-mosque-name-ar" class="auth-input" style="text-align: right;" placeholder="مثال: جامع الإيمان / مسجد النور">
+            <input type="text" id="add-mosque-name-ar" data-field="name:ar" class="auth-input" style="text-align: right;" placeholder="مثال: جامع الإيمان / مسجد النور">
             <div class="chips-container" id="mosque-prefix-chips" style="margin-top: 4px; gap: 6px;">
               <button type="button" class="chip prefix-chip" data-prefix="جامع">جامع</button>
               <button type="button" class="chip prefix-chip" data-prefix="مسجد">مسجد</button>
@@ -839,51 +853,19 @@
               <label for="add-mosque-name-en">الاسم بالإنجليزية (name:en):</label>
               <button type="button" id="btn-suggest-mosque-en" class="quick-fix-btn" style="padding: 2px 8px; font-size: 11px;">✨ اقتراح الاسم الذكي</button>
             </div>
-            <input type="text" id="add-mosque-name-en" class="auth-input" dir="ltr" placeholder="e.g. Al-Iman Mosque">
+            <input type="text" id="add-mosque-name-en" data-field="name:en" class="auth-input" dir="ltr" placeholder="e.g. Al-Iman Mosque">
           </div>
 
-          <!-- Denomination Dropdown -->
-          <div class="client-id-config">
-            <label for="add-mosque-denom">المذهب (denomination):</label>
-            <select id="add-mosque-denom" class="auth-input" style="cursor: pointer;">
-              <option value="" selected>غير محدد (Unspecified - الافتراضي)</option>
-              <option value="sunni">سني (Sunni)</option>
-              <option value="shia">شيعي (Shia)</option>
-              <option value="ibadi">إباضي (Ibadi)</option>
-            </select>
-          </div>
+          <!-- Mosque preset fields (src/presets.js): denomination here, the
+               preset's moreFields in the accordion. Rendered by renderAddMosqueFields(). -->
+          <div id="add-mosque-fields" class="preset-fields"></div>
 
           <!-- Additional Options Accordion -->
           <details class="advanced-tags-details" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 8px 12px;">
             <summary style="cursor: pointer; font-size: 12px; color: var(--color-secondary); font-weight: 600; user-select: none;">
-              وسوم إضافية اختيارية (مصلى نساء، مبنى، ويكي بيانات)...
+              وسوم إضافية اختيارية (مصلى نساء، مبنى، ويكي بيانات، السعة، أوقات الفتح)...
             </summary>
-            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
-              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
-                <input type="checkbox" id="add-mosque-female" value="yes">
-                <span>مصلى نساء (female:prayer_room=yes)</span>
-              </label>
-
-              <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
-                <input type="checkbox" id="add-mosque-building" value="yes">
-                <span>المعلم يمثل مبنى مسجداً مستقلاً (building=mosque)</span>
-              </label>
-
-              <div class="client-id-config" style="margin-top: 2px;">
-                <label for="add-mosque-wheelchair">سهولة وصول ذوي الإعاقة (wheelchair):</label>
-                <select id="add-mosque-wheelchair" class="auth-input" style="cursor: pointer;">
-                  <option value="" selected>-- غير محدد --</option>
-                  <option value="yes">نعم (yes)</option>
-                  <option value="limited">محدود (limited)</option>
-                  <option value="no">لا (no)</option>
-                </select>
-              </div>
-
-              <div class="client-id-config" style="margin-top: 2px;">
-                <label for="add-mosque-wikidata">معرف ويكي بيانات (Wikidata QID):</label>
-                <input type="text" id="add-mosque-wikidata" class="auth-input" dir="ltr" placeholder="مثال: Q12345678">
-              </div>
-            </div>
+            <div id="add-mosque-more-fields" class="preset-fields" style="margin-top: 10px;"></div>
           </details>
 
           <!-- Source & Changeset Comment -->

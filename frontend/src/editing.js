@@ -2,11 +2,12 @@
 // Every edit is previewed and confirmed by the mapper; the batch only holds
 // fixes that were reviewed one by one, then uploads them in one changeset
 // (the osm x wikidata batch pattern). There is deliberately no "fix all".
-import { addTranslations, t, fmtNum, fmtDate, onLanguageChange } from './i18n.js';
+import { addTranslations, t, fmtNum, fmtDate, onLanguageChange, currentLang } from './i18n.js';
 import { ArabicText } from './arabic.js';
 import { ReviewMarks, refreshAfterReviewChange } from './review.js';
 import { Exporters } from './exporters.js';
 import { OsmApi, EditHistory } from './osm_api.js';
+import { FIELDS, MOSQUE_PRESET, BUILDING_YES_RULE, fieldLabel, fieldPlaceholder, fieldOptions, optionLabel, normalizeValue, validateValue, outdatedRules, upgradeChanges, tagsFromProps } from './presets.js';
 import { allPlaces, selectedPlace, denomLabel, osmTypeOf, getIssues, invalidateIssues, updateImprovementIssueCounts, showToast, placeName, showDetails } from './app.js';
 
 addTranslations({
@@ -18,13 +19,16 @@ addTranslations({
   fix_missing_name_en: ['إضافة الاسم بالإنجليزية (name:en)', 'Add the English name (name:en)'],
   suggestNameEnBtn: ['✨ اقتراح الاسم الذكي (GASGI)', '✨ Smart Suggest (GASGI)'],
   fix_missing_denom: ['تحديد المذهب (denomination)', 'Set the denomination'],
+  fix_outdated_tags: ['تحديث الوسوم القديمة', 'Upgrade outdated tags'],
+  fieldUnset: ['-- غير محدد --', '-- Not specified --'],
+  fieldErr_tooLong: ['{field}: القيمة أطول من 255 حرفاً.', '{field}: the value is longer than 255 characters.'],
+  fieldErr_notNumber: ['{field}: يجب أن تكون القيمة عدداً صحيحاً موجباً.', '{field}: must be a whole, non-negative number.'],
+  fieldErr_badOption: ['{field}: اختر قيمة من القائمة.', '{field}: choose a value from the list.'],
+  fieldErr_badFormat: ['{field}: صيغة غير صحيحة.', '{field}: the format is not valid.'],
   editDialogTitle: ['مراجعة التعديل قبل الرفع', 'Review the edit before uploading'],
   editTarget: ['العنصر:', 'Element:'],
   editChanges: ['التغييرات:', 'Changes:'],
   editIfMissing: ['(إن لم يكن موجوداً)', '(if missing)'],
-  editNameEnLabel: ['الاسم بالإنجليزية:', 'English name:'],
-  editNameEnPlaceholder: ['مثال: Al Rahma Mosque', 'e.g. Al Rahma Mosque'],
-  editDenomLabel: ['المذهب:', 'Denomination:'],
   editComment: ['تعليق مجموعة التغييرات (changeset):', 'Changeset comment:'],
   editSource: ['المصدر:', 'Source:'],
   sourceLocal: ['معرفة محلية', 'Local knowledge'],
@@ -69,39 +73,53 @@ export const FIX_COMMENT_SUMMARY = {
   building_yes: 'building=yes -> building=mosque',
   missing_name_en: 'add name:en',
   missing_denom: 'add denomination',
+  outdated_tags: 'upgrade outdated tags',
 };
 
-// Issue id -> how to fix it. target: which OSM object gets the tags ("poi" is
-// the merged POI node when there is one, otherwise the place itself).
+// Issue id -> how to fix it, built from the mosque preset (presets.js).
+// target: which OSM object gets the tags ("poi" is the merged POI node when
+// there is one, otherwise the place itself); a function picks per place.
+// field: the preset field the mapper fills in. edits(value, props) returns
+// what OsmApi.applyEditsToTags applies to the element's current tags.
 export const QUICK_FIXES = {
   missing_amenity: {
     target: 'place',
     source: 'local knowledge',
-    edits: () => ({ set: { amenity: 'place_of_worship' }, setIfMissing: { religion: 'muslim' } })
+    edits: () => {
+      const { amenity, ...rest } = MOSQUE_PRESET.addTags;
+      return { set: { amenity }, setIfMissing: rest };
+    }
   },
   building_yes: {
     target: 'place',
     source: 'Esri World Imagery',
     applies: props => props.geom_type !== 'Point',
-    edits: () => ({ set: { building: 'mosque' } })
+    edits: () => ({ upgrade: [BUILDING_YES_RULE] })
   },
   missing_name_en: {
     target: 'poi',
     source: 'local knowledge',
-    input: 'text',
-    edits: v => ({ set: { 'name:en': v } })
+    field: 'name:en',
+    edits: v => ({ set: { [FIELDS['name:en'].key]: v } })
   },
   missing_denom: {
     target: 'poi',
     source: 'local knowledge',
-    input: 'select',
-    options: ['sunni', 'shia', 'ibadi'],
-    edits: v => ({ set: { denomination: v } })
+    field: 'denomination',
+    edits: v => ({ set: { [FIELDS.denomination.key]: v } })
+  },
+  outdated_tags: {
+    // building=* is on the outline; religion and denomination are usually on
+    // the merged POI node.
+    target: props => (outdatedRules(props).every(r => Object.keys(r.old).every(k => k === 'building')) ? 'place' : 'poi'),
+    source: 'local knowledge',
+    edits: (_, props) => ({ upgrade: outdatedRules(props) })
   }
 };
 
 export function fixTarget(props, fix) {
-  if (fix.target === 'poi' && props.poi_node_id) {
+  const target = typeof fix.target === 'function' ? fix.target(props) : fix.target;
+  if (target === 'poi' && props.poi_node_id) {
     return { type: 'node', id: props.poi_node_id, expectedVersion: props._editedNodeVersion || props.poi_node_version };
   }
   return { type: osmTypeOf(props), id: props.osm_id, expectedVersion: props._editedVersion || props.version };
@@ -123,6 +141,7 @@ export function applyUploadedTagsToPlace(placeKey, result) {
   if (tags.amenity !== undefined) props.amenity = tags.amenity;
   if (tags.religion !== undefined) props.religion = tags.religion;
   if (tags.denomination !== undefined) props.denomination = tags.denomination;
+  else if (result.oldTags && 'denomination' in result.oldTags) props.denomination = 'unknown';
   if (tags['name:en'] !== undefined) props.name_en = props.name_en_original = tags['name:en'];
   if (result.type === osmTypeOf(props) && result.id === props.osm_id) {
     if (tags.building !== undefined) props.building = tags.building;
@@ -214,12 +233,106 @@ export function commentField(value) {
   return { wrap, area };
 }
 
-export function describeEdits(edits) {
+export function describeEdits(edits, props) {
   const lines = [];
+  if (edits.upgrade) {
+    upgradeChanges(tagsFromProps(props), edits.upgrade).forEach(({ key, from, to }) => {
+      if (from !== undefined) lines.push(`- ${key}=${from}`);
+      if (to !== undefined) lines.push(`+ ${key}=${to}`);
+    });
+  }
   Object.entries(edits.set || {}).forEach(([k, v]) => lines.push(`+ ${k}=${v}`));
   Object.entries(edits.setIfMissing || {}).forEach(([k, v]) => lines.push(`+ ${k}=${v} ${t('editIfMissing')}`));
   (edits.del || []).forEach(k => lines.push(`- ${k}`));
   return lines;
+}
+
+// ---------------------------------------------------------------------------
+// Preset fields (presets.js) as form controls, shared by the quick-fix dialog
+// and the add-mosque form. Each control carries data-field="<field id>".
+// ---------------------------------------------------------------------------
+function optionText(fieldId, value) {
+  const label = optionLabel(fieldId, value, currentLang)
+    || (FIELDS[fieldId].key === 'denomination' ? denomLabel(value) : value);
+  return label === value ? value : `${label} (${value})`;
+}
+
+export function createFieldInput(fieldId, value = '') {
+  const field = FIELDS[fieldId];
+  let input;
+  if (field.type === 'combo') {
+    input = document.createElement('select');
+    ['', ...fieldOptions(fieldId)].forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v ? optionText(fieldId, v) : t('fieldUnset');
+      input.appendChild(opt);
+    });
+    input.value = fieldOptions(fieldId).includes(value) ? value : '';
+    input.className = 'auth-input';
+  } else if (field.type === 'check') {
+    input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = normalizeValue(fieldId, value) === field.checkValue;
+  } else {
+    input = document.createElement('input');
+    input.type = 'text';
+    if (field.type === 'number') input.inputMode = 'numeric';
+    input.placeholder = fieldPlaceholder(fieldId, currentLang);
+    input.value = value || '';
+    input.className = 'auth-input';
+  }
+  if (field.dir) input.dir = field.dir;
+  input.dataset.field = fieldId;
+  return input;
+}
+
+// Label + control in the dialogs' usual wrapper. A check renders as a
+// checkbox row naming the tag it writes.
+export function createFieldRow(fieldId, value, idPrefix) {
+  const field = FIELDS[fieldId];
+  const input = createFieldInput(fieldId, value);
+  input.id = `${idPrefix}-${fieldId.replace(/[^a-z0-9]+/gi, '-')}`;
+  if (field.type === 'check') {
+    const row = document.createElement('label');
+    row.className = 'checkbox-label preset-check';
+    const text = document.createElement('span');
+    text.textContent = `${fieldLabel(fieldId, currentLang)} (${field.key}=${field.checkValue})`;
+    row.append(input, text);
+    return row;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'client-id-config';
+  const label = document.createElement('label');
+  label.htmlFor = input.id;
+  label.textContent = `${fieldLabel(fieldId, currentLang)} (${field.key}):`;
+  wrap.append(label, input);
+  return wrap;
+}
+
+// { fieldId: raw value } for every preset control under root.
+export function readFieldValues(root) {
+  const values = {};
+  root.querySelectorAll('[data-field]').forEach(el => {
+    values[el.dataset.field] = el.type === 'checkbox' ? el.checked : el.value;
+  });
+  return values;
+}
+
+// Marks the invalid controls and returns the message for the first one
+// (focused), or null when there are no errors.
+export function showFieldErrors(root, errors) {
+  root.querySelectorAll('[data-field]').forEach(el => el.removeAttribute('aria-invalid'));
+  errors.forEach(({ fieldId }) => {
+    root.querySelector(`[data-field="${fieldId}"]`)?.setAttribute('aria-invalid', 'true');
+  });
+  if (!errors.length) return null;
+  const { fieldId, code } = errors[0];
+  const first = root.querySelector(`[data-field="${fieldId}"]`);
+  const details = first?.closest('details');
+  if (details) details.open = true;
+  first?.focus();
+  return t(`fieldErr_${code}`, { field: fieldLabel(fieldId, currentLang) });
 }
 
 export function openOverlay(id, build) {
@@ -254,16 +367,10 @@ export function openEditDialog(props, fixId) {
     body.appendChild(targetRow);
 
     let input = null;
-    if (fix.input) {
-      const wrap = document.createElement('div');
-      wrap.className = 'client-id-config';
-      const lbl = document.createElement('label');
-      if (fix.input === 'text') {
-        lbl.textContent = t('editNameEnLabel');
-        input = document.createElement('input');
-        input.type = 'text';
-        input.dir = 'ltr';
-        input.placeholder = t('editNameEnPlaceholder');
+    if (fix.field) {
+      const wrap = createFieldRow(fix.field, '', 'edit-field');
+      input = wrap.querySelector('[data-field]');
+      if (fix.field === 'name:en') {
         const arabicName = props.name_original || props['name:ar'] || props.name_ar || props.name_ar_original || props.name || '';
         const suggested = ArabicText.suggestEnglishName(arabicName);
         if (suggested) {
@@ -282,18 +389,7 @@ export function openEditDialog(props, fixId) {
           });
           wrap.appendChild(suggestBtn);
         }
-      } else {
-        lbl.textContent = t('editDenomLabel');
-        input = document.createElement('select');
-        fix.options.forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v;
-          opt.textContent = `${denomLabel(v)} (${v})`;
-          input.appendChild(opt);
-        });
       }
-      input.className = 'auth-input';
-      wrap.append(lbl, input);
       body.appendChild(wrap);
     }
 
@@ -303,9 +399,9 @@ export function openEditDialog(props, fixId) {
     const preview = document.createElement('pre');
     preview.className = 'edit-diff';
     preview.dir = 'ltr';
-    const currentValue = () => (input ? input.value.trim() : '');
-    const updatePreview = () => { preview.textContent = describeEdits(fix.edits(currentValue() || '…')).join('\n'); };
-    if (input) input.addEventListener('input', updatePreview);
+    const currentValue = () => (input ? normalizeValue(fix.field, input.value) : '');
+    const updatePreview = () => { preview.textContent = describeEdits(fix.edits(currentValue() || '…', props), props).join('\n'); };
+    if (input) ['input', 'change'].forEach(ev => input.addEventListener(ev, updatePreview));
     updatePreview();
     body.append(changesLabel, preview);
 
@@ -323,13 +419,19 @@ export function openEditDialog(props, fixId) {
 
     const buildItem = () => {
       const value = currentValue();
-      if (fix.input && !value) {
+      if (fix.field && !value) {
         showToast(t('editValueRequired'), 'error');
+        return null;
+      }
+      const code = fix.field && validateValue(fix.field, value);
+      const error = code && showFieldErrors(body, [{ fieldId: fix.field, code }]);
+      if (error) {
+        showToast(error, 'error');
         return null;
       }
       return {
         ...target,
-        edits: fix.edits(value),
+        edits: fix.edits(value, props),
         label,
         fixId,
         summary: FIX_COMMENT_SUMMARY[fixId] + (value ? ` (${value})` : ''),
