@@ -2,7 +2,8 @@
 Server-side pipeline runner (the VPS replacement for the desktop updater).
 
     python run.py once [--force]   one update: fetch, process, validate, publish
-    python run.py schedule         run `once` daily at MANARA_RUN_AT_UTC
+    python run.py schedule         check hourly for a new Geofabrik update and
+                                   run `once` when there is one
 
 One run:
   1. Keeps the OSM extract current. The first run downloads Geofabrik's
@@ -25,7 +26,12 @@ Environment (defaults suit the Docker image, pipeline/Dockerfile):
   MANARA_PUBLISH_DIR  /published  shared with the web container
   MANARA_EXTRACT_URL  Geofabrik public GCC extract
   MANARA_WIKIDATA_URL osm-x-wikidata data/sa.json on GitHub
-  MANARA_RUN_AT_UTC   "23:30" (02:30 in Riyadh, after Geofabrik's daily update)
+  MANARA_CHECK_EVERY_MIN  60      how often `schedule` looks for a new update
+
+Geofabrik publishes the daily diff at no fixed time (seen from 20:45 to the
+next day's 12:56 UTC), so `schedule` does not run at a set hour: it reads the
+small state.txt of the extract's replication URL every hour and only starts a
+run when its sequence number is ahead of the local extract's.
 """
 
 import datetime
@@ -48,7 +54,7 @@ EXTRACT_URL = os.environ.get("MANARA_EXTRACT_URL",
                              "https://download.geofabrik.de/asia/gcc-states-latest.osm.pbf")
 WIKIDATA_URL = os.environ.get("MANARA_WIKIDATA_URL",
                               "https://raw.githubusercontent.com/Abdullah201x/osm-x-wikidata/main/data/sa.json")
-RUN_AT_UTC = os.environ.get("MANARA_RUN_AT_UTC", "23:30")
+CHECK_EVERY_S = int(os.environ.get("MANARA_CHECK_EVERY_MIN", "60")) * 60
 USER_AGENT = "Manara/1.0 (+https://manara.saudiosm.org)"
 
 PBF_PATH = os.path.join(STATE_DIR, "gcc-states.osm.pbf")
@@ -93,14 +99,56 @@ def log(msg):
 # 1. The OSM extract
 # ---------------------------------------------------------------------------
 
-def replication_sequence(pbf_path):
-    """Replication sequence number in the extract's header (None if absent)."""
+def replication_header(pbf_path):
+    """(sequence number, replication base URL) from the extract's header;
+    either is None if absent."""
     reader = osmium.io.Reader(pbf_path, osmium.osm.osm_entity_bits.NOTHING)
     try:
-        seq = reader.header().get("osmosis_replication_sequence_number")
+        header = reader.header()
+        seq = header.get("osmosis_replication_sequence_number")
+        url = header.get("osmosis_replication_base_url")
     finally:
         reader.close()
-    return int(seq) if seq else None
+    return (int(seq) if seq else None), (url or None)
+
+
+def replication_sequence(pbf_path):
+    """Replication sequence number in the extract's header (None if absent)."""
+    return replication_header(pbf_path)[0]
+
+
+def parse_state(text):
+    """sequenceNumber from a replication state.txt (None if missing)."""
+    for line in text.splitlines():
+        key, _, value = line.partition("=")
+        if key.strip() == "sequenceNumber" and value.strip().isdigit():
+            return int(value.strip())
+    return None
+
+
+def remote_sequence(base_url):
+    """The newest sequence number Geofabrik has published (one small GET)."""
+    url = base_url.rstrip("/") + "/state.txt"
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return parse_state(resp.read().decode("utf-8", "replace"))
+
+
+def update_available():
+    """True when Geofabrik has a newer update than the local extract, or when
+    that can't be told (no extract yet, or the check failed), so run_once()
+    decides with its own up-to-date check."""
+    if not os.path.exists(PBF_PATH):
+        return True
+    try:
+        local, base_url = replication_header(PBF_PATH)
+        if local is None or not base_url:
+            return True
+        remote = remote_sequence(base_url)
+    except Exception as e:  # noqa: BLE001 - fall back to a normal run
+        log(f"Update check failed ({e}); running anyway")
+        return True
+    return remote is None or remote > local
 
 
 def download(url, dest, etag_path=None):
@@ -283,25 +331,41 @@ def run_once(force=False):
         os.remove(LOCK_PATH)
 
 
-def seconds_until(hhmm_utc):
-    hour, minute = (int(x) for x in hhmm_utc.split(":"))
-    now = datetime.datetime.now(datetime.timezone.utc)
-    nxt = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-    if nxt <= now:
-        nxt += datetime.timedelta(days=1)
-    return (nxt - now).total_seconds()
+RETRY_FAILED_AFTER_S = 6 * 3600
+
+
+def failed_run_due(status, now):
+    """True when the last run failed at least RETRY_FAILED_AFTER_S ago. A run
+    that fails after the diffs were applied leaves the extract up to date, so
+    without a forced retry that update would never be published."""
+    if status.get("last_result") != "failed" or not status.get("last_attempt"):
+        return False
+    attempt = datetime.datetime.fromisoformat(status["last_attempt"])
+    return (now - attempt).total_seconds() >= RETRY_FAILED_AFTER_S
+
+
+def read_status():
+    try:
+        with open(STATUS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
 
 
 def schedule():
-    log(f"Scheduler started; daily run at {RUN_AT_UTC} UTC")
-    if not os.path.exists(CURRENT_LINK):
-        log("Nothing published yet; running now")
-        run_once()
+    log(f"Scheduler started; checking for new Geofabrik updates every {CHECK_EVERY_S // 60} min")
     while True:
-        wait = seconds_until(RUN_AT_UTC)
-        log(f"Next run in {wait / 3600:.1f} h")
-        time.sleep(wait)
-        run_once()
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if not os.path.exists(CURRENT_LINK):
+            log("Nothing published yet; running now")
+            run_once()
+        elif failed_run_due(read_status(), now):
+            log("Retrying the last failed run")
+            run_once(force=True)
+        elif update_available():
+            log("New Geofabrik update available")
+            run_once()
+        time.sleep(CHECK_EVERY_S)
 
 
 def main():

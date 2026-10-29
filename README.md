@@ -59,7 +59,7 @@ All pipeline scripts reside in `pipeline/`.
 The server pipeline runner is orchestrated by [`pipeline/run.py`](pipeline/run.py):
 ```bash
 python pipeline/run.py once [--force]   # Single run: diff update, process, validate, atomic publish
-python pipeline/run.py schedule         # Run daily at MANARA_RUN_AT_UTC (default 23:30 UTC / 02:30 Riyadh)
+python pipeline/run.py schedule         # Check hourly for a new Geofabrik update; run when there is one
 ```
 
 ### Manual Individual Execution
