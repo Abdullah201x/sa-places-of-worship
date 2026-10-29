@@ -204,7 +204,8 @@ h1 {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  padding: 12px 42px 12px 16px; /* Swapped padding for RTL search icon */
+  padding-block: 12px;
+  padding-inline: 42px 16px; /* room for the icon on the start side */
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 14px;
@@ -220,8 +221,7 @@ h1 {
 
 .search-icon {
   position: absolute;
-  right: 14px; /* Icon positioned on the right for RTL search box */
-  left: auto;
+  inset-inline-start: 14px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-muted);
@@ -374,7 +374,7 @@ h1 {
   font-weight: 600;
   margin-bottom: 4px;
   color: #fff;
-  text-align: right;
+  text-align: start;
   font-family: 'Outfit Variable', sans-serif;
 }
 
@@ -765,7 +765,7 @@ h1 {
   user-select: none;
   cursor: pointer;
   flex-grow: 1;
-  text-align: right;
+  text-align: start;
 }
 
 .switch input:checked ~ .switch-label {
@@ -967,7 +967,7 @@ h1 {
   border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  text-align: right;
+  text-align: start;
   font-family: inherit;
   color: var(--color-text);
   box-sizing: border-box;
@@ -1139,7 +1139,7 @@ h1 {
   cursor: pointer;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   color: var(--color-text);
-  text-align: right;
+  text-align: start;
   font-family: inherit;
   box-sizing: border-box;
 }
@@ -1339,7 +1339,7 @@ h1 {
 
 .issues-list {
   list-style: none;
-  padding-right: 0;
+  padding-inline-start: 0;
   margin: 0;
 }
 
@@ -1347,15 +1347,15 @@ h1 {
   font-size: 11.5px;
   color: #ffbaba;
   margin-bottom: 6px;
-  padding-right: 14px;
+  padding-inline-start: 14px;
   position: relative;
-  text-align: right;
+  text-align: start;
 }
 
 .issues-list li::before {
   content: '•';
   position: absolute;
-  right: 0;
+  inset-inline-start: 0;
   color: #ff453a;
   font-weight: bold;
 }
@@ -1467,7 +1467,6 @@ h1 {
   gap: 10px;
   font-size: 13px;
   animation: slide-in-left 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  direction: rtl;
 }
 
 .toast-notification.error {
@@ -1540,7 +1539,6 @@ h1 {
   gap: 24px;
   overflow-x: hidden;
   overflow-y: auto;
-  direction: rtl;
 }
 
 .auth-close-btn {
@@ -1901,11 +1899,11 @@ h1 {
 }
 
 .auth-divider:not(:empty)::before {
-  margin-left: 12px;
+  margin-inline-end: 12px;
 }
 
 .auth-divider:not(:empty)::after {
-  margin-right: 12px;
+  margin-inline-start: 12px;
 }
 
 /* Guest Skip Button styling */
@@ -2010,7 +2008,7 @@ h1 {
 
 .guide-sublist {
   margin: 6px 0 0 0;
-  padding-right: 18px;
+  padding-inline-start: 18px;
   list-style-type: square;
   color: var(--color-text-muted);
   font-size: 11.5px;
@@ -2332,8 +2330,7 @@ h1 {
   min-width: 260px;
   max-width: 320px;
   font-family: var(--font-body);
-  direction: rtl;
-  text-align: right;
+  text-align: start;
   line-height: 1.4;
   padding: 4px;
 }
@@ -2356,8 +2353,7 @@ h1 {
 .suggestion-subtitle {
   font-size: 12px;
   color: #94a3b8;
-  direction: ltr;
-  text-align: right;
+  text-align: start; /* the name inside is a <bdi>, laid out in its own direction */
   margin-top: 2px;
 }
 
@@ -2768,49 +2764,16 @@ kbd {
   margin-bottom: 10px;
 }
 
-/* ===== English (LTR) overrides =====
-   The layout was designed RTL-first; these flip the rules that hard-code a
-   side. The floating sidebar intentionally stays on the right. */
-[dir="ltr"] .search-input {
-  padding: 12px 16px 12px 42px;
-}
-
-[dir="ltr"] .search-icon {
-  right: auto;
-  left: 14px;
-}
-
-[dir="ltr"] .details-title-ar,
-[dir="ltr"] .switch-label,
-[dir="ltr"] .improve-hero-card,
-[dir="ltr"] .improve-item,
-[dir="ltr"] .issues-list li,
-[dir="ltr"] .suggestion-popup,
-[dir="ltr"] .suggestion-subtitle {
-  text-align: left;
-}
-
-[dir="ltr"] .issues-list li {
-  padding-right: 0;
-  padding-left: 14px;
-}
-
-[dir="ltr"] .issues-list li::before {
-  right: auto;
-  left: 0;
-}
-
-[dir="ltr"] .toast-notification,
-[dir="ltr"] .auth-card,
-[dir="ltr"] .suggestion-popup {
-  direction: ltr;
-}
-
+/* ===== English (LTR) =====
+   Directional rules use logical properties, so they follow <html dir>. The
+   floating sidebar intentionally stays on the right in both languages.
+   One exception is left: modal inputs that are centred in Arabic are
+   left-aligned in English. Revisit with the Phase 1 form redesign. */
+[dir="ltr"] .auth-card input,
 [dir="ltr"] .auth-card select,
-[dir="ltr"] .auth-card textarea,
-[dir="ltr"] .auth-card input {
-  text-align: left !important;
-  text-align-last: left !important;
+[dir="ltr"] .auth-card textarea {
+  text-align: left;
+  text-align-last: left;
 }
 
 /* ===== Quick fixes / edit dialog / batch ===== */
@@ -2964,11 +2927,7 @@ kbd {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  text-align: right;
-}
-
-[dir="ltr"] .auth-feature-item {
-  text-align: left;
+  text-align: start;
 }
 
 .auth-feature-icon {
@@ -3155,4 +3114,233 @@ kbd {
   max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+/* ===== Formerly inline styles in index.html =====
+   Kept at the end of the file so these win ties with the component rules
+   above, as the inline styles did. ID selectors stand in for one-off
+   elements. Only the display:none starting states stay inline (the JS
+   toggles them; Phase 1 replaces that code). */
+.mt-8 {
+  margin-top: 8px;
+}
+
+.mt-10 {
+  margin-top: 10px;
+}
+
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Text fields holding Arabic text align with the reading direction. */
+.auth-input.field-start {
+  text-align: start;
+  text-align-last: start;
+}
+
+.threshold-slider-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.threshold-slider-row .slider {
+  flex: 1;
+}
+
+#qibla-dev-input {
+  width: 70px;
+  text-align: center;
+}
+
+.qibla-sort-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.qibla-sort-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #666);
+}
+
+#qibla-sort-select {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#btn-add-note-here {
+  margin-bottom: 14px;
+}
+
+#details-guest-tools-notice {
+  margin-top: 16px;
+  margin-bottom: 0;
+  background: rgba(0, 242, 254, 0.04);
+  border-color: rgba(0, 242, 254, 0.15);
+  color: #c4f7ff;
+}
+
+#details-guest-tools-notice .alert-icon {
+  color: var(--color-primary);
+}
+
+#link-guest-login {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+#osm-auth-overlay .auth-advanced {
+  margin-top: 14px;
+  opacity: 0.75;
+}
+
+#osm-auth-overlay .auth-advanced summary {
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+#osm-environment {
+  width: 100%;
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+#osm-environment option,
+#note-worship-religion option {
+  background: #12141d;
+  color: #fff;
+}
+
+.box-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.redirect-uri-box {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-top: 8px;
+  gap: 4px;
+}
+
+.redirect-uri-box .row-between {
+  margin-bottom: 2px;
+}
+
+.redirect-uri-box .box-label {
+  font-size: 10.5px;
+}
+
+#osm-redirect-uri-display {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--color-primary);
+  user-select: all;
+  text-align: left;
+  direction: ltr;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.coords-box {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 12px 14px;
+  border-radius: 12px;
+  gap: 6px;
+}
+
+.coords-box--accent {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: rgba(0, 242, 254, 0.2);
+  padding: 10px 14px;
+  gap: 4px;
+}
+
+.coords-hint {
+  font-size: 10.5px;
+  color: #00ff87;
+}
+
+/* Coordinates are LTR data in both languages. */
+.coords-value {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--color-primary);
+  direction: ltr;
+  text-align: center;
+}
+
+#add-mosque-coords-display {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+#mosque-prefix-chips {
+  margin-top: 4px;
+  gap: 6px;
+}
+
+#btn-suggest-mosque-en {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.advanced-tags-details {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.advanced-tags-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-secondary);
+  font-weight: 600;
+  user-select: none;
+}
+
+#add-mosque-more-fields {
+  margin-top: 10px;
+}
+
+#add-mosque-source,
+#note-worship-religion {
+  cursor: pointer;
+}
+
+#add-mosque-auth-status {
+  text-align: center;
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+#btn-submit-add-mosque {
+  background: linear-gradient(135deg, #00ff87, #60efff);
+  color: #071714;
+  font-weight: 700;
+}
+
+#note-text-input {
+  resize: vertical;
+  font-family: var(--font-body);
+}
+
+#note-composer-attribution {
+  text-align: center;
 }

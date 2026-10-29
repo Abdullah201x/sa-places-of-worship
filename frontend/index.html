@@ -496,18 +496,18 @@
           </div>
           <p class="section-hint">تحديد المباني التي تنحرف محاورها المعمارية عن سمت الكعبة المشرفة بمقدار يتجاوز هذا الحد. الافتراضي: 20° (يمثل أشد 10% من المساجد انحرافاً).</p>
           <div class="threshold-fields">
-            <label class="threshold-field" style="flex: 1;">
+            <label class="threshold-field">
               <span>الحد الأدنى للانحراف</span>
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <input type="range" id="qibla-dev-slider" class="slider" min="5" max="45" value="20" step="1" style="flex: 1;" aria-label="منزلق حد انحراف القبلة">
-                <input type="number" id="qibla-dev-input" class="threshold-input" min="1" max="45" step="1" value="20" style="width: 70px; text-align: center;" aria-label="قيمة حد انحراف القبلة">
+              <div class="threshold-slider-row">
+                <input type="range" id="qibla-dev-slider" class="slider" min="5" max="45" value="20" step="1" aria-label="منزلق حد انحراف القبلة">
+                <input type="number" id="qibla-dev-input" class="threshold-input" min="1" max="45" step="1" value="20" aria-label="قيمة حد انحراف القبلة">
               </div>
             </label>
           </div>
 
-          <div style="margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary, #666);">ترتيب المساجد:</span>
-            <select id="qibla-sort-select" class="threshold-input" style="flex: 1; padding: 4px 8px; font-size: 12px; cursor: pointer;" aria-label="خيارات ترتيب المساجد حسب دقة القبلة">
+          <div class="qibla-sort-row">
+            <span class="qibla-sort-label">ترتيب المساجد:</span>
+            <select id="qibla-sort-select" class="threshold-input" aria-label="خيارات ترتيب المساجد حسب دقة القبلة">
               <option value="least_accurate" selected>⚠️ من الأقل دقة إلى الأكثر دقة (الأشد انحرافاً)</option>
               <option value="most_accurate">✨ من الأكثر دقة إلى الأقل دقة (الأقرب للقبلة)</option>
             </select>
@@ -583,7 +583,7 @@
           </div>
 
           <!-- OSM Note shortcut: always visible, works for guests too -->
-          <button id="btn-add-note-here" class="mapper-btn" style="margin-bottom: 14px;">📝 إضافة ملاحظة OSM هنا</button>
+          <button id="btn-add-note-here" class="mapper-btn">📝 إضافة ملاحظة OSM هنا</button>
 
           <div class="details-row">
             <span class="details-label">الديانة</span>
@@ -655,13 +655,13 @@
           </div>
 
           <!-- Guest Mode Editing Block -->
-          <div id="details-guest-tools-notice" class="info-alert" style="display: none; margin-top: 16px; margin-bottom: 0; background: rgba(0, 242, 254, 0.04); border-color: rgba(0, 242, 254, 0.15); color: #c4f7ff;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="alert-icon" style="color: var(--color-primary);">
+          <div id="details-guest-tools-notice" class="info-alert" style="display: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="alert-icon">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="16" x2="12" y2="12"></line>
               <line x1="12" y1="8" x2="12.01" y2="8"></line>
             </svg>
-            <span>بيانات المساهمين التفصيلية (اسم المحرر ومعرف المستخدم ومجموعة التعديل) محجوبة كزائر بموجب GDPR. يمكنك <a href="#" id="link-guest-login" style="color: var(--color-primary); font-weight: 700; text-decoration: underline;">تسجيل الدخول بحساب OSM</a> لإظهارها.</span>
+            <span>بيانات المساهمين التفصيلية (اسم المحرر ومعرف المستخدم ومجموعة التعديل) محجوبة كزائر بموجب GDPR. يمكنك <a href="#" id="link-guest-login">تسجيل الدخول بحساب OSM</a> لإظهارها.</span>
           </div>
         </div>
       </section>
@@ -779,24 +779,24 @@
             </svg>
           </button>
 
-          <details class="auth-advanced" style="margin-top: 14px; opacity: 0.75;">
-            <summary style="font-size: 11px; cursor: pointer; color: var(--color-text-muted);">إعدادات متقدمة للمطورين (بيئة العمل ومعرّف العميل)</summary>
-            <div class="client-id-config" style="margin-top: 10px;">
+          <details class="auth-advanced">
+            <summary>إعدادات متقدمة للمطورين (بيئة العمل ومعرّف العميل)</summary>
+            <div class="client-id-config mt-10">
               <label for="osm-environment">بيئة العمل (OpenStreetMap Environment):</label>
-              <select id="osm-environment" class="auth-input" style="width: 100%; text-align: right; text-align-last: right; padding-right: 12px; font-family: var(--font-body); cursor: pointer;">
-                <option value="production" style="background: #12141d; color: #fff;">بيئة الإنتاج (Production - openstreetmap.org)</option>
-                <option value="dev" style="background: #12141d; color: #fff;">بيئة التطوير (Dev - apis.dev.openstreetmap.org)</option>
+              <select id="osm-environment" class="auth-input field-start">
+                <option value="production">بيئة الإنتاج (Production - openstreetmap.org)</option>
+                <option value="dev">بيئة التطوير (Dev - apis.dev.openstreetmap.org)</option>
               </select>
             </div>
 
-            <div class="client-id-config" style="margin-top: 8px;">
+            <div class="client-id-config mt-8">
               <label for="osm-client-id">معرّف العميل (Client ID):</label>
               <input type="text" id="osm-client-id" class="auth-input" placeholder="معرّف مخصص (اتركه فارغاً للافتراضي المدمج)" dir="ltr" />
             </div>
 
-            <div class="client-id-config" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); padding: 10px 12px; border-radius: 10px; margin-top: 8px; gap: 4px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                <span style="font-family: var(--font-body); font-size: 10.5px; color: var(--color-text-muted);">عنوان العودة (Redirect URI):</span>
+            <div class="client-id-config redirect-uri-box">
+              <div class="row-between">
+                <span class="box-label">عنوان العودة (Redirect URI):</span>
                 <button id="btn-copy-redirect-uri" class="copy-uri-btn" title="نسخ العنوان">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -805,7 +805,7 @@
                   <span>نسخ</span>
                 </button>
               </div>
-              <div id="osm-redirect-uri-display" style="font-family: monospace; font-size: 11px; color: var(--color-primary); user-select: all; text-align: left; direction: ltr; overflow-x: auto; white-space: nowrap;">https://manara.saudiosm.org/</div>
+              <div id="osm-redirect-uri-display">https://manara.saudiosm.org/</div>
             </div>
           </details>
         </div>
@@ -828,19 +828,19 @@
 
         <div class="auth-body">
           <!-- Coordinates & Hint -->
-          <div class="client-id-config" style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(0, 242, 254, 0.2); padding: 10px 14px; border-radius: 12px; gap: 4px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-family: var(--font-body); font-size: 11px; color: var(--color-text-muted);">الإحداثيات (WGS84):</span>
-              <span style="font-size: 10.5px; color: #00ff87;">✓ يمكنك سحب المؤشر على الخارطة للضبط</span>
+          <div class="client-id-config coords-box coords-box--accent">
+            <div class="row-between">
+              <span class="box-label">الإحداثيات (WGS84):</span>
+              <span class="coords-hint">✓ يمكنك سحب المؤشر على الخارطة للضبط</span>
             </div>
-            <div id="add-mosque-coords-display" style="font-family: monospace; font-size: 13.5px; color: var(--color-primary); direction: ltr; text-align: center; font-weight: 600;">-</div>
+            <div id="add-mosque-coords-display" class="coords-value">-</div>
           </div>
 
           <!-- Arabic Name with Quick Prefix Chips -->
           <div class="client-id-config">
             <label for="add-mosque-name-ar">اسم المسجد (بالعربية):</label>
-            <input type="text" id="add-mosque-name-ar" data-field="name:ar" class="auth-input" style="text-align: right;" placeholder="مثال: جامع الإيمان / مسجد النور">
-            <div class="chips-container" id="mosque-prefix-chips" style="margin-top: 4px; gap: 6px;">
+            <input type="text" id="add-mosque-name-ar" data-field="name:ar" class="auth-input field-start" placeholder="مثال: جامع الإيمان / مسجد النور">
+            <div class="chips-container" id="mosque-prefix-chips">
               <button type="button" class="chip prefix-chip" data-prefix="جامع">جامع</button>
               <button type="button" class="chip prefix-chip" data-prefix="مسجد">مسجد</button>
               <button type="button" class="chip prefix-chip" data-prefix="مصلى">مصلى</button>
@@ -849,9 +849,9 @@
 
           <!-- English Name with Smart Suggestion -->
           <div class="client-id-config">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="row-between">
               <label for="add-mosque-name-en">الاسم بالإنجليزية (name:en):</label>
-              <button type="button" id="btn-suggest-mosque-en" class="quick-fix-btn" style="padding: 2px 8px; font-size: 11px;">✨ اقتراح الاسم الذكي</button>
+              <button type="button" id="btn-suggest-mosque-en" class="quick-fix-btn">✨ اقتراح الاسم الذكي</button>
             </div>
             <input type="text" id="add-mosque-name-en" data-field="name:en" class="auth-input" dir="ltr" placeholder="e.g. Al-Iman Mosque">
           </div>
@@ -861,17 +861,17 @@
           <div id="add-mosque-fields" class="preset-fields"></div>
 
           <!-- Additional Options Accordion -->
-          <details class="advanced-tags-details" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 8px 12px;">
-            <summary style="cursor: pointer; font-size: 12px; color: var(--color-secondary); font-weight: 600; user-select: none;">
+          <details class="advanced-tags-details">
+            <summary>
               وسوم إضافية اختيارية (مصلى نساء، مبنى، ويكي بيانات، السعة، أوقات الفتح)...
             </summary>
-            <div id="add-mosque-more-fields" class="preset-fields" style="margin-top: 10px;"></div>
+            <div id="add-mosque-more-fields" class="preset-fields"></div>
           </details>
 
           <!-- Source & Changeset Comment -->
           <div class="client-id-config">
             <label for="add-mosque-source">المصدر (source):</label>
-            <select id="add-mosque-source" class="auth-input" style="cursor: pointer;">
+            <select id="add-mosque-source" class="auth-input">
               <option value="local knowledge" selected>معرفة محلية (Local knowledge)</option>
               <option value="survey">مسح ميداني (Survey)</option>
               <option value="Esri World Imagery">صور Esri الجوية (Esri World Imagery)</option>
@@ -885,10 +885,10 @@
           </div>
 
           <!-- Auth Status / Warning Banner -->
-          <div id="add-mosque-auth-status" class="input-help" style="text-align: center; font-size: 12px; margin: 4px 0;"></div>
+          <div id="add-mosque-auth-status" class="input-help"></div>
 
           <!-- Submit & Cancel Buttons -->
-          <button type="button" id="btn-submit-add-mosque" class="auth-submit-btn" style="background: linear-gradient(135deg, #00ff87, #60efff); color: #071714; font-weight: 700;">
+          <button type="button" id="btn-submit-add-mosque" class="auth-submit-btn">
             <span>رفع المسجد كعقدة إلى OpenStreetMap 🚀</span>
           </button>
 
@@ -914,9 +914,9 @@
         </div>
 
         <div class="auth-body">
-          <div class="client-id-config" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 14px; border-radius: 12px; gap: 6px;">
-            <span style="font-family: var(--font-body); font-size: 11px; color: var(--color-text-muted);">الإحداثيات:</span>
-            <div id="note-composer-coords" style="font-family: monospace; font-size: 13px; color: var(--color-primary); direction: ltr; text-align: center;">-</div>
+          <div class="client-id-config coords-box">
+            <span class="box-label">الإحداثيات:</span>
+            <div id="note-composer-coords" class="coords-value">-</div>
           </div>
 
           <div class="client-id-config">
@@ -931,34 +931,34 @@
 
           <div id="note-preset-freetext" class="client-id-config note-preset-group">
             <label for="note-text-input">نص الملاحظة:</label>
-            <textarea id="note-text-input" class="auth-input" rows="4" style="text-align: right; resize: vertical; font-family: var(--font-body);" placeholder="مثال: هذا المسجد أُغلق نهائياً / الاسم غير صحيح / يوجد مسجد جديد هنا..."></textarea>
+            <textarea id="note-text-input" class="auth-input field-start" rows="4" placeholder="مثال: هذا المسجد أُغلق نهائياً / الاسم غير صحيح / يوجد مسجد جديد هنا..."></textarea>
           </div>
 
           <div id="note-preset-worship" class="client-id-config note-preset-group hidden">
             <label for="note-worship-name">اسم المكان (اختياري):</label>
-            <input type="text" id="note-worship-name" class="auth-input" style="text-align: right;" placeholder="مثال: مسجد الرحمة">
-            <label for="note-worship-religion" style="margin-top: 8px;">الديانة / المذهب (اختياري):</label>
-            <select id="note-worship-religion" class="auth-input" style="text-align: right; text-align-last: right; cursor: pointer;">
-              <option value="" style="background: #12141d; color: #fff;">-- غير محدد --</option>
-              <option value="مسلم" style="background: #12141d; color: #fff;">مسلم (مسجد)</option>
-              <option value="مصلى" style="background: #12141d; color: #fff;">مصلى</option>
-              <option value="أخرى" style="background: #12141d; color: #fff;">أخرى</option>
+            <input type="text" id="note-worship-name" class="auth-input field-start" placeholder="مثال: مسجد الرحمة">
+            <label for="note-worship-religion" class="mt-8">الديانة / المذهب (اختياري):</label>
+            <select id="note-worship-religion" class="auth-input field-start">
+              <option value="">-- غير محدد --</option>
+              <option value="مسلم">مسلم (مسجد)</option>
+              <option value="مصلى">مصلى</option>
+              <option value="أخرى">أخرى</option>
             </select>
           </div>
 
           <div id="note-preset-fixme" class="client-id-config note-preset-group hidden">
             <label for="note-fixme-text">وصف المشكلة (fixme):</label>
-            <input type="text" id="note-fixme-text" class="auth-input" style="text-align: right;" placeholder="مثال: الطريق مغلق">
+            <input type="text" id="note-fixme-text" class="auth-input field-start" placeholder="مثال: الطريق مغلق">
           </div>
 
           <div id="note-preset-gone" class="client-id-config note-preset-group hidden">
             <label for="note-gone-name">اسم المعلم (POI name):</label>
-            <input type="text" id="note-gone-name" class="auth-input" style="text-align: right;" placeholder="مثال: مسجد النور">
-            <label for="note-gone-types" style="margin-top: 8px;">نوع المعلم (POI types):</label>
-            <input type="text" id="note-gone-types" class="auth-input" style="text-align: right;" placeholder="مثال: amenity-place_of_worship">
+            <input type="text" id="note-gone-name" class="auth-input field-start" placeholder="مثال: مسجد النور">
+            <label for="note-gone-types" class="mt-8">نوع المعلم (POI types):</label>
+            <input type="text" id="note-gone-types" class="auth-input field-start" placeholder="مثال: amenity-place_of_worship">
           </div>
 
-          <p id="note-composer-attribution" class="input-help" style="text-align: center;">-</p>
+          <p id="note-composer-attribution" class="input-help">-</p>
 
           <button id="btn-submit-note" class="auth-submit-btn">
             <span>إرسال الملاحظة إلى OpenStreetMap</span>

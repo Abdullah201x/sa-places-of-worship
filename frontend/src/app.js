@@ -634,7 +634,7 @@ export function buildSuggestionPopup(props, lat, lon) {
     <div class="suggestion-popup" dir="${currentLang === 'ar' ? 'rtl' : 'ltr'}">
       <div class="suggestion-popup-header">
         <h3 class="suggestion-title">🕌 ${escapeHtml(displayName)}</h3>
-        ${props.name_en && props.name_ar ? `<div class="suggestion-subtitle">${escapeHtml(subtitle)}</div>` : ''}
+        ${props.name_en && props.name_ar ? `<div class="suggestion-subtitle"><bdi>${escapeHtml(subtitle)}</bdi></div>` : ''}
       </div>
 
       <div>
