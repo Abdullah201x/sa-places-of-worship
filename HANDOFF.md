@@ -2,9 +2,9 @@
 
 This document summarises the architecture, live infrastructure, completed phases (Phases 1–3 and Phase 6a), and upcoming roadmap (Phases 5, 4 and 6b) for **Manara** (`https://manara.saudiosm.org`), so another AI coding assistant can seamlessly continue the work.
 
-**Where things stand:** Phases 1–3, Phase 4 (accounts & shared review), Phase 5a (`/community` page), Phase 5b (leaderboard, verified edits feed, and SEO pages), and Phase 6a (operations) are done. Phase 6b (final security review) remains. Nothing is half-finished in the code; `main` is clean.
+**Where things stand:** Phases 1–3, Phase 4 (accounts & shared review), Phase 5a (`/community` page), Phase 5b (leaderboard, verified edits feed, and SEO pages), and Phase 6a (operations) are done. Phase 6b (final security review) remains. The utility-first redesign (`REDESIGN.md`) has started: **Redesign Phase 0 is done and live** (2026-10-30, see §12); Redesign Phase 1 is next. Nothing is half-finished in the code; `main` is clean.
 
-- **Last updated:** 2026-10-28
+- **Last updated:** 2026-10-30
 - **Repository:** `github.com/Abdullah201x/sa-places-of-worship` (branch `main` auto-deploys via Coolify)
 - **Local checkout:** `C:\Users\abdul\Desktop\GCC20260707`
 - **VPS SSH:** `root@159.195.192.148`
@@ -18,7 +18,7 @@ Manara is an interactive Leaflet map of places of worship in Saudi Arabia, built
 - **Coverage gaps** (road-network grid cells lacking nearby mosques);
 - **Data-improvement mode for mappers**: issue detection, a review queue, Wikidata suggestions (~54.5k missing mosques), exports (GeoJSON, CSV, KML, OSM XML, MapRoulette), and in-app tag fixes through the OSM API with OAuth2 PKCE.
 
-A daily server-side Python pipeline (`pipeline/`, using `osmium`, `shapely`, `scikit-learn`, `psycopg`) turns Geofabrik's public GCC `.pbf` extract into static compressed JSON/GeoJSON datasets **and** loads them atomically into a PostGIS 17 database backing a public read-only FastAPI service (`backend/`).
+A server-side Python pipeline (checks hourly, runs once per new Geofabrik update) (`pipeline/`, using `osmium`, `shapely`, `scikit-learn`, `psycopg`) turns Geofabrik's public GCC `.pbf` extract into static compressed JSON/GeoJSON datasets **and** loads them atomically into a PostGIS 17 database backing a public read-only FastAPI service (`backend/`).
 
 | Dataset File | Records | Contents |
 |---|---|---|
@@ -47,7 +47,7 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 | Service | Coolify UUID / Container Prefix | Image / Build | Port | Memory Cap | Actual RAM | Notes |
 |---|---|---|---|---|---|---|
 | **Web (Caddy + SPA)** | `qri8jmjjfbuaiwyfwbunrjvn` | Root `Dockerfile` | `:80` | — | ~15 MiB | Public domain `https://manara.saudiosm.org`; mounts `/data/manara/published:/srv/manara/published:ro` |
-| **Pipeline Worker** | `e3xakpyxk2xmq19aqpyvjdjq` (`manara-pipeline`) | `pipeline/Dockerfile` | None | `1.5 GiB` (`1.5 CPU`) | ~17 MiB idle (~970 MiB peak) | Runs `python run.py schedule` (daily 23:30 UTC / 02:30 Riyadh); mounts volume `manara-state:/state` and host `/data/manara/published:/published` |
+| **Pipeline Worker** | `e3xakpyxk2xmq19aqpyvjdjq` (`manara-pipeline`) | `pipeline/Dockerfile` | None | `1.5 GiB` (`1.5 CPU`) | ~17 MiB idle (~970 MiB peak) | Runs `python run.py schedule` (hourly check of Geofabrik's `state.txt`; a full run only when a new update exists, see §4); mounts volume `manara-state:/state` and host `/data/manara/published:/published` |
 | **FastAPI Backend** | `mp6ebt0ybcqvpmk4bke8d56w` (`manara-api`) | `backend/Dockerfile` | `:8010` | `256 MiB` | ~45 MiB | Consistent container name enabled; Docker network alias `manara-api` on `coolify` network; proxied by Caddy `handle /api/*` |
 | **PostGIS Database** | `9uzoip4gqaxybg3e5oymh8sg` (`manara-db`) | `postgis/postgis:17-3.5-alpine` | `:5432` | `512 MiB` | ~241 MiB | Database `manara`, user `manara`, extensions `postgis` and `pg_trgm` enabled |
 
@@ -71,6 +71,10 @@ See `VPS_HARDWARE_ANALYSIS.md`.
   - always close changesets;
   - never offer a "fix all" button.
 - Map tiles come from Esri and CARTO only, never `tile.openstreetmap.org`.
+- **Approved 2026-10-30 for the redesign, not built yet** (`REDESIGN.md` §3.3, decisions D3/D4):
+  - OSM's own minutely replication diffs (`planet.openstreetmap.org/replication/minute`, which redirects to OSMF's S3 mirror) may be read by one dedicated container (`manara-live`), for the change feed only: sequential, one `state.txt` check per minute at most, identifying User-Agent, backoff on 429/503. The diffs carry `user`/`uid`/`changeset`; keep only `changeset`, never store or log names or uids.
+  - Osmose (`osmose.openstreetmap.fr/api/0.3`) and Overpass (`overpass-api.de`) may be called from the browser **on click only**, one request at a time, bbox-limited; both send `Access-Control-Allow-Origin: *` and need a CSP `connect-src` addition.
+- **Never hand-patch published datasets or the committed copies.** On 2026-10-28 a mosque added from Manara was patched into `/data/manara/published/current/places_of_worship_sa.geojson` and into the repo, together with its editor's name, uid and changeset. Let the next pipeline run pick new objects up from the extract.
 
 ---
 
@@ -79,7 +83,7 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 ### Frontend (`frontend/`)
 - **Vite MPA**:
   - `index.html` (map), `about.html`, `privacy.html` (bilingual `[data-lang]` blocks with shared i18n module).
-  - ES modules in `frontend/src/`: `main.js`, `app.js`, `i18n.js`, `translations*.js`, `arabic.js`, `review.js`, `exporters.js`, `osm_api.js`, `editing.js`, `analytics.js`, `page.js`, `leaflet-setup.js`.
+  - ES modules in `frontend/src/`: `main.js`, `app.js`, `i18n.js`, `translations*.js`, `arabic.js`, `review.js`, `exporters.js`, `osm_api.js`, `editing.js`, `analytics.js`, `page.js`, `leaflet-setup.js`, plus (redesign Phase 0) `keys.js` (layout-independent shortcuts), `validator.js` (the 13 issue rules) and `timeago.js` (the data-age label).
   - Self-hosted dependencies (Leaflet, markercluster, leaflet.heat, `@fontsource-variable/*`). No CDN, no Google Fonts.
 - **Two build gotchas in `frontend/vite.config.js` (keep intact):**
   - `cssMinify: 'esbuild'`: Lightning CSS drops unprefixed `backdrop-filter` with `var()`, breaking glass blur in Chrome.
@@ -95,8 +99,11 @@ See `VPS_HARDWARE_ANALYSIS.md`.
    - Removed `last_edited_by`, `user_id`, and `changeset_id` from `places_of_worship_sa.geojson`. Kept `version` and `edited_at`.
 2. **In-browser lazy contributor fetch (`frontend/src/osm_api.js` & `frontend/src/app.js`):**
    - `OsmApi.fetchLastEdit(type, id, version)` fetches `/api/0.6/{type}/{id}.json` only for logged-in mappers when inspecting a single place, with race-condition guards and `sessionStorage` caching.
-3. **Automated daily runner (`pipeline/run.py` & `pipeline/Dockerfile`):**
-   - Runs `python run.py schedule` (daily at `23:30` UTC).
+3. **Automated runner (`pipeline/run.py` & `pipeline/Dockerfile`):**
+   - Runs `python run.py schedule`. Since 2026-10-30 it **checks hourly** (`MANARA_CHECK_EVERY_MIN`, default 60): one small GET of the extract's replication `state.txt`, and a full run only when Geofabrik's sequence is ahead of the local extract's. The old fixed 23:30 UTC run missed about half of Geofabrik's updates, whose publish time varies from about 20:45 UTC to 12:56 UTC the next day; on 2026-10-28 it checked 92 s too early and the site stayed a day staler.
+   - A run that **failed** after the diffs were applied is retried with `--force` at most every 6 hours (otherwise the already-updated extract would hide that update until the next one).
+   - `/state/status.json` records `last_attempt`, `last_result` (`published` / `no new data` / `failed`) and `last_error`. `duration_s` is only written on success.
+   - `summary.json` now also has `pbf_timestamp` (full replication time of the extract) next to `pbf_date`; the frontend's data-age label reads it.
    - Updates `/state/gcc-states.osm.pbf` via `pyosmium-up-to-date`, checks `osmosis_replication_sequence_number`, fetches Wikidata `sa.json` with ETag caching, runs all pipeline steps in `/state/work`, pre-compresses `.br` and `.gz`, publishes to `/published/v<TIMESTAMP>`, atomically swaps relative symlink `current -> v<TIMESTAMP>`, and retains the 2 most recent versions.
 4. **Live dynamic `/data/*` serving (`deploy/Caddyfile.container`):**
    - Serves from `/srv/manara/published/current` when present, falling back to baked `/srv/manara/data`.
@@ -149,7 +156,9 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 2. ✅ **Phase 5a** (done 2026-10-28, see §8): the public `/community` stats page (`frontend/community.html`, `frontend/src/community.js`).
 3. ✅ **Phase 4** (done 2026-10-28, see §7): accounts and guarded shared review (hybrid model B).
 4. ✅ **Phase 5b** (done 2026-10-28, see §8): opt-in leaderboard, recent verified edits feed, and SEO pages (/region, /place, /sitemap.xml).
-5. **Phase 6b (NEXT):** final security review and verification.
+5. **Phase 6b (still open):** final security review and verification.
+6. ✅ **Redesign Phase 0** (done 2026-10-30, see §12).
+7. **Redesign Phase 1 (NEXT):** Astro + Svelte shell, routing, command palette and the list-first `/qa` workspace (`REDESIGN.md` §5). Write a step-by-step plan for the user first.
 
 ---
 
@@ -245,13 +254,13 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 - **Health routes answer GET and HEAD.** UptimeRobot checks with `HEAD`; the routes were `GET`-only at first and returned 405, which made two monitors go red (fixed in `0e4f733`). Keep `methods=["GET", "HEAD"]` on any new health route.
 - **UptimeRobot** (the user's free account, 5-minute checks, email alerts) has three monitors: `https://manara.saudiosm.org` (home page), `/api/healthz`, `/api/healthz/freshness`. The Caddy-only `/healthz` is not monitored (the home page covers the web container).
 - **Backups (DECIDED: on the VPS only):**
-  - Coolify scheduled backup on `manara-db`: database `manara`, frequency `daily` (00:00 UTC, 03:00 Riyadh, after the 23:30 UTC pipeline run), **14 days** local retention, no S3.
+  - Coolify scheduled backup on `manara-db`: database `manara`, frequency `daily` (00:00 UTC, 03:00 Riyadh; the pipeline no longer runs at a fixed time, which is fine: `pg_dump` takes a consistent snapshot and the loader's table swap waits for it), **14 days** local retention, no S3.
   - Files: `/data/coolify/backups/databases/root-team-0/manara-db-9uzoip4gqaxybg3e5oymh8sg/pg-dump-manara-*.dmp` (custom format, about 6.7 MB).
   - The scope is the **whole `manara` database**, not only the user tables (this replaced the earlier plan, because the user tables do not exist yet and the dump is small). Nothing needs changing when Phase 4 adds tables.
   - Verified: a manual `pg_dump -Fc` restored into a throwaway database with identical row counts (14,021 places, 59,695 gaps, 54,504 suggestions, 13 regions, 2 dataset versions), and Coolify's own dump lists all the data tables in `pg_restore -l`.
   - ⚠️ Risk the user accepted: losing the VPS disk loses the backups too. **Optional safety net:** a weekly manual `scp` of the newest dump to the desktop. Not set up.
 - **Hygiene:**
-  - Image tags pinned: `caddy:2.11-alpine` (changed), `node:22-alpine`, `alpine:3.22` and `python:3.12-slim` (already pinned), `postgis/postgis:17-3.5-alpine` (set in Coolify).
+  - Image tags pinned: `caddy:2.11-alpine`, `node:26-alpine`, `alpine:3.24` and `python:3.12-slim` (as of 2026-10-30), `postgis/postgis:17-3.5-alpine` (set in Coolify).
   - `.github/dependabot.yml`: weekly updates for npm (`/frontend`), pip (`/backend`, `/pipeline`), docker (`/`, `/backend`, `/pipeline`) and github-actions. Expect its first PRs on GitHub; review them rather than auto-merging, because a merge to `main` deploys to production.
 
 ### Still to do
@@ -285,7 +294,8 @@ docker exec $C rm -f /tmp/restore.dmp
 ## 10. Useful Verification Commands
 
 ```bash
-# 1. Run full Python test suite (72 tests: common, regions extractor, Phase 4/5b, transliteration NLP, FastAPI endpoints)
+# 1. Run full Python test suite (82 tests: common, regions extractor, Phase 4/5b, transliteration NLP, FastAPI endpoints, pipeline scheduler)
+#    and the frontend Vitest suite (45 tests: presets, validator rules, shortcut keys, data-age label): cd frontend && npm run test
 python -m pytest tests/ -q
 
 # 2. Frontend lint, build & local HTTPS preview (https://localhost:8000)
@@ -328,3 +338,32 @@ ssh root@159.195.192.148 'CID=$(docker ps --filter name=e3xakpyxk2xmq19aqpyvjdjq
 - Git prints "LF will be replaced by CRLF" warnings on commit. They are harmless.
 - `ssh root@159.195.192.148 ... docker exec ... run.py once --force` takes about 2 minutes. The SSH connection may reset right after the final `Published v...` line; that is harmless. Confirm with `curl -s https://manara.saudiosm.org/api/healthz/freshness`.
 - Do not run `once --force` casually: peak memory is about 970 MiB on a VPS with about 2.3 GiB available and a neighbour (Rahma) on it.
+
+---
+
+## 12. Utility-First Redesign (`REDESIGN.md`)
+
+`REDESIGN.md` is the plan for turning Manara into a utility-first, keyboard-driven, bilingual workspace: functional audit, sitemap, the Task Tracker / Tagging Directory / Live Change Monitor specs, data models and the phased roadmap. `OSM_IDEAS.md` holds the earlier ideas it builds on.
+
+### Decisions (user, 2026-10-30)
+| # | Decision |
+|---|---|
+| D1 | Scope: **places of worship only** |
+| D2 | Frontend: **Astro (static output) + Svelte islands**; no SSR server, no Tailwind; MapLibre in redesign Phase 5 |
+| D3 | Change feed: **add OSM minutely replication diffs** (new `manara-live` container) with an Osmose-style age label |
+| D4 | Osmose and Overpass: **on-click browser calls** |
+| D5 | English: **`/en/` prefix for content pages**, `lang` setting for the workspaces |
+| D6 | Sprints (task tracker): **admins only** (`MANARA_ADMIN_UIDS`), no coordinator role |
+
+### Redesign Phase 0: DONE & live (2026-10-30)
+- `a137a34` Shortcuts work with any keyboard layout (`frontend/src/keys.js`). They used `e.key`, so the Arabic layout broke every shortcut.
+- `a8d259f` Issue rules moved to `frontend/src/validator.js` (`RULES`, `RULE_IDS`, `evaluateRules`). **Rule ids are snake_case and must never be renamed** (filters, permalinks, exports). Output was verified identical to the old code on all places.
+- `e33425d` Data-age label in the sidebar (`OSM data · 20h`, ●/▲/✕ at 36 h / 72 h, Riyadh + UTC on hover), from `summary.json` `pbf_timestamp`, with clock skew corrected from the `Date` header.
+- `0343368` `index.css` uses logical properties; the `[dir="ltr"]` override block is gone (two intended exceptions are commented). 53 styling inline styles moved to the stylesheet; only the 15 JS-toggled `display:none` states stay inline until Phase 1.
+- Dropped: loading Wikidata suggestions by bbox. The bundle is already lazy (938 KB brotli), and the bbox API would lose the country-wide clusters, the counts and search (keeps the §8 decision).
+- Verification approach that worked: headless Chrome via `puppeteer-core` (driving the installed Chrome, tool kept outside the repo) taking before/after screenshots in ar/en, desktop/mobile, with remote tiles blocked and animations disabled, plus per-element position/size comparisons.
+
+### Follow-ups done the same day
+- `9b9e440` The pipeline checks hourly instead of once at 23:30 UTC (see §4).
+- `c14e2e3`, `e29b638` The committed datasets were replaced with the public-extract versions. The old committed places file came from the login-only extract and named 484 contributors (the old values remain in the private repo's history). The committed gaps grid was kept, because the published one predated `urgency_score`.
+
