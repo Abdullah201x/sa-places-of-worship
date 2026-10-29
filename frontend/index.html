@@ -12,6 +12,44 @@
 <body>
 
   <div id="app-container">
+    <!-- AppShell Top Bar (40px) -->
+    <header id="app-topbar" class="app-topbar" role="banner">
+      <div class="topbar-start">
+        <a href="/" class="topbar-brand" title="منارة — خارطة أماكن العبادة">
+          <span class="brand-badge">م</span>
+          <span class="brand-title">منارة</span>
+        </a>
+        <nav class="topbar-tabs" aria-label="مساحات العمل">
+          <button type="button" class="topbar-tab active" data-workspace="map" id="tab-workspace-map">
+            <span data-lang="ar">الخريطة</span><span data-lang="en">Map</span>
+          </button>
+          <button type="button" class="topbar-tab" data-workspace="qa" id="tab-workspace-qa">
+            <span data-lang="ar">الجودة</span><span data-lang="en">QA</span>
+          </button>
+          <a href="/community" class="topbar-tab">
+            <span data-lang="ar">المجتمع</span><span data-lang="en">Community</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="topbar-center">
+        <button type="button" id="btn-command-palette" class="topbar-search-trigger" title="لوحة الأوامر (Ctrl+K)">
+          <span class="search-trigger-icon">🔍</span>
+          <span class="search-trigger-text" data-lang="ar">ابحث أو نفّذ أمراً...</span>
+          <span class="search-trigger-text" data-lang="en">Search or command...</span>
+          <kbd class="search-trigger-kbd">⌘K</kbd>
+        </button>
+      </div>
+
+      <div class="topbar-end">
+        <div id="topbar-freshness" class="topbar-freshness" title="تحديثات بيانات OpenStreetMap">
+          <span class="freshness-dot">●</span>
+          <span id="topbar-data-age" class="freshness-text">بيانات OSM</span>
+        </div>
+        <button type="button" id="topbar-btn-lang" class="topbar-btn" title="English / العربية" lang="en">EN</button>
+        <button type="button" id="topbar-btn-auth" class="topbar-btn user-btn" title="تسجيل الدخول عبر OpenStreetMap">👤</button>
+      </div>
+    </header>
     
     <!-- Sidebar Controls -->
     <aside id="sidebar">
@@ -1061,6 +1099,35 @@
     <div id="batch-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
     <div id="history-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
     <button type="button" id="batch-dock" class="batch-dock" style="display: none;"></button>
+
+    <!-- Command Palette Dialog (Accessible combobox dialog) -->
+    <dialog id="command-palette-dialog" class="command-palette-dialog" aria-label="لوحة الأوامر والبحث السريع">
+      <div class="palette-box">
+        <div class="palette-input-wrap">
+          <span class="palette-search-icon">🔍</span>
+          <input type="search" id="command-palette-input" class="palette-input" placeholder="ابحث عن منطقة، أو قاعدة فحص، أو أمر..." autocomplete="off" spellcheck="false" />
+          <kbd class="palette-esc-badge">ESC</kbd>
+        </div>
+        <div id="command-palette-results" class="palette-results" role="listbox"></div>
+      </div>
+    </dialog>
+
+    <!-- AppShell Status Bar (24px) -->
+    <footer id="app-statusbar" class="app-statusbar" role="status">
+      <div class="statusbar-start">
+        <span id="sb-version">منارة v1.0</span>
+        <span class="statusbar-sep">·</span>
+        <span id="sb-visible-count">0 في العرض</span>
+      </div>
+      <div class="statusbar-center">
+        <span id="sb-selection">لم يتم تحديد مكان</span>
+      </div>
+      <div class="statusbar-end">
+        <span id="sb-batch" style="display: none;">دفعة: 0</span>
+        <span class="statusbar-sep" id="sb-batch-sep" style="display: none;">·</span>
+        <button type="button" id="sb-btn-shortcuts" class="statusbar-action" title="اختصارات لوحة المفاتيح (?)">? اختصارات</button>
+      </div>
+    </footer>
 
     <!-- Loading / Error Overlay -->
     <div id="loading-overlay" role="status" aria-live="polite">

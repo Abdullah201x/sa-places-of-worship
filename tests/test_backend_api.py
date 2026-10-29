@@ -125,3 +125,43 @@ def test_backend_arabic_normalization():
     assert normalize_arabic("جامع الإمام تركي") == "مسجد الامام تركي"
     assert normalize_arabic("مَسْجِدُ الرَّحْمَٰنِ") == "مسجد الرحمن"
     assert normalize_arabic("الجامع الكبير", strip_al=True) == "مسجد كبير"
+
+
+def test_get_issues_endpoint():
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+    mock_cur.fetchone.return_value = None
+    mock_cur.fetchall.return_value = [
+        {
+            "rule_id": "missing_name_en",
+            "severity": "medium",
+            "osm_type": "way",
+            "osm_id": 12345,
+            "name": "جامع الملك فهد",
+            "name_en": "",
+            "religion": "muslim",
+            "denomination": "sunni",
+            "region_code": "SA-01",
+            "region_name": "منطقة الرياض",
+            "lon": 46.7,
+            "lat": 24.7,
+            "suggested_fix": None,
+            "review_status": None,
+        }
+    ]
+
+    def override_get_db():
+        yield mock_conn
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app, raise_server_exceptions=False) as c:
+        res = c.get("/api/v1/issues?rule_id=missing_name_en&region_code=SA-01")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["count"] == 1
+        assert data["issues"][0]["osm_id"] == 12345
+        assert data["issues"][0]["coordinates"] == [46.7, 24.7]
+    app.dependency_overrides.clear()
+

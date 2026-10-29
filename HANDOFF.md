@@ -458,3 +458,30 @@ Completed Phase 6b security review of the Phase 4 auth, review marks, and edit r
 7. **Test Suite Expansion:**
    - Added tests in `tests/test_phase4_phase5b.py` for CSRF referer fallback, multi-hop proxy HTTPS cookie detection, successful edit verification with changeset XML object parsing and mark binding, and edit author mismatch rejection.
    - Full test suite: 86 passed Python tests (`pytest`), 45 passed Vitest tests, clean ESLint and Vite build.
+
+---
+
+## 15. Redesign Phase 1: Shell, Navigation & Issues Service Record (2026-10-30)
+
+Started Phase 1 implementation from `REDESIGN.md` §5:
+
+### 15.1 Completed Items
+1. **Typography & Font Optimization (§2.4):**
+   - Removed `@fontsource-variable/outfit` and `@fontsource-variable/plus-jakarta-sans`.
+   - Standardized on self-hosted Cairo Variable and system monospace stack (`ui-monospace, ...`).
+   - Saved 7 font bundles (~100 KB payload reduction).
+2. **Backend QA Issues Service (`GET /api/v1/issues`):**
+   - Created `backend/app/routers/issues.py` supporting rule, region, severity, and review status filtering.
+   - Added `issues` table to `backend/app/schema.py`.
+   - Added test in `tests/test_backend_api.py`.
+3. **AppShell Layout & Status Bar (§2.2):**
+   - Added 40px TopBar (`#app-topbar`) with branding, workspace tabs (`Map`, `QA`, `Community`), search trigger, live freshness indicator, language toggle, and auth button.
+   - Added 24px StatusBar (`#app-statusbar`) with active version, visible items count, selected place indicator, and keyboard shortcuts helper.
+4. **Command Palette (`Ctrl+K` or `/`):**
+   - Built accessible modal combobox in `frontend/src/palette.js` matching Saudi regions, QA rules, and quick actions.
+   - Added unit test suite in `frontend/tests/palette.test.js`.
+5. **Testing & Build:**
+   - Vitest: 50 passed (5 test files).
+   - Pytest: 87 passed.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build.

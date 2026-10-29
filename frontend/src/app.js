@@ -1,3 +1,4 @@
+import { setupCommandPalette } from './palette.js';
 import { currentLang, t, fmtNum, fmtDate, onLanguageChange, setLanguage } from './i18n.js';
 import { ArabicText } from './arabic.js';
 import { ReviewMarks, hideReviewedPlaces, setHideReviewedPlaces, isHiddenByReview, markCurrentPlace, clearCurrentMark, renderReviewActions, rebuildReviewQueue, navigateReview, updateReviewNavUI, Permalink, updatePermalinkSoon, setupKeyboardShortcuts } from './review.js';
@@ -895,6 +896,105 @@ export function initSidebarToggle() {
   });
 }
 
+
+export function setupAppShell() {
+  const topbarLangBtn = document.getElementById('topbar-btn-lang');
+  if (topbarLangBtn) {
+    topbarLangBtn.addEventListener('click', () => {
+      setLanguage(currentLang === 'ar' ? 'en' : 'ar');
+    });
+  }
+
+  const topbarAuthBtn = document.getElementById('topbar-btn-auth');
+  if (topbarAuthBtn) {
+    topbarAuthBtn.addEventListener('click', () => {
+      const overlay = document.getElementById('osm-auth-overlay');
+      if (overlay) overlay.classList.toggle('hidden');
+    });
+  }
+
+  const tabMap = document.getElementById('tab-workspace-map');
+  const tabQa = document.getElementById('tab-workspace-qa');
+  if (tabMap) {
+    tabMap.addEventListener('click', () => {
+      if (currentMode === 'improve') {
+        document.getElementById('mode-poi')?.click();
+      }
+      tabMap.classList.add('active');
+      tabQa?.classList.remove('active');
+    });
+  }
+  if (tabQa) {
+    tabQa.addEventListener('click', () => {
+      if (currentMode !== 'improve') {
+        document.getElementById('mode-improve')?.click();
+      }
+      tabQa.classList.add('active');
+      tabMap?.classList.remove('active');
+    });
+  }
+
+  const syncTabs = (mode) => {
+    if (mode === 'improve') {
+      tabQa?.classList.add('active');
+      tabMap?.classList.remove('active');
+    } else {
+      tabMap?.classList.add('active');
+      tabQa?.classList.remove('active');
+    }
+  };
+  document.getElementById('mode-poi')?.addEventListener('click', () => syncTabs('poi'));
+  document.getElementById('mode-gap')?.addEventListener('click', () => syncTabs('gap'));
+  document.getElementById('mode-improve')?.addEventListener('click', () => syncTabs('improve'));
+
+  const sbShortcutsBtn = document.getElementById('sb-btn-shortcuts');
+  if (sbShortcutsBtn) {
+    sbShortcutsBtn.addEventListener('click', () => {
+      document.getElementById('shortcuts-overlay')?.classList.remove('hidden');
+    });
+  }
+
+  setupCommandPalette({
+    onSelectRegion: (reg) => {
+      if (map) map.flyTo(reg.center, reg.zoom);
+    },
+    onSelectRule: (ruleId) => {
+      document.getElementById('mode-improve')?.click();
+      const chip = document.querySelector(`[data-improve="${ruleId}"]`);
+      if (chip) chip.click();
+    },
+    onExecuteAction: (actionId) => {
+      if (actionId === 'mode_poi') document.getElementById('mode-poi')?.click();
+      else if (actionId === 'mode_gap') document.getElementById('mode-gap')?.click();
+      else if (actionId === 'mode_improve') document.getElementById('mode-improve')?.click();
+      else if (actionId === 'toggle_satellite') {
+        const satBtn = document.getElementById('btn-basemap-satellite');
+        if (satBtn) satBtn.click();
+      } else if (actionId === 'toggle_qibla') {
+        document.getElementById('btn-qibla-compass')?.click();
+      } else if (actionId === 'toggle_wikidata') {
+        const chk = document.getElementById('chk-wikidata-suggestions');
+        if (chk) {
+          chk.checked = !chk.checked;
+          chk.dispatchEvent(new Event('change'));
+        }
+      } else if (actionId === 'export_csv') {
+        document.getElementById('btn-export-csv')?.click();
+      } else if (actionId === 'edit_history') {
+        document.getElementById('btn-edit-history')?.click();
+      } else if (actionId === 'shortcuts') {
+        document.getElementById('shortcuts-overlay')?.classList.remove('hidden');
+      } else if (actionId === 'community') {
+        window.location.href = '/community';
+      } else if (actionId === 'toggle_lang') {
+        setLanguage(currentLang === 'ar' ? 'en' : 'ar');
+      } else if (actionId === 'auth_login') {
+        document.getElementById('osm-auth-overlay')?.classList.remove('hidden');
+      }
+    },
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   onLanguageChange(refreshLanguageDependentUI);
   if (currentLang !== 'ar') setLanguage(currentLang);
@@ -905,6 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   setupKeyboardShortcuts();
   initSidebarToggle();
+  setupAppShell();
   // Handle OAuth callback first, then load the data
   setupEditing();
   OsmApi.handleCallback().then(() => {
@@ -1307,6 +1408,16 @@ export function renderDataUpdatedLabel() {
   time.textContent = formatAge(ageMs, currentLang, fmtNum);
   const [before, after] = t('dataAge').split('{age}');
   el.replaceChildren(glyph, before, time, after || '');
+    const topbarAge = document.getElementById('topbar-data-age');
+  if (topbarAge) {
+    if (!Number.isFinite(stamp)) {
+      const date = dataSummary.pbf_date || (dataSummary.updated_at || '').slice(0, 10);
+      topbarAge.textContent = date ? (currentLang === 'ar' ? `بيانات ${date}` : `Data ${date}`) : 'OSM Data';
+    } else {
+      topbarAge.textContent = `${currentLang === 'ar' ? 'بيانات' : 'Data'} ${formatAge(ageMs, currentLang, fmtNum)}`;
+      topbarAge.title = t('dataAgeTitle', { riyadh, utc });
+    }
+  }
   el.className = `data-updated age-${level}`;
   el.title = t('dataAgeTitle', { riyadh, utc });
   el.hidden = false;
@@ -1770,6 +1881,11 @@ export function updateMapLayers() {
 
 // Show detailed information about a single place of worship in the sidebar
 export function showDetails(props, lat, lon) {
+    const sbSel = document.getElementById('sb-selection');
+  if (sbSel) {
+    const pName = props.name || props.name_en || (currentLang === 'ar' ? 'مكان بدون اسم' : 'Unnamed place');
+    sbSel.textContent = `${osmTypeOf(props)}/${props.osm_id} — ${pName}`;
+  }
   selectedPlace = { properties: props, lat, lon };
   const panel = document.getElementById('details-panel');
   panel.style.display = 'block';
@@ -2078,6 +2194,10 @@ export function updateStats() {
   }
 
   document.getElementById('total-count').innerText = fmtNum(totalCount);
+    const sbVis = document.getElementById('sb-visible-count');
+  if (sbVis) {
+    sbVis.textContent = `${fmtNum(visibleCount)} ${currentLang === 'ar' ? 'في العرض' : 'in view'}`;
+  }
   document.getElementById('visible-count').innerText = fmtNum(visibleCount);
 }
 
@@ -2186,6 +2306,11 @@ export function updateCategoryTabCounts() {
 // Re-renders everything built in JavaScript after a language switch; static
 // text is swapped by setLanguage() itself.
 export function refreshLanguageDependentUI() {
+  const topbarLangBtn = document.getElementById('topbar-btn-lang');
+  if (topbarLangBtn) {
+    topbarLangBtn.textContent = currentLang === 'ar' ? 'EN' : 'عربي';
+  }
+
   updateCategoryTabCounts();
   renderDataUpdatedLabel();
   updateUserWidgetUI();

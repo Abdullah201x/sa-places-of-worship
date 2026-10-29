@@ -65,5 +65,18 @@ def init_app_tables(conn):
         );
         CREATE INDEX IF NOT EXISTS idx_edits_osm_uid ON edits (osm_uid);
         CREATE INDEX IF NOT EXISTS idx_edits_created_at ON edits (created_at DESC);
+
+        CREATE TABLE IF NOT EXISTS issues (
+            rule_id VARCHAR(64) NOT NULL,
+            osm_type VARCHAR(16) NOT NULL,
+            osm_id BIGINT NOT NULL,
+            severity VARCHAR(16) NOT NULL DEFAULT 'medium',
+            region_code VARCHAR(10),
+            suggested_fix JSONB,
+            PRIMARY KEY (rule_id, osm_type, osm_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_issues_rule ON issues (rule_id);
+        CREATE INDEX IF NOT EXISTS idx_issues_region ON issues (region_code);
+        CREATE INDEX IF NOT EXISTS idx_issues_osm ON issues (osm_type, osm_id);
         """)
 

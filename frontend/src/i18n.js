@@ -23,10 +23,10 @@ export function addTranslations(entries) {
 }
 
 export let currentLang = (() => {
-  const fromUrl = new URLSearchParams(window.location.hash.slice(1)).get('lang');
+  const fromUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.hash.slice(1)).get('lang') : null;
   if (fromUrl === 'ar' || fromUrl === 'en') return fromUrl;
   try {
-    return localStorage.getItem('gcc_lang') === 'en' ? 'en' : 'ar';
+    return typeof localStorage !== 'undefined' && localStorage.getItem('gcc_lang') === 'en' ? 'en' : 'ar';
   } catch (e) {
     return 'ar';
   }
