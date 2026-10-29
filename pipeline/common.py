@@ -256,7 +256,10 @@ def update_summary(dataset, info, pbf_path=None):
     now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
     summary["updated_at"] = now.isoformat().replace("+00:00", "Z")
     if pbf_path:
+        stamp = pbf_timestamp(pbf_path)
         summary["pbf_file"] = os.path.basename(pbf_path)
-        summary["pbf_date"] = pbf_timestamp(pbf_path)[:10]
+        summary["pbf_date"] = stamp[:10]
+        # Full time of the OSM data, for the frontend's "data age" label.
+        summary["pbf_timestamp"] = stamp
     summary.setdefault("datasets", {})[dataset] = dict(info, updated_at=summary["updated_at"])
     write_json(SUMMARY_PATH, summary)

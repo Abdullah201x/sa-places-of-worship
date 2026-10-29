@@ -160,3 +160,15 @@ def test_missing_name_en_excludes_unnamed_mosques():
     # 6. Named mosque with valid English name -> NOT flagged
     assert not check_missing_name_en({"name_original": "مسجد قباء", "name_en_original": "Quba Mosque"})
 
+
+
+def test_update_summary_keeps_full_pbf_timestamp(tmp_path, monkeypatch):
+    import common
+    monkeypatch.setattr(common, "SUMMARY_PATH", str(tmp_path / "summary.json"))
+    monkeypatch.setattr(common, "pbf_timestamp", lambda path: "2026-10-27T20:21:47Z")
+    common.update_summary("places", {"count": 1}, pbf_path="/state/gcc-states.osm.pbf")
+    with open(tmp_path / "summary.json", encoding="utf-8") as f:
+        summary = json.load(f)
+    assert summary["pbf_date"] == "2026-10-27"
+    assert summary["pbf_timestamp"] == "2026-10-27T20:21:47Z"
+    assert summary["pbf_file"] == "gcc-states.osm.pbf"

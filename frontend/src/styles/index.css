@@ -11,7 +11,9 @@
   --color-accent: #00ff87;
   --color-text: #f1f5f9;
   --color-text-muted: #94a3b8;
-  
+  --color-warn: #ffb03a;
+  --color-danger: #ff453a;
+
   --font-title: 'Outfit Variable', 'Cairo Variable', sans-serif;
   --font-body: 'Cairo Variable', 'Plus Jakarta Sans Variable', sans-serif;
   
@@ -2520,6 +2522,30 @@ h1 {
   font-size: 11px;
   color: var(--color-text-muted);
   opacity: 0.8;
+}
+
+/* Data age label: the glyph carries the level too, not only the colour. */
+.data-updated .age-glyph {
+  margin-inline-end: 4px;
+}
+
+.data-updated.age-ok .age-glyph {
+  color: var(--color-accent);
+}
+
+.data-updated.age-warn,
+.data-updated.age-stale {
+  opacity: 1;
+}
+
+.data-updated.age-warn .age-glyph,
+.data-updated.age-warn time {
+  color: var(--color-warn);
+}
+
+.data-updated.age-stale .age-glyph,
+.data-updated.age-stale time {
+  color: var(--color-danger);
 }
 
 /* ===== Header actions (language, shortcuts) ===== */

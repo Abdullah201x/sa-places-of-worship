@@ -6,6 +6,7 @@ import { OsmApi, EditHistory } from './osm_api.js';
 import { renderQuickFixes, setupEditing, createFieldRow, readFieldValues, showFieldErrors } from './editing.js';
 import { MOSQUE_PRESET, tagsFromValues, validateValues } from './presets.js';
 import { evaluateRules } from './validator.js';
+import { DATA_AGE_OK_MS, DATA_AGE_WARN_MS, ageLevel, clockOffset, formatAge } from './timeago.js';
 import { trackEvent } from './analytics.js';
 export let map;
 export let heatmapLayer = null;
@@ -1269,23 +1270,61 @@ export function fetchJson(path, required = true) {
   return required ? req : req.catch(() => ({}));
 }
 
-// Shows which OSM extract the published data was built from.
+// Browser clock minus server clock, from the Date header of summary.json, so
+// a phone with a wrong clock still shows the right data age.
+let clockSkewMs = 0;
+const AGE_GLYPHS = { ok: '●', warn: '▲', stale: '✕' };
+
+// Shows how old the published OSM data is, Osmose-style ("OSM data · 20h"),
+// with the exact time on hover. Summaries from before pbf_timestamp existed
+// only have pbf_date, so they keep the plain date.
 export function renderDataUpdatedLabel() {
   const el = document.getElementById('data-updated');
   if (!el) return;
-  const date = dataSummary.pbf_date || (dataSummary.updated_at || '').slice(0, 10);
-  el.textContent = date ? t('dataUpdated', { date }) : '';
-  el.style.display = date ? '' : 'none';
+  const stamp = Date.parse(dataSummary.pbf_timestamp || '');
+  if (!Number.isFinite(stamp)) {
+    const date = dataSummary.pbf_date || (dataSummary.updated_at || '').slice(0, 10);
+    el.className = 'data-updated';
+    el.textContent = date ? t('dataUpdated', { date }) : '';
+    el.removeAttribute('title');
+    el.hidden = !date;
+    return;
+  }
+
+  const ageMs = Date.now() + clockSkewMs - stamp;
+  const level = ageLevel(ageMs, DATA_AGE_OK_MS, DATA_AGE_WARN_MS);
+  const when = new Date(stamp);
+  const locale = currentLang === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-GB';
+  const riyadh = when.toLocaleString(locale, { timeZone: 'Asia/Riyadh', dateStyle: 'medium', timeStyle: 'short' });
+  const utc = `${when.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+
+  const glyph = document.createElement('span');
+  glyph.className = 'age-glyph';
+  glyph.setAttribute('aria-hidden', 'true');
+  glyph.textContent = AGE_GLYPHS[level];
+  const time = document.createElement('time');
+  time.dateTime = when.toISOString();
+  time.textContent = formatAge(ageMs, currentLang, fmtNum);
+  const [before, after] = t('dataAge').split('{age}');
+  el.replaceChildren(glyph, before, time, after || '');
+  el.className = `data-updated age-${level}`;
+  el.title = t('dataAgeTitle', { riyadh, utc });
+  el.hidden = false;
 }
 
 export function loadData() {
   fetch(`${DATA_BASE}summary.json`, { cache: 'no-store' })
-    .then(r => (r.ok ? r.json() : {}))
+    .then(r => {
+      clockSkewMs = clockOffset(r.headers.get('Date'), Date.now());
+      return r.ok ? r.json() : {};
+    })
     .catch(() => ({}))
     .then(summary => {
       dataSummary = summary || {};
       if (dataSummary.updated_at) dataVersion = dataSummary.updated_at;
       renderDataUpdatedLabel();
+      // Keep the age current while the page stays open.
+      setInterval(renderDataUpdatedLabel, 30 * 1000);
       return Promise.all([
         fetchJson('places_of_worship_sa.geojson'),
         fetchJson('worship_gaps_sa.json'),

@@ -26,6 +26,8 @@ addTranslations({
   labelTotalGaps: ['الفجوات المكتشفة', 'Detected gaps'],
   labelVisibleGaps: ['الفجوات في النطاق', 'Gaps in view'],
   dataUpdated: ['بيانات OSM بتاريخ {date}', 'OSM data as of {date}'],
+  dataAge: ['بيانات OSM · {age}', 'OSM data · {age}'],
+  dataAgeTitle: ['بيانات OSM بتاريخ {riyadh} بتوقيت الرياض ({utc})', 'OSM data as of {riyadh} Riyadh time ({utc})'],
   loadError: ['فشل في تحميل بيانات الخريطة. يرجى تحديث الصفحة أو المحاولة لاحقاً.', 'Failed to load the map data. Please reload the page or try again later.'],
 
   // Details panel
