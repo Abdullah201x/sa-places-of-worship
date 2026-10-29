@@ -10,6 +10,8 @@ from app.database import get_db
 OSM_USER_AGENT = "Manara/1.0 (+https://manara.saudiosm.org)"
 OSM_CHANGESET_BASE = "https://api.openstreetmap.org/api/0.6/changeset"
 
+MAX_CHANGESET_XML_BYTES = 5 * 1024 * 1024  # 5 MB safety limit
+
 router = APIRouter(prefix="/api/v1", tags=["edits"])
 
 
@@ -116,7 +118,9 @@ async def report_and_verify_edit(
                 download_url,
                 headers={"User-Agent": OSM_USER_AGENT},
             )
-            objects = parse_osmchange_objects(dl_res.text) if dl_res.status_code == 200 else []
+            objects = []
+            if dl_res.status_code == 200 and len(dl_res.content) <= MAX_CHANGESET_XML_BYTES:
+                objects = parse_osmchange_objects(dl_res.text)
 
     except HTTPException:
         raise
@@ -126,23 +130,30 @@ async def report_and_verify_edit(
             detail=f"Could not verify changeset with OpenStreetMap: {e}",
         )
 
-    # 3. Store verified edit in database
-    with conn.cursor() as cur:
-        cur.execute("""
-            INSERT INTO edits (changeset_id, osm_uid, objects, comment, verified_at, created_at)
-            VALUES (%s, %s, %s::jsonb, %s, NOW(), NOW())
-            ON CONFLICT (changeset_id) DO NOTHING;
-        """, (cid, user["osm_uid"], json.dumps(objects), comment))
-
-        # 4. Bind verified_changeset to user's 'fixed' marks for any touched object
-        updated_marks_count = 0
-        for obj in objects:
+    # 3. Store verified edit and bind marks inside an atomic transaction
+    with conn.transaction():
+        with conn.cursor() as cur:
             cur.execute("""
-                UPDATE review_marks
-                SET verified_changeset = %s
-                WHERE osm_uid = %s AND osm_type = %s AND osm_id = %s AND status = 'fixed';
-            """, (cid, user["osm_uid"], obj["type"], obj["id"]))
-            updated_marks_count += cur.rowcount
+                INSERT INTO edits (changeset_id, osm_uid, objects, comment, verified_at, created_at)
+                VALUES (%s, %s, %s::jsonb, %s, NOW(), NOW())
+                ON CONFLICT (changeset_id) DO NOTHING;
+            """, (cid, user["osm_uid"], json.dumps(objects), comment))
+
+            # 4. Batch bind verified_changeset to user's 'fixed' marks for touched objects
+            updated_marks_count = 0
+            if objects:
+                types = [obj["type"] for obj in objects]
+                ids = [obj["id"] for obj in objects]
+                cur.execute("""
+                    UPDATE review_marks
+                    SET verified_changeset = %s
+                    WHERE osm_uid = %s
+                      AND status = 'fixed'
+                      AND (osm_type, osm_id) IN (
+                          SELECT * FROM unnest(%s::text[], %s::bigint[])
+                      );
+                """, (cid, user["osm_uid"], types, ids))
+                updated_marks_count = cur.rowcount
 
     return {
         "status": "ok",

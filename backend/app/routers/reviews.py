@@ -111,22 +111,23 @@ def set_review_mark(
     conn=Depends(get_db),
 ):
     """Set or update a review mark (fixed or skipped) for a place."""
-    with conn.cursor() as cur:
-        cur.execute("""
-            INSERT INTO review_marks (osm_type, osm_id, osm_uid, status, version, created_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
-            ON CONFLICT (osm_type, osm_id, osm_uid) DO UPDATE SET
-                status = EXCLUDED.status,
-                version = EXCLUDED.version,
-                created_at = NOW()
-            RETURNING osm_type, osm_id, osm_uid, status, version, verified_changeset, created_at;
-        """, (osm_type, osm_id, user["osm_uid"], payload.status, payload.version))
-        mark = dict(cur.fetchone())
+    with conn.transaction():
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO review_marks (osm_type, osm_id, osm_uid, status, version, created_at)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (osm_type, osm_id, osm_uid) DO UPDATE SET
+                    status = EXCLUDED.status,
+                    version = EXCLUDED.version,
+                    created_at = NOW()
+                RETURNING osm_type, osm_id, osm_uid, status, version, verified_changeset, created_at;
+            """, (osm_type, osm_id, user["osm_uid"], payload.status, payload.version))
+            mark = dict(cur.fetchone())
 
-        cur.execute("""
-            INSERT INTO review_events (osm_type, osm_id, osm_uid, status, version, created_at)
-            VALUES (%s, %s, %s, %s, %s, NOW());
-        """, (osm_type, osm_id, user["osm_uid"], payload.status, payload.version))
+            cur.execute("""
+                INSERT INTO review_events (osm_type, osm_id, osm_uid, status, version, created_at)
+                VALUES (%s, %s, %s, %s, %s, NOW());
+            """, (osm_type, osm_id, user["osm_uid"], payload.status, payload.version))
 
     return {
         "status": "ok",
@@ -149,19 +150,20 @@ def delete_review_mark(
     conn=Depends(get_db),
 ):
     """Remove caller's review mark for a place."""
-    with conn.cursor() as cur:
-        cur.execute("""
-            DELETE FROM review_marks
-            WHERE osm_type = %s AND osm_id = %s AND osm_uid = %s
-            RETURNING version;
-        """, (osm_type, osm_id, user["osm_uid"]))
-        deleted_row = cur.fetchone()
+    with conn.transaction():
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM review_marks
+                WHERE osm_type = %s AND osm_id = %s AND osm_uid = %s
+                RETURNING version;
+            """, (osm_type, osm_id, user["osm_uid"]))
+            deleted_row = cur.fetchone()
 
-        version = deleted_row["version"] if deleted_row else 1
-        cur.execute("""
-            INSERT INTO review_events (osm_type, osm_id, osm_uid, status, version, created_at)
-            VALUES (%s, %s, %s, 'unmarked', %s, NOW());
-        """, (osm_type, osm_id, user["osm_uid"], version))
+            version = deleted_row["version"] if deleted_row else 1
+            cur.execute("""
+                INSERT INTO review_events (osm_type, osm_id, osm_uid, status, version, created_at)
+                VALUES (%s, %s, %s, 'unmarked', %s, NOW());
+            """, (osm_type, osm_id, user["osm_uid"], version))
 
     return {"status": "ok", "deleted": True}
 

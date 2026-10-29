@@ -2,9 +2,9 @@
 
 This document summarises the architecture, live infrastructure, completed phases (Phases 1–3 and Phase 6a), and upcoming roadmap (Phases 5, 4 and 6b) for **Manara** (`https://manara.saudiosm.org`), so another AI coding assistant can seamlessly continue the work.
 
-**Where things stand:** Phases 1–3, Phase 4 (accounts & shared review), Phase 5a (`/community` page), Phase 5b (leaderboard, verified edits feed, and SEO pages), and Phase 6a (operations) are done. Phase 6b (final security review) remains. The utility-first redesign (`REDESIGN.md`) has started: **Redesign Phase 0 is done and live** (2026-10-30, see §12); Redesign Phase 1 is next. Nothing is half-finished in the code; `main` is clean.
+**Where things stand:** Phases 1–3, Phase 4 (accounts & shared review), Phase 5a (`/community` page), Phase 5b (leaderboard, verified edits feed, and SEO pages), Phase 6a (operations), and Phase 6b (security review & hardening) are done. The utility-first redesign (`REDESIGN.md`) has started: **Redesign Phase 0 is done and live** (2026-10-30, see §12); Redesign Phase 1 is next. Nothing is half-finished in the code; `main` is clean.
 
-- **Last updated:** 2026-10-30 (see §13 for the full session record and what is still pending)
+- **Last updated:** 2026-10-30 (Phase 6b security hardening complete; next is Redesign Phase 1)
 - **Repository:** `github.com/Abdullah201x/sa-places-of-worship` (branch `main` auto-deploys via Coolify)
 - **Local checkout:** `C:\Users\abdul\Desktop\GCC20260707`
 - **VPS SSH:** `root@159.195.192.148`
@@ -156,7 +156,7 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 2. ✅ **Phase 5a** (done 2026-10-28, see §8): the public `/community` stats page (`frontend/community.html`, `frontend/src/community.js`).
 3. ✅ **Phase 4** (done 2026-10-28, see §7): accounts and guarded shared review (hybrid model B).
 4. ✅ **Phase 5b** (done 2026-10-28, see §8): opt-in leaderboard, recent verified edits feed, and SEO pages (/region, /place, /sitemap.xml).
-5. **Phase 6b (still open):** final security review and verification.
+5. ✅ **Phase 6b** (done 2026-10-30, see §14): final security review and verification, transaction atomicity, batch changeset updates, proxy multi-hop headers, CSRF referer fallback, and test suite expansion.
 6. ✅ **Redesign Phase 0** (done 2026-10-30, see §12).
 7. **Redesign Phase 1 (NEXT):** Astro + Svelte shell, routing, command palette and the list-first `/qa` workspace (`REDESIGN.md` §5). Write a step-by-step plan for the user first.
 
@@ -430,3 +430,31 @@ This section summarises the whole chat of 2026-10-30, so a new agent can continu
   - wait for `#loading-overlay.hidden`, set `localStorage.sidebar_collapsed=false`;
   - shoot ar/en at 1440×2000 and 390×844; compare with `pixelmatch`, then compare element positions and sizes to tell layout changes from scroll or timing.
   - Keep the tool outside the repo; it is not a project dependency.
+
+---
+
+## 14. Phase 6b Security Review & Hardening Record (2026-10-30)
+
+Completed Phase 6b security review of the Phase 4 auth, review marks, and edit reporting layer (`backend/app/auth.py`, `routers/auth.py`, `reviews.py`, `edits.py`):
+
+### 14.1 Hardening Patches Applied
+1. **Transaction Atomicity:**
+   - `backend/app/routers/reviews.py`: wrapped `set_review_mark` (marks upsert + events log) and `delete_review_mark` (delete + events log) in `with conn.transaction():`.
+   - `backend/app/routers/auth.py`: wrapped user upsert and session token creation in `with conn.transaction():`.
+   - `backend/app/routers/edits.py`: wrapped edit insertion and mark binding in `with conn.transaction():`.
+2. **Batching and DoS Mitigation in `edits.py`:**
+   - Replaced iterative single-row `UPDATE review_marks` loop with a single atomic batch query: `UPDATE review_marks SET verified_changeset = %s WHERE osm_uid = %s AND status = 'fixed' AND (osm_type, osm_id) IN (SELECT * FROM unnest(%s::text[], %s::bigint[]));`.
+   - Capped XML download text parsing (`MAX_CHANGESET_XML_BYTES = 5 MB`) to prevent memory exhaustion.
+3. **Multi-Hop Reverse Proxy Header Parsing:**
+   - Standardized `is_request_https(request)` to check `request.url.scheme == "https"` and parse comma-separated `X-Forwarded-Proto` (`proto.split(",")[0].strip().lower() == "https"`), ensuring reliable `__Host-` cookie setting behind Traefik + Caddy.
+4. **CSRF Referer Fallback:**
+   - In `verify_csrf`, when `Origin` header is omitted by privacy-preserving browser configurations, falls back to parsing `Referer` and matching against `ALLOWED_ORIGINS`.
+5. **Robust OSM User Dict Parsing:**
+   - Fixed potential `AttributeError` when OSM API returns `"img": null` or `"changesets": null` by safely checking dict types before extracting avatar URLs and counts.
+6. **Codebase Cleanups:**
+   - Removed unused duplicate `pipeline/transliteration.py` (canonical module is `backend/app/transliteration.py`).
+   - Removed obsolete root `cert.pem` and `key.pem` files.
+   - Replaced inline `min-height: 160px;` styles in `frontend/community.html` with `.skeleton-block.skeleton-feed` in `frontend/src/styles/page.css`.
+7. **Test Suite Expansion:**
+   - Added tests in `tests/test_phase4_phase5b.py` for CSRF referer fallback, multi-hop proxy HTTPS cookie detection, successful edit verification with changeset XML object parsing and mark binding, and edit author mismatch rejection.
+   - Full test suite: 86 passed Python tests (`pytest`), 45 passed Vitest tests, clean ESLint and Vite build.

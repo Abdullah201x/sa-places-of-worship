@@ -1,3 +1,4 @@
+from urllib.parse import urlparse
 import hashlib
 import os
 import secrets
@@ -16,6 +17,14 @@ ALLOWED_ORIGINS = {
     "http://127.0.0.1:8000",
     "https://127.0.0.1:8000",
 }
+
+
+def is_request_https(request: Request) -> bool:
+    """Check if the request originated over HTTPS, handling multi-hop reverse proxies."""
+    if request.url.scheme == "https":
+        return True
+    proto = request.headers.get("x-forwarded-proto", "")
+    return proto.split(",")[0].strip().lower() == "https"
 
 
 def get_admin_uids() -> set[int]:
@@ -37,7 +46,7 @@ def generate_session_token() -> str:
 
 
 def set_session_cookie(response: Response, request: Request, raw_token: str):
-    is_https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    is_https = is_request_https(request)
     cookie_name = SESSION_COOKIE_SECURE if is_https else SESSION_COOKIE_DEV
     max_age = SESSION_DURATION_DAYS * 86400
 
@@ -54,7 +63,7 @@ def set_session_cookie(response: Response, request: Request, raw_token: str):
 
 
 def clear_session_cookie(response: Response, request: Request):
-    is_https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+    is_https = is_request_https(request)
     for name in [SESSION_COOKIE_SECURE, SESSION_COOKIE_DEV]:
         response.delete_cookie(
             key=name,
@@ -69,6 +78,7 @@ def verify_csrf(request: Request):
     """
     Enforce CSRF protection on state-changing requests.
     Requires Origin matching allowed host and header X-Manara-CSRF: 1.
+    Falls back to Referer validation when Origin header is omitted.
     """
     csrf_header = request.headers.get("x-manara-csrf")
     if csrf_header not in ("1", "true", "True"):
@@ -78,12 +88,22 @@ def verify_csrf(request: Request):
         )
 
     origin = request.headers.get("origin")
-    # If Origin header is present, validate against allowlist
-    if origin and origin.rstrip("/") not in ALLOWED_ORIGINS:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Forbidden cross-origin request from {origin}.",
-        )
+    if origin:
+        if origin.rstrip("/") not in ALLOWED_ORIGINS:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Forbidden cross-origin request from {origin}.",
+            )
+    else:
+        referer = request.headers.get("referer")
+        if referer:
+            parsed = urlparse(referer)
+            ref_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+            if ref_origin and ref_origin not in ALLOWED_ORIGINS:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Forbidden cross-origin request from {referer}.",
+                )
 
 
 def get_token_from_request(request: Request) -> str | None:

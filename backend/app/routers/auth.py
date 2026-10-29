@@ -94,8 +94,10 @@ async def create_session(
 
     osm_uid = int(osm_user["id"])
     display_name = osm_user.get("display_name") or f"user_{osm_uid}"
-    avatar_url = osm_user.get("img", {}).get("href")
-    osm_changesets = int(osm_user.get("changesets", {}).get("count") or 0)
+    img = osm_user.get("img") or {}
+    avatar_url = img.get("href") if isinstance(img, dict) else None
+    changesets = osm_user.get("changesets") or {}
+    osm_changesets = int(changesets.get("count") or 0)
 
     account_created_str = osm_user.get("account_created")
     account_created_dt = None
@@ -107,32 +109,33 @@ async def create_session(
 
     is_admin = osm_uid in get_admin_uids()
 
-    # 2. Upsert user in PostGIS database
-    with conn.cursor() as cur:
-        cur.execute("""
-            INSERT INTO users (
-                osm_uid, display_name, avatar_url, osm_changesets,
-                osm_account_created, is_admin, last_login_at
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, NOW())
-            ON CONFLICT (osm_uid) DO UPDATE SET
-                display_name = EXCLUDED.display_name,
-                avatar_url = EXCLUDED.avatar_url,
-                osm_changesets = EXCLUDED.osm_changesets,
-                is_admin = EXCLUDED.is_admin,
-                last_login_at = NOW()
-            RETURNING osm_uid, display_name, avatar_url, osm_changesets, leaderboard_opt_in, is_admin;
-        """, (osm_uid, display_name, avatar_url, osm_changesets, account_created_dt, is_admin))
-        user_row = dict(cur.fetchone())
+    # 2. Upsert user and create session atomically in database
+    with conn.transaction():
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (
+                    osm_uid, display_name, avatar_url, osm_changesets,
+                    osm_account_created, is_admin, last_login_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (osm_uid) DO UPDATE SET
+                    display_name = EXCLUDED.display_name,
+                    avatar_url = EXCLUDED.avatar_url,
+                    osm_changesets = EXCLUDED.osm_changesets,
+                    is_admin = EXCLUDED.is_admin,
+                    last_login_at = NOW()
+                RETURNING osm_uid, display_name, avatar_url, osm_changesets, leaderboard_opt_in, is_admin;
+            """, (osm_uid, display_name, avatar_url, osm_changesets, account_created_dt, is_admin))
+            user_row = dict(cur.fetchone())
 
-        # 3. Create cryptographically secure random session
-        raw_token = generate_session_token()
-        token_h = hash_token(raw_token)
+            # 3. Create cryptographically secure random session
+            raw_token = generate_session_token()
+            token_h = hash_token(raw_token)
 
-        cur.execute("""
-            INSERT INTO sessions (token_hash, osm_uid, created_at, expires_at, last_seen_at)
-            VALUES (%s, %s, NOW(), NOW() + INTERVAL '30 days', NOW());
-        """, (token_h, osm_uid))
+            cur.execute("""
+                INSERT INTO sessions (token_hash, osm_uid, created_at, expires_at, last_seen_at)
+                VALUES (%s, %s, NOW(), NOW() + INTERVAL '30 days', NOW());
+            """, (token_h, osm_uid))
 
     # 4. Set HTTP-only secure cookie
     set_session_cookie(response, request, raw_token)

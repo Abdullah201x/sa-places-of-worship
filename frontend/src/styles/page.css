@@ -349,6 +349,10 @@ code {
   min-height: 220px;
 }
 
+.skeleton-block.skeleton-feed {
+  min-height: 160px;
+}
+
 /* Panels & Issue Breakdown */
 .panel-card {
   background: var(--panel-bg);

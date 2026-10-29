@@ -409,3 +409,166 @@ def test_datasets_suggestions_not_containing_existing_osm_place():
     assert "Q138075660" not in sug_qids
 
 
+def test_csrf_referer_fallback(client):
+    # Valid referer without Origin
+    res = client.post(
+        "/auth/logout",
+        headers={"X-Manara-CSRF": "1", "Referer": "https://manara.saudiosm.org/community"},
+    )
+    assert res.status_code == 200
+
+    # Malicious referer without Origin
+    res_bad = client.post(
+        "/auth/logout",
+        headers={"X-Manara-CSRF": "1", "Referer": "https://evil.com/community"},
+    )
+    assert res_bad.status_code == 403
+    assert "Forbidden cross-origin" in res_bad.json()["detail"]
+
+
+@patch("httpx.AsyncClient.get")
+def test_create_session_multihop_proxy(mock_get, client, db_mocks):
+    mock_conn, mock_cur = db_mocks
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "user": {
+            "id": 55555,
+            "display_name": "MultiHopMapper",
+            "img": None,
+            "changesets": {"count": 10},
+            "account_created": "2021-01-01T00:00:00Z",
+        }
+    }
+    mock_get.return_value = mock_resp
+    mock_cur.fetchone.return_value = {
+        "osm_uid": 55555,
+        "display_name": "MultiHopMapper",
+        "avatar_url": None,
+        "osm_changesets": 10,
+        "leaderboard_opt_in": False,
+        "is_admin": False,
+    }
+
+    res = client.post(
+        "/auth/session",
+        headers={
+            "X-Manara-CSRF": "1",
+            "Origin": "https://manara.saudiosm.org",
+            "X-Forwarded-Proto": "https, http",
+        },
+        json={"access_token": "token_multihop_12345"},
+    )
+    assert res.status_code == 200
+    assert any("__Host-manara_session" in c for c in res.cookies.keys())
+
+
+@patch("httpx.AsyncClient.get")
+def test_post_edits_verify_success(mock_get, client, db_mocks):
+    mock_conn, mock_cur = db_mocks
+    raw_token = "valid_test_token_string_hex"
+    token_h = hash_token(raw_token)
+
+    mock_cur.fetchone.side_effect = [
+        # Session check in get_current_user
+        {
+            "token_hash": token_h,
+            "osm_uid": 12345,
+            "display_name": "TestMapper",
+            "avatar_url": None,
+            "osm_changesets": 50,
+            "osm_account_created": None,
+            "leaderboard_opt_in": True,
+            "is_admin": False,
+            "last_seen_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc),
+        },
+        # Check existing in edits
+        None,
+    ]
+    mock_cur.rowcount = 1
+
+    meta_resp = MagicMock()
+    meta_resp.status_code = 200
+    meta_resp.json.return_value = {
+        "changeset": {
+            "id": 170000000,
+            "uid": 12345,
+            "open": False,
+            "tags": {
+                "comment": "Fix mosque building #sa-worship-map",
+            },
+        }
+    }
+    osmchange_xml = """<osmChange version="0.6">
+        <modify>
+            <way id="9999" version="2"/>
+        </modify>
+    </osmChange>"""
+    dl_resp = MagicMock()
+    dl_resp.status_code = 200
+    dl_resp.text = osmchange_xml
+    dl_resp.content = osmchange_xml.encode("utf-8")
+
+    mock_get.side_effect = [meta_resp, dl_resp]
+
+    client.cookies.set("manara_session", raw_token)
+    res = client.post(
+        "/api/v1/edits",
+        headers={"X-Manara-CSRF": "1", "Origin": "https://manara.saudiosm.org"},
+        json={"changeset_id": 170000000},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "ok"
+    assert data["changeset_id"] == 170000000
+    assert data["verified"] is True
+    assert data["objects_count"] == 1
+
+
+@patch("httpx.AsyncClient.get")
+def test_post_edits_author_mismatch(mock_get, client, db_mocks):
+    mock_conn, mock_cur = db_mocks
+    raw_token = "valid_test_token_string_hex"
+    token_h = hash_token(raw_token)
+
+    mock_cur.fetchone.side_effect = [
+        # Session check
+        {
+            "token_hash": token_h,
+            "osm_uid": 12345,
+            "display_name": "TestMapper",
+            "avatar_url": None,
+            "osm_changesets": 50,
+            "osm_account_created": None,
+            "leaderboard_opt_in": True,
+            "is_admin": False,
+            "last_seen_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc),
+        },
+        # Check existing in edits
+        None,
+    ]
+
+    meta_resp = MagicMock()
+    meta_resp.status_code = 200
+    meta_resp.json.return_value = {
+        "changeset": {
+            "id": 170000001,
+            "uid": 99999,
+            "open": False,
+            "tags": {"comment": "Add tags #sa-worship-map"},
+        }
+    }
+    mock_get.return_value = meta_resp
+
+    client.cookies.set("manara_session", raw_token)
+    res = client.post(
+        "/api/v1/edits",
+        headers={"X-Manara-CSRF": "1", "Origin": "https://manara.saudiosm.org"},
+        json={"changeset_id": 170000001},
+    )
+    assert res.status_code == 403
+    assert "created by OSM UID 99999" in res.json()["detail"]
+
+
