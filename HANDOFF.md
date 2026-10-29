@@ -485,3 +485,22 @@ Started Phase 1 implementation from `REDESIGN.md` §5:
    - Pytest: 87 passed.
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean production build.
+
+### 15.2 QA Workspace & State Decoupling (2026-10-30)
+1. **List-First QA Workspace (`qa_view.js` & `index.html`):**
+   - Implemented `/qa` list-first triage workspace toggleable via `L` key or topbar `QA` tab.
+   - Keyboard navigation: `J`/`K` navigation, `Enter` to inspect place on map, `F` to mark fixed, `S` to mark skipped, `L`/`Esc` to return to map.
+   - Multi-criteria filter toolbar: rule ID, administrative region (SA-01..SA-13), review status, and dynamic sorting (severity, distance to map center, name).
+   - Resilient issue resolution: queries `GET /api/v1/issues?limit=200` with graceful client-side fallback to evaluating local `allPlaces` using `evaluateRules(props)`.
+   - Severity and status badges with Arabic/English localization and Haversine distance formatting.
+2. **Central State Store & Mode System (`store.js` & `modes.js`):**
+   - Created reactive store holding workspace mode, filters, selection, and dataset stats with observable subscription hooks.
+   - Created iD-style mode state machine with explicit `enter()` and `exit()` lifecycle hooks.
+   - Wired into `app.js` for seamless mode switching and map selection synchronization.
+3. **Verification & Tests:**
+   - Added `frontend/tests/qa_view.test.js` (7 unit tests).
+   - Added `frontend/tests/store.test.js` (5 unit tests).
+   - Vitest: 62 passed across 7 test suites.
+   - Pytest: 87 passed.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: production build succeeds in <400 ms.

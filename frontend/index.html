@@ -1077,7 +1077,8 @@
             <tbody>
               <tr><td><kbd>N</kbd> / <kbd>P</kbd></td><td>المكان التالي / السابق في القائمة</td></tr>
               <tr><td><kbd>F</kbd></td><td>وضع علامة "تم الإصلاح" والانتقال للتالي</td></tr>
-              <tr><td><kbd>S</kbd></td><td>تخطي والانتقال للتالي</td></tr>
+                            <tr><td><kbd>L</kbd></td><td>مساحة عمل فحص الجودة (قائمة المهام)</td></tr>
+<tr><td><kbd>S</kbd></td><td>تخطي والانتقال للتالي</td></tr>
               <tr><td><kbd>J</kbd></td><td>فتح المكان في JOSM</td></tr>
               <tr><td><kbd>I</kbd></td><td>فتح المكان في iD</td></tr>
               <tr><td><kbd>O</kbd></td><td>عرض المكان على openstreetmap.org</td></tr>
@@ -1099,6 +1100,120 @@
     <div id="batch-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
     <div id="history-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
     <button type="button" id="batch-dock" class="batch-dock" style="display: none;"></button>
+    <!-- QA Workspace (List-first issue triage view) -->
+    <section id="qa-workspace" class="qa-workspace hidden" aria-label="مساحة عمل فحص الجودة">
+      <div class="qa-workspace-container">
+        <header class="qa-workspace-header">
+          <div class="qa-header-start">
+            <span class="qa-title-icon">🛠️</span>
+            <h2 class="qa-title" data-lang="ar">فحص ومراجعة الجودة</h2>
+            <h2 class="qa-title" data-lang="en">Quality Assurance &amp; Triage</h2>
+            <span id="qa-count" class="qa-count-badge">0</span>
+          </div>
+
+          <div class="qa-filters-toolbar">
+            <div class="qa-filter-group">
+              <label for="qa-filter-rule" class="qa-filter-label"><span data-lang="ar">القاعدة:</span><span data-lang="en">Rule:</span></label>
+              <select id="qa-filter-rule" class="qa-select">
+                <option value="all">الكل / All Rules</option>
+                <option value="missing_name_en">missing_name_en (الاسم بالإنجليزي)</option>
+                <option value="missing_denom">missing_denom (المذهب)</option>
+                <option value="qibla_deviation">qibla_deviation (انحراف القبلة)</option>
+                <option value="ml_geometry_anomaly">ml_geometry_anomaly (شذوذ هندسي)</option>
+                <option value="building_yes">building_yes (تصنيف مبنى عام)</option>
+                <option value="missing_amenity">missing_amenity (مبنى بدون وسم)</option>
+                <option value="duplicate_poi">duplicate_poi (مكرر)</option>
+                <option value="mapped_as_node">mapped_as_node (نقطة بدلاً من مبنى)</option>
+                <option value="size_too_small">size_too_small (مساحة صغيرة)</option>
+                <option value="size_too_large">size_too_large (مساحة كبيرة)</option>
+                <option value="stale_data">stale_data (بيانات قديمة)</option>
+                <option value="outdated_tags">outdated_tags (وسوم قديمة)</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="qa-filter-region" class="qa-filter-label"><span data-lang="ar">المنطقة:</span><span data-lang="en">Region:</span></label>
+              <select id="qa-filter-region" class="qa-select">
+                <option value="all">جميع المناطق / All Regions</option>
+                <option value="SA-01">الرياض (SA-01)</option>
+                <option value="SA-02">مكة المكرمة (SA-02)</option>
+                <option value="SA-03">المدينة المنورة (SA-03)</option>
+                <option value="SA-04">المنطقة الشرقية (SA-04)</option>
+                <option value="SA-05">عسير (SA-05)</option>
+                <option value="SA-06">القصيم (SA-06)</option>
+                <option value="SA-07">تبوك (SA-07)</option>
+                <option value="SA-08">حائل (SA-08)</option>
+                <option value="SA-09">الجوف (SA-09)</option>
+                <option value="SA-10">جازان (SA-10)</option>
+                <option value="SA-11">نجران (SA-11)</option>
+                <option value="SA-12">الباحة (SA-12)</option>
+                <option value="SA-13">الحدود الشمالية (SA-13)</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="qa-filter-status" class="qa-filter-label"><span data-lang="ar">الحالة:</span><span data-lang="en">Status:</span></label>
+              <select id="qa-filter-status" class="qa-select">
+                <option value="all">الكل / All</option>
+                <option value="open" selected>مفتوحة / Open</option>
+                <option value="fixed">تم الإصلاح / Fixed</option>
+                <option value="skipped">تم التخطي / Skipped</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="qa-filter-sort" class="qa-filter-label"><span data-lang="ar">الترتيب:</span><span data-lang="en">Sort:</span></label>
+              <select id="qa-filter-sort" class="qa-select">
+                <option value="severity">الأهمية (الأشد أولاً) / Severity</option>
+                <option value="distance">الأقرب للخريطة / Distance</option>
+                <option value="name">أبجدياً بالاسم / Name</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="qa-header-actions">
+            <button type="button" id="qa-btn-close" class="qa-close-btn" title="العودة للخريطة (L أو Esc)">
+              <span data-lang="ar">✕ إغلاق</span>
+              <span data-lang="en">✕ Close</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="qa-table-wrap">
+          <table class="qa-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;"><span data-lang="ar">الأهمية</span><span data-lang="en">Severity</span></th>
+                <th><span data-lang="ar">اسم المكان</span><span data-lang="en">Place Name</span></th>
+                <th style="width: 140px;"><span data-lang="ar">العنصر</span><span data-lang="en">Object</span></th>
+                <th style="width: 180px;"><span data-lang="ar">قاعدة الفحص</span><span data-lang="en">Rule</span></th>
+                <th style="width: 90px;"><span data-lang="ar">المنطقة</span><span data-lang="en">Region</span></th>
+                <th style="width: 90px;"><span data-lang="ar">المسافة</span><span data-lang="en">Dist</span></th>
+                <th style="width: 110px;"><span data-lang="ar">الحالة</span><span data-lang="en">Status</span></th>
+              </tr>
+            </thead>
+            <tbody id="qa-table-body">
+              <!-- Rendered dynamically by qa_view.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="qa-workspace-footer">
+          <div class="qa-footer-hints">
+            <span><kbd>J</kbd> / <kbd>K</kbd> للتنقل</span>
+            <span>·</span>
+            <span><kbd>Enter</kbd> للمعاينة على الخريطة</span>
+            <span>·</span>
+            <span><kbd>F</kbd> تم الإصلاح</span>
+            <span>·</span>
+            <span><kbd>S</kbd> تخطي</span>
+            <span>·</span>
+            <span><kbd>L</kbd> أو <kbd>Esc</kbd> للعودة للخريطة</span>
+          </div>
+        </footer>
+      </div>
+    </section>
+
 
     <!-- Command Palette Dialog (Accessible combobox dialog) -->
     <dialog id="command-palette-dialog" class="command-palette-dialog" aria-label="لوحة الأوامر والبحث السريع">

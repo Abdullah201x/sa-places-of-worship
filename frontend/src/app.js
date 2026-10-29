@@ -1,4 +1,6 @@
 import { setupCommandPalette } from './palette.js';
+import { setupQAWorkspace, openQAWorkspace, closeQAWorkspace } from './qa_view.js';
+import { setMode as storeSetMode, setSelection as storeSetSelection } from './store.js';
 import { currentLang, t, fmtNum, fmtDate, onLanguageChange, setLanguage } from './i18n.js';
 import { ArabicText } from './arabic.js';
 import { ReviewMarks, hideReviewedPlaces, setHideReviewedPlaces, isHiddenByReview, markCurrentPlace, clearCurrentMark, renderReviewActions, rebuildReviewQueue, navigateReview, updateReviewNavUI, Permalink, updatePermalinkSoon, setupKeyboardShortcuts } from './review.js';
@@ -917,22 +919,109 @@ export function setupAppShell() {
   const tabQa = document.getElementById('tab-workspace-qa');
   if (tabMap) {
     tabMap.addEventListener('click', () => {
-      if (currentMode === 'improve') {
-        document.getElementById('mode-poi')?.click();
-      }
+      closeQAWorkspace();
       tabMap.classList.add('active');
       tabQa?.classList.remove('active');
     });
   }
   if (tabQa) {
     tabQa.addEventListener('click', () => {
-      if (currentMode !== 'improve') {
-        document.getElementById('mode-improve')?.click();
-      }
-      tabQa.classList.add('active');
-      tabMap?.classList.remove('active');
+      openQAWorkspace();
     });
   }
+
+  setupQAWorkspace({
+    fetchIssues: async () => {
+      try {
+        const res = await fetch('/api/v1/issues?limit=200');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.issues && data.issues.length) {
+            return data.issues;
+          }
+        }
+      } catch (_) {}
+
+      const issues = [];
+      const ruleSeverities = {
+        missing_amenity: 'high',
+        missing_name: 'medium',
+        missing_name_en: 'medium',
+        missing_denom: 'medium',
+        size_too_small: 'low',
+        size_too_large: 'low',
+        stale_data: 'low',
+        building_yes: 'medium',
+        mapped_as_node: 'low',
+        ml_geometry_anomaly: 'high',
+        duplicate_poi: 'high',
+        outdated_tags: 'low',
+        qibla_deviation: 'high',
+      };
+      for (const p of allPlaces) {
+        const props = p.properties || {};
+        const ruleIssues = evaluateRules(props);
+        for (const r of ruleIssues) {
+          const revMark = ReviewMarks.get(props);
+          issues.push({
+            rule_id: r.id,
+            severity: ruleSeverities[r.id] || 'medium',
+            osm_type: osmTypeOf(props),
+            osm_id: props.osm_id || p.id,
+            name: props.name || '',
+            name_en: props.name_en || '',
+            religion: props.religion || '',
+            denomination: props.denomination || '',
+            region_code: props.region_code || '',
+            coordinates: p.geometry ? p.geometry.coordinates : null,
+            review_status: revMark ? revMark.status : null,
+          });
+        }
+      }
+      return issues;
+    },
+    onInspectIssue: (issue) => {
+      const matched = allPlaces.find(p => {
+        const props = p.properties || {};
+        return (props.osm_id === issue.osm_id || p.id === issue.osm_id) &&
+               (!issue.osm_type || osmTypeOf(props) === issue.osm_type);
+      });
+
+      if (matched) {
+        const lat = matched.geometry.coordinates[1];
+        const lon = matched.geometry.coordinates[0];
+        if (map) map.flyTo([lat, lon], 17);
+        showDetails(matched.properties, lat, lon);
+      } else if (issue.coordinates) {
+        const [lon, lat] = issue.coordinates;
+        if (map) map.flyTo([lat, lon], 17);
+        showDetails({
+          osm_id: issue.osm_id,
+          osm_type: issue.osm_type,
+          name: issue.name,
+          name_en: issue.name_en,
+          religion: issue.religion,
+          denomination: issue.denomination,
+          region_code: issue.region_code,
+        }, lat, lon);
+      }
+    },
+    onMarkIssue: (issue, status) => {
+      const matched = allPlaces.find(p => {
+        const props = p.properties || {};
+        return (props.osm_id === issue.osm_id || p.id === issue.osm_id);
+      });
+      const props = matched ? matched.properties : { osm_id: issue.osm_id, osm_type: issue.osm_type };
+      ReviewMarks.set(props, status);
+    },
+    getMapCenter: () => {
+      if (map) {
+        const c = map.getCenter();
+        return [c.lat, c.lng];
+      }
+      return [24.7136, 46.6753];
+    },
+  });
 
   const syncTabs = (mode) => {
     if (mode === 'improve') {
@@ -1887,6 +1976,7 @@ export function showDetails(props, lat, lon) {
     sbSel.textContent = `${osmTypeOf(props)}/${props.osm_id} — ${pName}`;
   }
   selectedPlace = { properties: props, lat, lon };
+  storeSetSelection(selectedPlace);
   const panel = document.getElementById('details-panel');
   panel.style.display = 'block';
   renderReviewActions();
@@ -2334,6 +2424,7 @@ export function setupEventListeners() {
     document.getElementById('mode-improve').classList.remove('active');
     e.target.classList.add('active');
     currentMode = 'poi';
+    storeSetMode('poi');
     updateDashboardUI();
   });
 
@@ -2342,6 +2433,7 @@ export function setupEventListeners() {
     document.getElementById('mode-improve').classList.remove('active');
     e.target.classList.add('active');
     currentMode = 'gap';
+    storeSetMode('gap');
     updateDashboardUI();
   });
 
@@ -2350,6 +2442,7 @@ export function setupEventListeners() {
     document.getElementById('mode-gap').classList.remove('active');
     e.target.classList.add('active');
     currentMode = 'improve';
+    storeSetMode('improve');
     updateImprovementIssueCounts();
     updateDashboardUI();
   });
