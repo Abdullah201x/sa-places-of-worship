@@ -4,7 +4,8 @@ import { ReviewMarks, hideReviewedPlaces, setHideReviewedPlaces, isHiddenByRevie
 import { Exporters } from './exporters.js';
 import { OsmApi, EditHistory } from './osm_api.js';
 import { renderQuickFixes, setupEditing, createFieldRow, readFieldValues, showFieldErrors } from './editing.js';
-import { MOSQUE_PRESET, outdatedRules, describeUpgrade, tagsFromValues, validateValues } from './presets.js';
+import { MOSQUE_PRESET, tagsFromValues, validateValues } from './presets.js';
+import { evaluateRules } from './validator.js';
 import { trackEvent } from './analytics.js';
 export let map;
 export let heatmapLayer = null;
@@ -265,143 +266,15 @@ export function osmTypeOf(props) {
   return 'way';
 }
 
-// Detect mapping issues for a feature based on its tags
+// Mapping issues for a place, judged with the current user-adjustable
+// size and Qibla thresholds. The rules themselves live in validator.js.
 export function getQualityIssues(props) {
-  const issues = [];
-  
-  // 1. building=mosque without amenity=place_of_worship
-  if (props.building === 'mosque' && props.amenity !== 'place_of_worship') {
-    issues.push({
-      id: 'missing_amenity',
-      title_ar: 'مبنى مسجد بدون تصنيف (amenity=place_of_worship)',
-      title_en: 'Building marked as mosque but missing amenity=place_of_worship'
-    });
-  }
-  
-  // 2. Missing specific name (empty, or only generic words like "مسجد", "الجامع", "مصلى", "Mosque")
-  const rawArabicName = (props.name_original || props['name:ar'] || props.name_ar || props.name_ar_original || '').trim();
-  if (ArabicText.isGenericMosqueName(rawArabicName)) {
-    issues.push({
-      id: 'missing_name',
-      title_ar: 'اسم المسجد مفقود أو افتراضي (مثال: "مسجد")',
-      title_en: 'Mosque name is missing or set to a generic default'
-    });
-  }
-  
-  // 3. Missing English name translation (missing name:en or identical to Arabic name)
-  // Exclude mosques without a name or name:ar (and mosques with only generic placeholder names)
-  const cleanNameAr = rawArabicName;
-  const cleanNameEn = (props.name_en_original || props['name:en'] || '').trim();
-  if (cleanNameAr && !ArabicText.isGenericMosqueName(cleanNameAr)) {
-    if (!cleanNameEn || cleanNameAr === cleanNameEn) {
-      issues.push({
-        id: 'missing_name_en',
-        title_ar: 'الاسم بالإنجليزية مفقود أو مطابق للاسم العربي',
-        title_en: 'English name translation (name:en) is missing or identical to the Arabic name'
-      });
-    }
-  }
-  
-  // 4. Muslim mosque with missing denomination
-  if (props.religion === 'muslim' && (!props.denomination || props.denomination === 'unknown')) {
-    issues.push({
-      id: 'missing_denom',
-      title_ar: 'المذهب غير محدد (سني/شيعي)',
-      title_en: 'Denomination is unknown or unspecified'
-    });
-  }
-  
-  // 5. Building footprint size looks like an outlier (too small/too large),
-  // judged against the user-adjustable currentSizeMinM2/currentSizeMaxM2 thresholds.
-  if (typeof props.size_area_m2 === 'number') {
-    if (props.size_area_m2 < currentSizeMinM2) {
-      issues.push({
-        id: 'size_too_small',
-        title_ar: 'مبنى المسجد أصغر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى',
-        title_en: 'Mosque building footprint looks too small — verify the building outline'
-      });
-    } else if (props.size_area_m2 > currentSizeMaxM2) {
-      issues.push({
-        id: 'size_too_large',
-        title_ar: 'مبنى المسجد أكبر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى',
-        title_en: 'Mosque building footprint looks too large — verify the building outline'
-      });
-    }
-  }
-
-  // 6. Never revisited since first mapped (still version 1, and old)
-  const FIVE_YEARS_MS = 5 * 365 * 24 * 60 * 60 * 1000;
-  if (props.version === 1 && props.edited_at && (Date.now() - new Date(props.edited_at).getTime()) > FIVE_YEARS_MS) {
-    issues.push({
-      id: 'stale_data',
-      title_ar: 'لم يتم تعديل هذا العنصر منذ إضافته لأول مرة (بيانات قديمة)',
-      title_en: 'This entry has never been revisited since it was first mapped'
-    });
-  }
-
-  // 7. building=yes for a mosque (should be building=mosque)
-  if (props.religion === 'muslim' && props.building === 'yes') {
-    issues.push({
-      id: 'building_yes',
-      title_ar: 'مبنى مسجد مصنف كـ building=yes بدلاً من building=mosque',
-      title_en: 'Mosque building tagged as building=yes instead of building=mosque'
-    });
-  }
-
-  // 8. Mapped as a single node instead of a building outline (area/way).
-  // Ideally a mosque's footprint should be traced as an area so its true
-  // size and shape show up on the map, rather than a single point.
-  if (props.geom_type === 'Point') {
-    issues.push({
-      id: 'mapped_as_node',
-      title_ar: 'مرسوم كنقطة وليس كمساحة (مبنى) — يفضّل رسم حدود المبنى',
-      title_en: 'Mapped as a single node instead of an area — ideally traced as a building outline'
-    });
-  }
-
-  // 9. Machine Learning Spatial Geometry Anomaly (Isolation Forest)
-  if (props.ml_anomaly && props.ml_anomaly.is_anomaly) {
-    issues.push({
-      id: 'ml_geometry_anomaly',
-      title_ar: `🤖 شذوذ هندسي (ذكاء اصطناعي): ${props.ml_anomaly.diagnosis}`,
-      title_en: `🤖 ML Geometry Anomaly: ${props.ml_anomaly.diagnosis_en || props.ml_anomaly.diagnosis}`
-    });
-  }
-
-  // 11. Mapped twice: the building outline and a point inside it both carry
-  // amenity=place_of_worship (merged into one place by extract_places.py).
-  if (props.duplicate_poi) {
-    issues.push({
-      id: 'duplicate_poi',
-      title_ar: 'مكرر: المبنى ونقطة داخله كلاهما موسوم كدار عبادة — يُفضّل نقل الوسوم إلى المبنى وحذف النقطة',
-      title_en: 'Mapped twice: both the building and a point inside it are tagged as the place of worship'
-    });
-  }
-
-  // 12. Outdated or non-standard values that the preset's upgrade rules fix
-  // (iD's deprecated.json plus Manara's, e.g. denomination=سني -> sunni).
-  const outdated = outdatedRules(props);
-  if (outdated.length) {
-    const changes = describeUpgrade(props, outdated);
-    issues.push({
-      id: 'outdated_tags',
-      title_ar: `وسوم قديمة أو بصيغة غير معتمدة (${changes.join('، ')})`,
-      title_en: `Outdated or non-standard tags (${changes.join(', ')})`
-    });
-  }
-
-  // 10. Qibla Orientation Misalignment
-  if (props.ml_anomaly && typeof props.ml_anomaly.qibla_dev === 'number') {
-    if (props.ml_anomaly.qibla_dev >= currentQiblaDevThreshold) {
-      issues.push({
-        id: 'qibla_deviation',
-        title_ar: `🕋 انحراف حاد عن القبلة (${props.ml_anomaly.qibla_dev}° — سمت القبلة ${props.ml_anomaly.qibla_az}° مقابل ${props.ml_anomaly.bldg_az}° لمحور المبنى)`,
-        title_en: `🕋 Severe Qibla deviation (${props.ml_anomaly.qibla_dev}°: Qibla bearing ${props.ml_anomaly.qibla_az}° vs building axis ${props.ml_anomaly.bldg_az}°)`
-      });
-    }
-  }
-
-  return issues;
+  return evaluateRules(props, {
+    sizeMinM2: currentSizeMinM2,
+    sizeMaxM2: currentSizeMaxM2,
+    qiblaDevThreshold: currentQiblaDevThreshold,
+    now: Date.now(),
+  });
 }
 
 // getQualityIssues() depends on the size/Qibla thresholds; cache its result
