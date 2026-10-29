@@ -4,7 +4,7 @@ This document summarises the architecture, live infrastructure, completed phases
 
 **Where things stand:** Phases 1–3, Phase 4 (accounts & shared review), Phase 5a (`/community` page), Phase 5b (leaderboard, verified edits feed, and SEO pages), and Phase 6a (operations) are done. Phase 6b (final security review) remains. The utility-first redesign (`REDESIGN.md`) has started: **Redesign Phase 0 is done and live** (2026-10-30, see §12); Redesign Phase 1 is next. Nothing is half-finished in the code; `main` is clean.
 
-- **Last updated:** 2026-10-30
+- **Last updated:** 2026-10-30 (see §13 for the full session record and what is still pending)
 - **Repository:** `github.com/Abdullah201x/sa-places-of-worship` (branch `main` auto-deploys via Coolify)
 - **Local checkout:** `C:\Users\abdul\Desktop\GCC20260707`
 - **VPS SSH:** `root@159.195.192.148`
@@ -367,3 +367,66 @@ ssh root@159.195.192.148 'CID=$(docker ps --filter name=e3xakpyxk2xmq19aqpyvjdjq
 - `9b9e440` The pipeline checks hourly instead of once at 23:30 UTC (see §4).
 - `c14e2e3`, `e29b638` The committed datasets were replaced with the public-extract versions. The old committed places file came from the login-only extract and named 484 contributors (the old values remain in the private repo's history). The committed gaps grid was kept, because the published one predated `urgency_score`.
 
+---
+
+## 13. Session Record, 2026-10-30 (for the next agent)
+
+This section summarises the whole chat of 2026-10-30, so a new agent can continue without it. Facts below were checked during the session; re-check anything time-sensitive.
+
+### 13.1 What the user asked, in order
+1. **Redesign proposal.** The user attached `design prompt.md`: a generic brief to re-architect Manara as a utility-first, dense, keyboard-driven, bilingual (Arabic-primary) platform with five deliverables (audit, sitemap/wireframes, three module specs, TypeScript data models, phased plan). The answer was grounded in the real codebase instead of the generic brief and written to `REDESIGN.md`.
+2. **Decisions.** The user answered the six open questions (§12 table). For D3 they asked for an Osmose-style age indicator, like `<span class="v-time-ago__text">20h</span>` on osmose.openstreetmap.fr. D6 needed a plain-language explanation; they chose admins only.
+3. **"Let us start with Phase 0"**: done (§12). Item 4 (bbox suggestions) was dropped after the user chose "Skip it" when shown the measurements.
+4. **"yes"** to pushing Phase 0. Pushed `a7cac6d..0343368`; Coolify deployed in about 90 s; live checks passed.
+5. **"what is next?"**: proposed 1) find why the pipeline didn't publish, 2) remove contributor names from committed data, 3) commit docs and update this file, 4) Redesign Phase 1.
+6. **"do the first three before phase 1"**: done (§12 "Follow-ups").
+7. **"export this chat in the handoff"**: this section.
+
+### 13.2 Current state (end of session)
+- **Live on production:** everything up to `0343368` (Redesign Phase 0).
+- **Committed locally, NOT pushed** (the user had not answered the push question when the session ended):
+  - `9b9e440` hourly pipeline check
+  - `c14e2e3`, `e29b638` cleaned committed datasets
+  - `722291b` docs
+  - the commit that adds this section
+
+  **Ask the user before pushing** (a push to `main` redeploys production). Once pushed, the pipeline container restarts and its first hourly check should immediately publish Geofabrik update 3869 (the local extract on the VPS was at 3868). If it is not pushed, the old scheduler that is live now runs at 23:30 UTC and should also pick up 3869.
+- **Live data was about 39 h old** at the end of the session (published `v20261028T071645Z`). The live `summary.json` has no `pbf_timestamp` yet, so the new data-age label still shows the plain date (`بيانات OSM بتاريخ 2026-10-27`) until the next publish.
+- **Production gaps file lacks `urgency_score`** (it predates that code). The frontend falls back to `gap_score`, so the "high urgency" filter is approximate until the next publish.
+- **The live published places file has one hand-patched feature** (node 14325238501, "Al-Nawawi Mosque", added from Manara on 2026-10-28) carrying `last_edited_by`, `user_id`, `changeset_id`. The next pipeline run overwrites it. Do not hand-patch published data again (§2).
+- Untracked on purpose: `design prompt.md` (the user's original brief).
+- Tests: `python -m pytest tests -q` gives 82 passed; `cd frontend && npm run test` gives 45 passed; lint and build are clean.
+
+### 13.3 Still open, in the recommended order
+1. **Push decision** for the four local commits plus this one (above).
+2. **Check the first run after the push or at 23:30 UTC:**
+   - `ssh root@159.195.192.148`, then `docker logs` on the `e3xakpyxk2xmq19aqpyvjdjq` container, and `cat /state/status.json` inside it;
+   - `curl -s https://manara.saudiosm.org/data/summary.json` should now include `pbf_timestamp`;
+   - the gaps file should have `urgency_score` in `fields`.
+3. **Phase 6b security review** of the Phase 4 auth code (`backend/app/auth.py`, `routers/auth.py`, `reviews.py`, `edits.py`). It was never done, and should come before Redesign Phase 1 adds more account-backed pages.
+4. **Redesign Phase 1** (`REDESIGN.md` §5): write a step-by-step plan and get the user's approval before building (the user's standing preference: plan first, then build).
+5. Minor / optional:
+   - the Coolify Telegram alerts (the user will do these);
+   - two `min-height` inline styles in `frontend/community.html`;
+   - `transliteration.py` is duplicated between `backend/app/` and `pipeline/`;
+   - `cert.pem` / `key.pem` sit in the repo root (gitignored).
+
+### 13.4 Facts verified during the session (useful later)
+- **Planet replication:**
+  - `https://planet.openstreetmap.org/replication/minute/state.txt` redirects (302) to `osm-planet-eu-central-1.s3.dualstack.eu-central-1.amazonaws.com`; clients must follow redirects.
+  - One minute diff was about 45 KB gzipped; one hour diff about 4.4 MB.
+  - Diffs include `user`, `uid`, `changeset`. Deleted elements carry no tags (nodes keep lat/lon), and ways have no coordinates.
+- **Browser calls:** `osmose.openstreetmap.fr/api/0.3/issues?bbox=…` and `overpass-api.de` both answer with `Access-Control-Allow-Origin: *`.
+- **Geofabrik GCC updates:** `https://download.geofabrik.de/asia/gcc-states-updates/state.txt`. Publish times of sequences 3850–3869 ranged from 20:45 UTC to 12:56 UTC the next day.
+- **Live compressed sizes (brotli):** places 257 KB, gaps 425 KB, suggestions 938 KB. Suggestions load only when toggled on.
+- **The GitHub repo is private:** the anonymous API returns 404. The `gh` CLI is not installed on this machine.
+- **Windows shell gotchas found this session:**
+  - Bash heredocs containing apostrophes sometimes fail to parse in the agent's Bash tool. Write Python helper scripts to a temp file instead.
+  - `python -I` ignores `PYTHONIOENCODING`, and the console is cp1252, so print only ASCII, or `ascii()` Arabic.
+  - `cmd | tail` hides the exit code. Check pytest's own exit status before committing.
+- **CSS:** `ar-SA` dates default to the Hijri calendar; use `ar-SA-u-ca-gregory` where a Gregorian date is meant. `fmtNum` (`ar-SA`) gives Arabic-Indic digits; the redesign plans Western digits in Phase 1 (`REDESIGN.md` §3.5).
+- **UI regression checking that worked:** `puppeteer-core` driving the installed Chrome (`C:/Program Files/Google/Chrome/Application/chrome.exe`) against `npm run dev` with `MANARA_DATA_DIR` pointing to a temp copy of the data:
+  - block `arcgisonline|cartocdn|openstreetmap.org|/stats/` requests, and disable animations and transitions;
+  - wait for `#loading-overlay.hidden`, set `localStorage.sidebar_collapsed=false`;
+  - shoot ar/en at 1440×2000 and 390×844; compare with `pixelmatch`, then compare element positions and sizes to tell layout changes from scroll or timing.
+  - Keep the tool outside the repo; it is not a project dependency.
