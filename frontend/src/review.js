@@ -2,6 +2,7 @@
 // permalinks and keyboard shortcuts. Uses app.js globals (map, filteredPlaces,
 // currentMode, ...) at call time.
 import { addTranslations, currentLang, t, fmtNum } from './i18n.js';
+import { shortcutKey } from './keys.js';
 import { map, allPlaces, filteredPlaces, currentMode, currentReligionFilter, currentImprovementFilter, currentSearchQuery, setCurrentSearchQuery, currentQiblaSort, selectedPlace, osmTypeOf, updateImprovementIssueCounts, showToast, showDetails, filterData } from './app.js';
 
 addTranslations({
@@ -358,7 +359,7 @@ export function setupKeyboardShortcuts() {
     const anyModalOpen = [...document.querySelectorAll('.auth-overlay')].some(o => !o.classList.contains('hidden'));
     if (anyModalOpen && e.key !== 'Escape') return;
 
-    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const key = shortcutKey(e);
     const click = id => document.getElementById(id)?.click();
     const handlers = {
       n: () => navigateReview(1),

@@ -271,6 +271,8 @@ addStaticTranslations({
   "الكثافة / فجوات التغطية / تحسين البيانات": "Density / coverage gaps / data improvement",
   "عرض هذه القائمة": "Show this list",
   "إغلاق النوافذ": "Close dialogs",
+  "تعمل الاختصارات بموضع المفتاح، فتعمل أيضاً ولوحة المفاتيح بالعربية (مثلاً": "Shortcuts follow the key position, so they also work with the Arabic keyboard layout (e.g.",
+  "هو مفتاح": "is the key",
   "جارٍ تحميل بيانات الخريطة...": "Loading map data...",
   "⚡ إضافة كعقدة مباشرة (الموقع الحالي)": "⚡ Add directly as node (current view)",
   "بعد تحديد موقع الفجوة باستخدام مؤشر القبلة والخارطة، أضف المسجد كعقدة مباشرة من هنا أو افتح نطاق العرض في المحررات الخارجية.": "After identifying the gap using the Qibla pointer and map, add the mosque directly as a node from here or open the current view in external editors.",
