@@ -1661,7 +1661,7 @@ export function buildPlacePopup(props, mode) {
     const issues = getIssues(props);
     return `
       <div style="font-family: var(--font-body); text-align: start; padding: 2px;">
-        <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(placeName(props))}</h4>
+        <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #f1f5f9;">${escapeHtml(placeName(props))}</h4>
         <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; background: rgba(255, 59, 48, 0.1); font-weight: 600; color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.2); display: inline-block; margin-top: 4px;">
           ${t('popupIssueCount', { n: fmtNum(issues.length) })}
         </span>
@@ -1670,8 +1670,8 @@ export function buildPlacePopup(props, mode) {
   }
   return `
     <div style="font-family: var(--font-body); text-align: start; padding: 2px;">
-      <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #111;">${escapeHtml(placeName(props))}</h4>
-      <p style="margin: 0 0 5px 0; font-size: 11px; color: #666;">${props.name_en !== props.name ? escapeHtml(currentLang === 'en' ? props.name : props.name_en) : ''}</p>
+      <h4 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 700; color: #f1f5f9;">${escapeHtml(placeName(props))}</h4>
+      <p style="margin: 0 0 5px 0; font-size: 11px; color: #94a3b8;">${props.name_en !== props.name ? escapeHtml(currentLang === 'en' ? props.name : props.name_en) : ''}</p>
       <span style="font-size: 10px; padding: 2px 6px; border-radius: 10px; background: #eee; font-weight: 600; color: #333;">
         ${escapeHtml(religionLabel(props.religion))}
       </span>
@@ -3033,7 +3033,7 @@ export function renderNoteMarker(noteFeature) {
     closed: isClosed,
     popupHtml: `
     <div style="font-family: var(--font-body); text-align: start; padding: 2px; max-width: 220px;">
-      <p style="margin: 0 0 6px 0; font-size: 12px; color: #333; white-space: pre-wrap;">${escapeHtml(commentText)}</p>
+      <p style="margin: 0 0 6px 0; font-size: 12px; color: #e2e8f0; white-space: pre-wrap;">${escapeHtml(commentText)}</p>
       <a href="${noteUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 11px;">${t('noteOpenOnOsm')}</a>
     </div>
   `

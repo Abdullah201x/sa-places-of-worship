@@ -1,5 +1,6 @@
-// The coverage-gap colour ramp and the bilinear interpolation over the analysis
-// grid. Shared by both map backends so Leaflet and MapLibre draw the same field.
+// Pure map maths shared by both backends (and testable without a map library):
+// the coverage-gap colour ramp, the bilinear interpolation over the analysis grid,
+// Web Mercator pixels, and the mask that clips the satellite imagery.
 
 export const GAP_GRADIENT_STOPS = [
   { stop: 0.0, color: [63, 43, 150] },   // Deep Indigo
@@ -64,4 +65,15 @@ export function worldPixel(lat, lon, zoom) {
   const sin = Math.sin(lat * Math.PI / 180);
   const y = (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale;
   return { x, y };
+}
+
+// World rectangle with the boundary's outer rings cut out.
+export function invertedMask(geometry) {
+  const polygons = geometry.type === 'MultiPolygon' ? geometry.coordinates : [geometry.coordinates];
+  const world = [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]];
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'Polygon', coordinates: [world, ...polygons.map(p => p[0])] },
+  };
 }

@@ -821,3 +821,33 @@ Started Phase 5 from `REDESIGN.md` §3.6, §4.6 & §5:
 **After the next push, check on the VPS:** `curl -sI -H 'Range: bytes=0-126' https://manara.saudiosm.org/data/places.pmtiles` must return `206`, `Content-Range`, and no `Content-Encoding: gzip/zstd`. Also check that `places.pmtiles` is in the published folder (it is not baked into the web image).
 
 **Still open in Phase 5:** MapLibre parity with the Leaflet map (browse/select/add/review modes, markers and clusters, heatmap, sprint tiles, boundary clip), then make it the default behind `?map=leaflet`; text labels; per-region exports and optional `.osm.pbf` cuts; first-load transfer and 60 fps measurements for the exit criteria. There are still no Playwright smoke tests (REDESIGN.md §7): the puppeteer sweep used here (load each route, collect page errors and CSP violations) is a good seed.
+
+### 20.5 Phase 5 Step 3b: MapLibre parity behind `?map=gl` (2026-10-30)
+
+The full map page (not just the overlay preview) now runs on MapLibre with `/?map=gl`. Leaflet stays the default; there is no flag for it because it is what you get without one.
+
+**Architecture: a map "kit".**
+- `app.js` no longer touches Leaflet. It builds the map, basemaps, clustered place and suggestion layers, density heat, gap field, note layer, pending-mosque pin and popups through `kit.*` factories (`src/map_kit.js` holds the active kit; its interface is documented at the top of `src/kit_leaflet.js`).
+- `src/kit_leaflet.js` is the old Leaflet code moved over unchanged (plus `leaflet-bundle.js`). `src/kit_gl.js` implements the same factories on MapLibre. `main.js` loads one of them with a dynamic import, then `app.js`. Only the chosen kit and its CSS are fetched.
+- `src/gap_field.js` holds the shared pure maths (gap colour ramp, bilinear interpolation, `worldPixel`, `invertedMask`), with 11 Vitest tests.
+- Verified for the refactor alone: counts and screenshots on the Leaflet kit match the pre-refactor build (at most 28 differing pixels of 1M, tile timing).
+
+**How the GL kit maps each feature:**
+- **Zoom:** every number the app sees is Leaflet's (256 px tiles); the facade converts to MapLibre's zoom (one lower) at its edges. Permalinks, `CLUSTER_MIN_ZOOM`, flyTo targets and "in view" counts therefore agree between kits (the probe's viewport counts match exactly).
+- **Places and suggestions:** a clustered GeoJSON source; singles are circle layers; cluster counts are DOM markers reusing the Leaflet cluster CSS (no glyph server, no RTL text plugin). Clicking a cluster zooms to its expansion zoom. The data is still the filtered GeoJSON the app already loads, not PMTiles: filters, stats and the search all work on `filteredPlaces`.
+- **Basemaps:** Esri/CARTO raster sources; the satellite is clipped to the Saudi boundary by an inverted polygon in the page colour. Changing `options.maxNativeZoom` (the satellite zoom cap) re-mounts the source, because a source's `maxzoom` is immutable. CARTO hosts were added to `connect-src` (MapLibre fetches tiles; Leaflet used `<img>`).
+- **Gap field:** drawn on a canvas source (one pixel per 4 CSS px, nearest-neighbour stretch) with the same interpolation as Leaflet, redrawn after each move. Looks the same as Leaflet in the screenshots.
+- **Density heat:** MapLibre `heatmap` layer, an approximation of leaflet.heat (linear density sum vs alpha compositing). Intensity, radius and the alpha ramp were tuned by eye against Leaflet screenshots; the sliders still work (blur maps to extra radius).
+- **Clicks, popups, context menu:** a click on a marker is not a map click (as in Leaflet). Right-click opens the same "add mosque / note" menu; a touch long-press (600 ms) does the same, because iOS never fires `contextmenu` (de-duplicated against the native event on Android).
+- **Notes and the pending-mosque pin:** DOM markers; the pin is draggable and reports coordinates while dragging.
+- Styling for MapLibre popups, zoom control and attribution is in `index.css` under "MapLibre kit", scoped with `#map` because MapLibre's own stylesheet loads later and would otherwise win.
+
+**Verified in headless Chrome, both kits** (`?map=gl` and default): viewport counts, selection from a permalink, clicking a place (popup + details), clicking a cluster, right-click menu and pending pin, suggestion popup, all four basemaps (including the satellite and its compass), mode switching and both sliders, permalink following a pan, all ten routes load without page errors or CSP violations. Vitest 121, pytest 146, lint clean.
+
+**Also fixed on the way:** place popups used `#111` text on the dark popup card (unreadable in both kits); they now use light text.
+
+**Not done / known gaps:**
+- **Default is still Leaflet.** The exit criteria need real-device numbers (60 fps pan on a mid-range Android, first-load transfer) that headless Chrome with a software GPU cannot give. Measure on a phone, then flip the default in `wantsGl()` and keep `?map=leaflet`.
+- **PMTiles are not used by the main app.** They feed only the `/mapgl` preview. The "first-load down by more than 80%" criterion needs the app to stop loading `places_of_worship_sa.geojson`/`worship_gaps_sa.json` up front, which means rethinking stats, search and filters; do that deliberately, it is a separate piece of work.
+- Not exercised in the browser: the OSM-notes layer with real notes, the add-note flow end to end, the Qibla compass rotation while panning, and the touch long-press (code only; needs a phone).
+- The two map codepaths still duplicate basemap URLs between `kit_gl.js` and `map_gl_view.js` (the `/mapgl` preview). Drop `/mapgl` once the PMTiles question above is settled.

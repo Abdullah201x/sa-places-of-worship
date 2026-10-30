@@ -7,9 +7,9 @@ import './styles/index.css';
 import './translations.js';
 import './translations_static.js';
 import { initAnalytics } from './analytics.js';
-import { setKit } from './map_kit.js';
+import { setKit, wantsGl } from './map_kit.js';
 
-const { kit } = await import('./kit_leaflet.js');
+const { kit } = await (wantsGl() ? import('./kit_gl.js') : import('./kit_leaflet.js'));
 setKit(kit);
 await import('./app.js');
 

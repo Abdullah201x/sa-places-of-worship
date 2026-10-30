@@ -4057,3 +4057,93 @@ html[lang="en"] [data-lang="ar"] {
   color: #94a3b8;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* ==========================================================================
+   MapLibre kit (?map=gl): the same glass look as the Leaflet controls and popups
+   ========================================================================== */
+#map .maplibregl-ctrl-group {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+#map .maplibregl-ctrl-group button {
+  background: transparent;
+  color: var(--color-text);
+  transition: background 0.2s ease;
+}
+
+#map .maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--panel-border);
+}
+
+#map .maplibregl-ctrl-group button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* The control icons are dark glyphs on a light button by default. */
+#map .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+#map .maplibregl-ctrl-attrib {
+  background: rgba(10, 11, 16, 0.7);
+  color: var(--color-text-muted, #94a3b8);
+}
+
+#map .maplibregl-ctrl-attrib a {
+  color: inherit;
+}
+
+#map .maplibregl-popup-content {
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 20px rgba(0, 242, 254, 0.08);
+  color: #f1f5f9;
+  padding: 8px;
+}
+
+#map .maplibregl-popup-anchor-top .maplibregl-popup-tip,
+#map .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+#map .maplibregl-popup-anchor-top-right .maplibregl-popup-tip { border-bottom-color: rgba(15, 23, 42, 0.95); }
+#map .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+#map .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+#map .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip { border-top-color: rgba(15, 23, 42, 0.95); }
+#map .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: rgba(15, 23, 42, 0.95); }
+#map .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: rgba(15, 23, 42, 0.95); }
+
+#map .maplibregl-popup-close-button {
+  color: #94a3b8;
+  font-size: 16px;
+  padding: 2px 8px;
+}
+
+#map .maplibregl-popup-close-button:hover {
+  background: transparent;
+  color: #ffffff;
+}
+
+#map .custom-context-popup .maplibregl-popup-content {
+  background: rgba(13, 17, 23, 0.95);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  padding: 4px;
+}
+
+#map.note-mode-active .maplibregl-canvas,
+#map.mosque-mode-active .maplibregl-canvas {
+  cursor: crosshair !important;
+}
+
+/* DOM markers (clusters, notes, the pending pin) sit above the canvas but must not block it. */
+#map .maplibregl-marker.add-mosque-marker,
+#map .maplibregl-marker.note-marker {
+  cursor: pointer;
+}
