@@ -504,3 +504,36 @@ Started Phase 1 implementation from `REDESIGN.md` §5:
    - Pytest: 87 passed.
    - ESLint: 0 errors, 0 warnings.
    - Vite: production build succeeds in <400 ms.
+
+---
+
+## 16. Redesign Phase 2a: Change Feed, Rules & Ingestion Hardening (2026-10-30)
+
+Started Phase 2a from `REDESIGN.md` §3.3 & §5:
+
+### 16.1 Completed Items
+1. **Shared Worship Tag Predicate (`pipeline/worship_tags.py`):**
+   - Single canonical predicate `is_worship_tagged(tags)` checking projects' places of worship (`amenity in ('place_of_worship', 'mosque') or building == 'mosque'`).
+   - Integrated with `pipeline/common.py` for backward compatibility.
+2. **Change Flags & Tag Diff Evaluator (`pipeline/change_rules.py`):**
+   - Implemented rules from §3.3.6: `deleted-named-mosque`, `name-removed`, `religion-changed`, `amenity-removed`, `new-duplicate`, `name-ar-mismatch`, `left-boundary`, `building-downgraded`, `issue-fixed`.
+   - Built `compute_tag_diff(old_tags, new_tags)` for granular tag diffs.
+3. **Daily Differential Analysis Engine (`pipeline/detect_changes.py`):**
+   - Differential analyzer detecting `created`, `modified`, `deleted`, and `upgraded` places (subsumed POI node to building outline transition).
+   - Distance calculation and live replication event reconciliation.
+4. **Automated Pipeline DB Ingestion (`pipeline/load_db.py`):**
+   - Schema now initializes and atomically swaps `issues` alongside `places`, `gaps`, and `suggestions`.
+   - Pipeline automatically populates QA issues during daily ingestion.
+5. **Backend Changes & Freshness API (`backend/app/routers/changes.py`):**
+   - `GET /api/v1/changes`: Paginated change feed with `since_id` auto-refresh, `ETag`, and multi-criteria filters.
+   - `POST /api/v1/changes/{change_id}/triage`: Authenticated triage workflow (`reviewed`, `flagged`, `reverted`).
+   - `GET /api/v1/freshness`: Returns both data and live replication timestamps and age metrics.
+   - `GET /api/healthz/live`: Healthcheck returning 503 if replication lag exceeds 2 hours.
+6. **Testing & Build Verification:**
+   - Added `tests/test_change_rules.py` (10 tests).
+   - Added `tests/test_detect_changes.py` (5 tests).
+   - Added `tests/test_changes_api.py` (6 tests).
+   - Pytest: 108 passed.
+   - Vitest: 62 passed across 7 test suites.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build.

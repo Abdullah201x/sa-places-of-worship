@@ -126,6 +126,19 @@ def init_db(conn):
         );
         CREATE UNIQUE INDEX IF NOT EXISTS idx_stats_history_ver_region
             ON region_stats_history (version, region_code);
+
+        CREATE TABLE IF NOT EXISTS issues (
+            rule_id VARCHAR(64) NOT NULL,
+            osm_type VARCHAR(16) NOT NULL,
+            osm_id BIGINT NOT NULL,
+            severity VARCHAR(16) NOT NULL DEFAULT 'medium',
+            region_code VARCHAR(10),
+            suggested_fix JSONB,
+            PRIMARY KEY (rule_id, osm_type, osm_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_issues_rule ON issues (rule_id);
+        CREATE INDEX IF NOT EXISTS idx_issues_region ON issues (region_code);
+        CREATE INDEX IF NOT EXISTS idx_issues_osm ON issues (osm_type, osm_id);
         """)
 
 
@@ -149,10 +162,12 @@ def load_staging_data(conn, data_dir=BASE_DIR):
         DROP TABLE IF EXISTS suggestions_staging CASCADE;
         DROP TABLE IF EXISTS regions_staging CASCADE;
 
+        DROP TABLE IF EXISTS issues_staging CASCADE;
         CREATE TABLE regions_staging (LIKE regions INCLUDING ALL);
         CREATE TABLE places_staging (LIKE places INCLUDING ALL);
         CREATE TABLE gaps_staging (LIKE gaps INCLUDING ALL);
         CREATE TABLE suggestions_staging (LIKE suggestions INCLUDING ALL);
+        CREATE TABLE issues_staging (LIKE issues INCLUDING ALL);
         """)
 
     # 2. Ingest Regions
@@ -325,6 +340,57 @@ def load_staging_data(conn, data_dir=BASE_DIR):
         """)
     print("  [OK] Spatial province assignment complete.")
 
+    # 6b. Populate QA Issues from places_staging
+    print("  Populating QA issues from places_staging...")
+    with conn.cursor() as cur:
+        cur.execute("""
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'missing_amenity', osm_type, osm_id, 'high', region_code, '{"amenity": "place_of_worship"}'::jsonb
+        FROM places_staging WHERE building = 'mosque' AND amenity != 'place_of_worship'
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'missing_name', osm_type, osm_id, 'medium', region_code, NULL
+        FROM places_staging WHERE name = '' OR name_norm IN ('مسجد', 'جامع', 'مصلى')
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'missing_name_en', osm_type, osm_id, 'medium', region_code, NULL
+        FROM places_staging WHERE name != '' AND name_norm NOT IN ('مسجد', 'جامع', 'مصلى') AND (name_en = '' OR name = name_en)
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'missing_denom', osm_type, osm_id, 'medium', region_code, NULL
+        FROM places_staging WHERE religion = 'muslim' AND (denomination IS NULL OR denomination = '' OR denomination = 'unknown')
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'building_yes', osm_type, osm_id, 'medium', region_code, '{"building": "mosque"}'::jsonb
+        FROM places_staging WHERE amenity = 'place_of_worship' AND building = 'yes'
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'size_too_small', osm_type, osm_id, 'low', region_code, NULL
+        FROM places_staging WHERE area_m2 IS NOT NULL AND area_m2 < 30.0
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'size_too_large', osm_type, osm_id, 'low', region_code, NULL
+        FROM places_staging WHERE area_m2 IS NOT NULL AND area_m2 > 10000.0
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'ml_geometry_anomaly', osm_type, osm_id, 'high', region_code, NULL
+        FROM places_staging WHERE anomaly_score IS NOT NULL AND anomaly_score < -0.3
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'qibla_deviation', osm_type, osm_id, 'high', region_code, NULL
+        FROM places_staging WHERE qibla_dev IS NOT NULL AND qibla_dev >= 20.0
+        ON CONFLICT DO NOTHING;
+        """)
+    print("  [OK] QA issues populated into issues_staging.")
+
     # 7. Record History Stats and Dataset Version
     now_ts = summary.get("updated_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     pbf_date = summary.get("pbf_date")
@@ -386,6 +452,7 @@ def swap_staging_to_production(conn):
             DROP TABLE IF EXISTS gaps_old CASCADE;
             DROP TABLE IF EXISTS suggestions_old CASCADE;
             DROP TABLE IF EXISTS regions_old CASCADE;
+            DROP TABLE IF EXISTS issues_old CASCADE;
 
             ALTER TABLE IF EXISTS places RENAME TO places_old;
             ALTER TABLE places_staging RENAME TO places;
@@ -399,10 +466,14 @@ def swap_staging_to_production(conn):
             ALTER TABLE IF EXISTS regions RENAME TO regions_old;
             ALTER TABLE regions_staging RENAME TO regions;
 
+            ALTER TABLE IF EXISTS issues RENAME TO issues_old;
+            ALTER TABLE issues_staging RENAME TO issues;
+
             DROP TABLE IF EXISTS places_old CASCADE;
             DROP TABLE IF EXISTS gaps_old CASCADE;
             DROP TABLE IF EXISTS suggestions_old CASCADE;
             DROP TABLE IF EXISTS regions_old CASCADE;
+            DROP TABLE IF EXISTS issues_old CASCADE;
             """)
     print("  [SUCCESS] All tables swapped to production atomically!")
 

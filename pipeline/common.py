@@ -32,9 +32,7 @@ M_PER_DEG_LAT = 110_574.0
 M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
 
 # Tags that make an OSM object a place of worship for this project.
-def is_worship_tagged(tags):
-    amenity = tags.get("amenity")
-    return amenity in ("place_of_worship", "mosque") or tags.get("building") == "mosque"
+from worship_tags import is_worship_tagged
 
 
 def configure_utf8_output():

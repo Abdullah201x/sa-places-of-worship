@@ -46,3 +46,40 @@ def freshness(conn=Depends(get_db)):
             "age_hours": round(age_hours, 1),
         },
     )
+
+
+@router.api_route("/api/healthz/live", methods=["GET", "HEAD"])
+def live_healthz(conn=Depends(get_db)):
+    """503 when the minutely replication lag exceeds 2 hours."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+            SELECT sequence, osm_timestamp
+            FROM replication_state
+            WHERE id = 1;
+            """)
+            row = cur.fetchone()
+    except Exception:
+        row = None
+
+    if not row or not row.get("osm_timestamp"):
+        return JSONResponse(
+            status_code=503,
+            content={"status": "stale", "detail": "Replication state not initialized."}
+        )
+
+    osm_ts = row["osm_timestamp"]
+    if osm_ts.tzinfo is None:
+        osm_ts = osm_ts.replace(tzinfo=timezone.utc)
+    lag_seconds = (datetime.now(timezone.utc) - osm_ts).total_seconds()
+    is_live = lag_seconds <= 7200  # 2 hours max lag
+
+    return JSONResponse(
+        status_code=200 if is_live else 503,
+        content={
+            "status": "ok" if is_live else "stale",
+            "sequence": row["sequence"],
+            "osm_timestamp": osm_ts.isoformat(),
+            "lag_seconds": max(0, int(lag_seconds)),
+        },
+    )

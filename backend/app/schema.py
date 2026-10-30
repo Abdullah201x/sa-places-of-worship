@@ -78,5 +78,51 @@ def init_app_tables(conn):
         CREATE INDEX IF NOT EXISTS idx_issues_rule ON issues (rule_id);
         CREATE INDEX IF NOT EXISTS idx_issues_region ON issues (region_code);
         CREATE INDEX IF NOT EXISTS idx_issues_osm ON issues (osm_type, osm_id);
+
+        CREATE TABLE IF NOT EXISTS change_events (
+            id BIGSERIAL PRIMARY KEY,
+            source TEXT NOT NULL,
+            confirmed BOOLEAN DEFAULT FALSE,
+            reverted_same_day BOOLEAN DEFAULT FALSE,
+            osm_timestamp TIMESTAMPTZ,
+            observed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            changeset_id BIGINT,
+            replication_seq BIGINT,
+            dataset_version TEXT,
+            prev_dataset_version TEXT,
+            osm_type TEXT NOT NULL,
+            osm_id BIGINT NOT NULL,
+            prev_ref TEXT,
+            kind TEXT NOT NULL,
+            flags JSONB DEFAULT '[]'::jsonb,
+            geom GEOMETRY(Point, 4326),
+            region_code TEXT,
+            name TEXT DEFAULT '',
+            tag_diff JSONB DEFAULT '{}'::jsonb,
+            version_before INT,
+            version_after INT
+        );
+        CREATE INDEX IF NOT EXISTS idx_change_events_osm ON change_events (osm_type, osm_id);
+        CREATE INDEX IF NOT EXISTS idx_change_events_observed ON change_events (observed_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_change_events_region ON change_events (region_code);
+        CREATE INDEX IF NOT EXISTS idx_change_events_source ON change_events (source);
+
+        CREATE TABLE IF NOT EXISTS change_triage (
+            change_id BIGINT PRIMARY KEY REFERENCES change_events(id) ON DELETE CASCADE,
+            status TEXT NOT NULL,
+            osm_uid BIGINT REFERENCES users(osm_uid) ON DELETE SET NULL,
+            note TEXT DEFAULT '',
+            triaged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS replication_state (
+            id INT PRIMARY KEY DEFAULT 1,
+            sequence BIGINT NOT NULL,
+            osm_timestamp TIMESTAMPTZ NOT NULL,
+            processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            last_gap_from BIGINT,
+            last_gap_to BIGINT,
+            last_gap_at TIMESTAMPTZ
+        );
         """)
 

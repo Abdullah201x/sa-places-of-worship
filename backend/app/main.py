@@ -9,6 +9,7 @@ from app import database
 from app.schema import init_app_tables
 from app.routers import (
     auth,
+    changes,
     community_data,
     edits,
     healthz,
@@ -70,6 +71,7 @@ app.add_middleware(
 app.include_router(healthz.router)
 app.include_router(auth.router)
 app.include_router(issues.router)
+app.include_router(changes.router)
 app.include_router(reviews.router)
 app.include_router(edits.router)
 app.include_router(community_data.router)
