@@ -1141,6 +1141,8 @@ export function setupAppShell() {
         window.location.href = '/tasks';
       } else if (actionId === 'tags') {
         window.location.href = '/tags';
+      } else if (actionId === 'data_hub') {
+        window.location.href = '/data';
       } else if (actionId === 'community') {
         window.location.href = '/community';
       } else if (actionId === 'toggle_lang') {

@@ -742,3 +742,33 @@ Started Phase 4 from `REDESIGN.md` §3.1, §4.2, §4.7 & §5:
    - Vitest: 87 passed across 11 test suites.
 
 **Phase 4 is now 100% COMPLETE.** Next phase in roadmap is **Phase 5: Data Hub & Vector Overlays (PMTiles & MapLibre)**.
+
+---
+
+## 20. Redesign Phase 5: Data Hub & Vector Overlays (2026-10-30)
+
+Started Phase 5 from `REDESIGN.md` §3.6, §4.6 & §5:
+
+### 20.1 Phase 5 Step 1: Open Data Hub Manifest Engine & `/data` Workspace
+1. **Data Manifest & Tabular Exporters Engine (`pipeline/build_data_hub.py`):**
+   - Automatically generates `manifest.json` conforming to `REDESIGN.md` §4.6 (`DataManifest`).
+   - Exports CSV tabular data with UTF-8 BOM alongside GeoJSON for places (`places_of_worship_sa.csv`), coverage gaps with coordinate conversion (`worship_gaps_sa.csv`), and suggestions (`suggested_mosques_sa.csv`).
+   - Computes exact file sizes, SHA-256 hashes, and feature counts.
+   - Embeds pre-configured Overpass Turbo queries for Saudi mosques, unnamed places, missing English names, and `building=yes` corrections.
+   - Integrated `build_data_hub.py` into `pipeline/run.py` pipeline sequence and published files catalog.
+2. **Data Hub Frontend Workspace (`frontend/data.html`, `frontend/src/data.js`, `frontend/src/styles/data.css`):**
+   - Clean glass design displaying version metadata, ODbL 1.0 license compliance, and dataset attribution.
+   - Instant search and dual filtering by layer (Places, Gaps, Suggestions, Boundary) and format (GeoJSON, CSV).
+   - One-click copy for SHA-256 digests with visual toast confirmation.
+   - Interactive Overpass Turbo preset cards with direct execution links into `overpass-turbo.eu`.
+3. **App Navigation & Routing Integration:**
+   - Added `/data` clean URL route in `frontend/vite.config.js`.
+   - Wired Topbar navigation tab and footer site links in `frontend/index.html`.
+   - Added Command Palette action `data_hub` in `frontend/src/palette.js` and `frontend/src/app.js`.
+4. **Automated Test Verification:**
+   - Authored `tests/test_data_hub.py` (5 unit tests covering SHA-256 hashing, CSV exporters, and manifest schema).
+   - Authored `frontend/tests/data_view.test.js` (10 unit tests covering bytes formatting, hash badges, Overpass URLs, and multi-criteria filtering).
+   - Pytest: 139 passed (up from 134).
+   - Vitest: 97 passed across 12 test suites (up from 87).
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build in 287 ms.

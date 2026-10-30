@@ -74,6 +74,7 @@ STEPS = [
     ["detect_geometry_anomalies.py"],
     ["import_wikidata_suggestions.py"],
     ["tag_stats.py"],
+    ["build_data_hub.py"],
     ["validate_data.py"],
     ["load_db.py"],
 ]
@@ -82,13 +83,17 @@ STEP_TIMEOUT_S = 45 * 60
 # What the frontend loads from /data/ (frontend/src/app.js).
 PUBLISHED_FILES = [
     "summary.json",
+    "manifest.json",
     "places_of_worship_sa.geojson",
+    "places_of_worship_sa.csv",
     "worship_gaps_sa.json",
+    "worship_gaps_sa.csv",
     "sa_boundary.geojson",
     "sa_regions.geojson",
     "mosque_sizes.json",
     "mosque_anomalies.json",
     "suggested_mosques_sa.geojson",
+    "suggested_mosques_sa.csv",
     "tag_stats_sa.json",
     "tags.json",
 ]

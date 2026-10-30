@@ -22,6 +22,10 @@ const DATA_FILES = new Set([
   'suggested_mosques_sa.geojson',
   'tag_stats_sa.json',
   'tags.json',
+  'manifest.json',
+  'places_of_worship_sa.csv',
+  'worship_gaps_sa.csv',
+  'suggested_mosques_sa.csv',
 ]);
 const dataDir = path.resolve(here, process.env.MANARA_DATA_DIR || '..');
 
@@ -43,7 +47,7 @@ function serveData(req, res, next) {
     res.statusCode = 404;
     return res.end('Not found');
   }
-  const type = name.endsWith('.geojson') ? 'application/geo+json' : 'application/json';
+  const type = name.endsWith('.geojson') ? 'application/geo+json' : name.endsWith('.csv') ? 'text/csv; charset=utf-8' : 'application/json';
   res.setHeader('Content-Type', `${type}; charset=utf-8`);
   fs.createReadStream(path.join(dataDir, name))
     .on('error', () => { res.statusCode = 404; res.end('Not found'); })
@@ -51,7 +55,7 @@ function serveData(req, res, next) {
 }
 
 // Clean URLs for the content pages, as Caddy's try_files does in production.
-const PAGES = new Set(['/about', '/privacy', '/community', '/tags', '/guides', '/start', '/tasks']);
+const PAGES = new Set(['/about', '/privacy', '/community', '/tags', '/guides', '/start', '/tasks', '/data']);
 function cleanUrls(req, res, next) {
   const [pathname, query] = req.url.split('?');
   if (PAGES.has(pathname)) req.url = `${pathname}.html${query ? `?${query}` : ''}`;
@@ -98,6 +102,7 @@ export default defineConfig({
         guides: path.resolve(here, 'guides.html'),
         start: path.resolve(here, 'start.html'),
         tasks: path.resolve(here, 'tasks.html'),
+        data: path.resolve(here, 'data.html'),
       },
     },
   },

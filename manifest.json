@@ -1,0 +1,120 @@
+{
+  "dataset_version": "v20261028T071645Z",
+  "pbf_date": "2026-10-27",
+  "licence": "ODbL-1.0",
+  "attribution": "© OpenStreetMap contributors",
+  "files": [
+    {
+      "id": "places-sa-geojson",
+      "scope": "SA",
+      "layer": "places",
+      "format": "geojson",
+      "path": "places_of_worship_sa.geojson",
+      "bytes": 6412875,
+      "sha256": "2a96bb29d746aef07b475138d7f4a58a18bf6639dc385a17da2366d11a341983",
+      "features": 14022
+    },
+    {
+      "id": "places-sa-csv",
+      "scope": "SA",
+      "layer": "places",
+      "format": "csv",
+      "path": "places_of_worship_sa.csv",
+      "bytes": 1340937,
+      "sha256": "c2d06f02dc53119147220d72bf51bab57128b11bd33fc991cffd35f5f37c7cb7",
+      "features": 14022
+    },
+    {
+      "id": "gaps-sa-json",
+      "scope": "SA",
+      "layer": "gaps",
+      "format": "geojson",
+      "path": "worship_gaps_sa.json",
+      "bytes": 1773628,
+      "sha256": "2768eaffb3561d9df1b685f5862e5a7ea7423b2cdb90f7ef8370a1efa2403641",
+      "features": 59681
+    },
+    {
+      "id": "gaps-sa-csv",
+      "scope": "SA",
+      "layer": "gaps",
+      "format": "csv",
+      "path": "worship_gaps_sa.csv",
+      "bytes": 2525518,
+      "sha256": "d85f08f9e62c47b6f9bc66c13be6a2fb52fe2dfb644693fead98d5c045a264ed",
+      "features": 59681
+    },
+    {
+      "id": "suggestions-sa-geojson",
+      "scope": "SA",
+      "layer": "suggestions",
+      "format": "geojson",
+      "path": "suggested_mosques_sa.geojson",
+      "bytes": 11426945,
+      "sha256": "002e995f23e1dd1f5bac6fa4f61868660ea057bac29ca87a66c5fe1512bf3ccb",
+      "features": 54503
+    },
+    {
+      "id": "suggestions-sa-csv",
+      "scope": "SA",
+      "layer": "suggestions",
+      "format": "csv",
+      "path": "suggested_mosques_sa.csv",
+      "bytes": 3808002,
+      "sha256": "655b58932192d9ef7a91687210f2b0210b98c185c1c95fbaa27681f52b0796ea",
+      "features": 54503
+    },
+    {
+      "id": "boundary-sa-geojson",
+      "scope": "SA",
+      "layer": "boundary",
+      "format": "geojson",
+      "path": "sa_boundary.geojson",
+      "bytes": 122823,
+      "sha256": "85ee0cfde90a6eda0ad7d4dea8b02c283a5f997f3df4fac629713e0cb6011b4e",
+      "features": 1
+    }
+  ],
+  "overpass_presets": [
+    {
+      "id": "places_of_worship_sa",
+      "label": {
+        "ar": "جميع بيوت ومصليات العبادة في المملكة",
+        "en": "All Places of Worship in Saudi Arabia"
+      },
+      "query": "[out:json][timeout:90];\narea[\"ISO3166-1\"=\"SA\"]->.searchArea;\n(\n  nwr[\"amenity\"=\"place_of_worship\"](area.searchArea);\n);\nout center tags;"
+    },
+    {
+      "id": "unnamed_mosques",
+      "label": {
+        "ar": "مساجد ومصليات غير محددة الاسم",
+        "en": "Unnamed Mosques & Prayer Rooms"
+      },
+      "query": "[out:json][timeout:60];\narea[\"ISO3166-1\"=\"SA\"]->.searchArea;\n(\n  nwr[\"amenity\"=\"place_of_worship\"][\"!name\"](area.searchArea);\n);\nout center tags;"
+    },
+    {
+      "id": "missing_name_en",
+      "label": {
+        "ar": "مساجد تفتقر لاسم لاتيني (name:en)",
+        "en": "Mosques Missing English Names (name:en)"
+      },
+      "query": "[out:json][timeout:60];\narea[\"ISO3166-1\"=\"SA\"]->.searchArea;\n(\n  nwr[\"amenity\"=\"place_of_worship\"][\"name\"][\"!name:en\"](area.searchArea);\n);\nout center tags;"
+    },
+    {
+      "id": "building_yes_mosques",
+      "label": {
+        "ar": "مساجد موسومة building=yes",
+        "en": "Mosques Tagged building=yes"
+      },
+      "query": "[out:json][timeout:60];\narea[\"ISO3166-1\"=\"SA\"]->.searchArea;\n(\n  nwr[\"amenity\"=\"place_of_worship\"][\"building\"=\"yes\"](area.searchArea);\n);\nout center tags;"
+    },
+    {
+      "id": "mosque_outlines_nodes",
+      "label": {
+        "ar": "مساجد مرسومة كنقاط فقط وليست مباني",
+        "en": "Mosques Mapped Only as Nodes"
+      },
+      "query": "[out:json][timeout:60];\narea[\"ISO3166-1\"=\"SA\"]->.searchArea;\n(\n  node[\"amenity\"=\"place_of_worship\"][\"!building\"](area.searchArea);\n);\nout;"
+    }
+  ]
+}

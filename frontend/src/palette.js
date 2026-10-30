@@ -48,6 +48,7 @@ export const ACTIONS = [
   { id: 'guides', name_ar: 'أدلة وإرشادات التحرير', name_en: 'Open Documentation & Guides', icon: '📚' },
   { id: 'tasks', name_ar: 'فتح حملات التحرير والتخطيط', name_en: 'Open Mapping Tasks & Sprints', icon: '🎯' },
   { id: 'tags', name_ar: 'فتح دليل وسوم المساجد', name_en: 'Open Saudi Tag Directory', icon: '📖' },
+  { id: 'data_hub', name_ar: 'فتح مركز تحميل البيانات المفتوحة', name_en: 'Open Data Downloads Hub', icon: '💾' },
   { id: 'community', name_ar: 'فتح إحصاءات المجتمع ولوحة الشرف', name_en: 'Open Community Stats & Leaderboard', icon: '🏆' },
   { id: 'toggle_lang', name_ar: 'تبديل اللغة (English / العربية)', name_en: 'Toggle Language (Arabic / English)', icon: '🌐' },
   { id: 'auth_login', name_ar: 'تسجيل الدخول عبر OpenStreetMap', name_en: 'Sign in with OpenStreetMap', icon: '👤' },

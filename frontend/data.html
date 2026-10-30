@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مركز البيانات المفتوحة والتحميل | منارة: خريطة بيوت الله</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💾%3C/text%3E%3C/svg%3E">
+  <link rel="canonical" href="https://manara.saudiosm.org/data">
+  <meta name="description" content="مركز تحميل البيانات الجغرافية المفتوحة لمساجد ومصليات المملكة العربية السعودية بصيغ GeoJSON و CSV مع بصمات التحقق SHA-256 واستعلامات Overpass Turbo.">
+</head>
+<body data-title-key="dataTitle">
+  <header class="page-header">
+    <nav style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <a href="/"><span data-lang="ar">← العودة إلى الخريطة</span><span data-lang="en">← Back to Map</span></a>
+      <a href="/qa"><span data-lang="ar">الجودة</span><span data-lang="en">QA</span></a>
+      <a href="/changes"><span data-lang="ar">التعديلات</span><span data-lang="en">Changes</span></a>
+      <a href="/tasks"><span data-lang="ar">الحملات</span><span data-lang="en">Tasks</span></a>
+      <a href="/tags"><span data-lang="ar">دليل الوسوم</span><span data-lang="en">Tags</span></a>
+      <a href="/data" style="color: var(--color-primary); font-weight: 700;"><span data-lang="ar">البيانات</span><span data-lang="en">Data Hub</span></a>
+      <a href="/community"><span data-lang="ar">المجتمع</span><span data-lang="en">Community</span></a>
+    </nav>
+    <button type="button" id="btn-toggle-lang" lang="en">English</button>
+  </header>
+
+  <main class="data-container">
+    <section class="data-hero">
+      <h1 data-lang="ar">مركز البيانات الجغرافية المفتوحة</h1>
+      <h1 data-lang="en">Open Geospatial Data Hub</h1>
+      <p data-lang="ar">
+        حمّل بيانات بيوت العبادة وفجوات التغطية واقتراحات ويكي بيانات في المملكة العربية السعودية بصيغ متعددة مع قيم التحقق SHA-256، أو استعلم عنها مباشرة عبر Overpass Turbo.
+      </p>
+      <p data-lang="en">
+        Download places of worship, coverage gaps, and Wikidata suggestions in Saudi Arabia across multiple formats with SHA-256 checksums, or query them directly with Overpass Turbo.
+      </p>
+
+      <div class="data-license-banner">
+        <span class="data-license-badge">ODbL 1.0</span>
+        <span data-lang="ar">جميع البيانات منشورة بموجب ترخيص قواعد البيانات المفتوحة وتنسب لمساهمي OpenStreetMap.</span>
+        <span data-lang="en">Published under the Open Database License, attributed to © OpenStreetMap contributors.</span>
+        <div style="margin-inline-start: auto; display: flex; gap: 16px; font-size: 0.85rem;">
+          <span><span data-lang="ar">الإصدار:</span><span data-lang="en">Version:</span> <strong id="meta-dataset-version">–</strong></span>
+          <span><span data-lang="ar">تاريخ OSM:</span><span data-lang="en">PBF Date:</span> <strong id="meta-pbf-date">–</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter Bar -->
+    <div class="data-filter-bar">
+      <div class="data-filter-group">
+        <input type="search" id="data-search-input" class="data-search-input" placeholder="ابحث بالاسم أو المسار..." aria-label="بحث في الملفات" />
+        <select id="filter-layer" class="data-filter-select" aria-label="تصفية حسب الطبقة">
+          <option value="all">جميع الطبقات (All Layers)</option>
+          <option value="places">بيوت العبادة (Places)</option>
+          <option value="gaps">فجوات التغطية (Gaps)</option>
+          <option value="suggestions">اقتراحات ويكي بيانات (Suggestions)</option>
+          <option value="boundary">الحدود والمناطق (Boundaries)</option>
+        </select>
+        <select id="filter-format" class="data-filter-select" aria-label="تصفية حسب الصيغة">
+          <option value="all">جميع الصيغ (All Formats)</option>
+          <option value="geojson">GeoJSON</option>
+          <option value="csv">CSV (جداول إكسل)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Files Table -->
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th data-lang="ar">الملف والمعرف</th><th data-lang="en">File & ID</th>
+            <th data-lang="ar">الطبقة</th><th data-lang="en">Layer</th>
+            <th data-lang="ar">الصيغة</th><th data-lang="en">Format</th>
+            <th data-lang="ar">السجلات</th><th data-lang="en">Records</th>
+            <th data-lang="ar">الحجم</th><th data-lang="en">Size</th>
+            <th data-lang="ar">بصمة SHA-256</th><th data-lang="en">SHA-256 Hash</th>
+            <th data-lang="ar">تحميل</th><th data-lang="en">Download</th>
+          </tr>
+        </thead>
+        <tbody id="data-table-body">
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--color-text-muted); padding: 32px;">
+              جارٍ تحميل فهرس البيانات...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Overpass Turbo Presets Section -->
+    <section class="presets-section">
+      <h2 data-lang="ar">استعلامات Overpass Turbo الجاهزة</h2>
+      <h2 data-lang="en">Pre-configured Overpass Turbo Queries</h2>
+      <p data-lang="ar">
+        استعلم مباشرة عن أحدث بيانات مساجد المملكة مباشرة من خوادم خريطة الشارع المفتوحة دون الحاجة لتحميل ملفات كبيرة.
+      </p>
+      <p data-lang="en">
+        Query the live OpenStreetMap database directly for Saudi mosques without downloading full extracts.
+      </p>
+
+      <div id="overpass-presets-grid" class="presets-grid"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/src/data.js"></script>
+</body>
+</html>
