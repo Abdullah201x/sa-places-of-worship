@@ -83,18 +83,78 @@ def is_in_sa_bbox(lat: float, lon: float) -> bool:
     return min_lon <= lon <= max_lon and min_lat <= lat <= max_lat
 
 
-def parse_osc_stream(xml_bytes: bytes) -> list[dict[str, Any]]:
+def load_known_places(conn) -> dict[tuple[str, int], dict[str, Any]]:
+    """
+    Loads the known-places cache: (osm_type, osm_id) -> {"lat", "lon"} for the
+    ~14k places in the daily dataset plus live-created ones. Only these objects
+    can be recognised when they are deleted, since diffs carry no tags for
+    deletions, and ways/relations in the diff have no coordinates of their own.
+    """
+    known: dict[tuple[str, int], dict[str, Any]] = {}
+    with conn.cursor() as cur:
+        for table in ("places", "live_places"):
+            cur.execute(
+                f"SELECT osm_type, osm_id, ST_Y(geom) AS lat, ST_X(geom) AS lon FROM {table} WHERE geom IS NOT NULL;"
+            )
+            for row in cur.fetchall():
+                if isinstance(row, dict):
+                    osm_type, osm_id, lat, lon = row["osm_type"], row["osm_id"], row["lat"], row["lon"]
+                else:
+                    osm_type, osm_id, lat, lon = row
+                known[(osm_type, int(osm_id))] = {"lat": lat, "lon": lon}
+    return known
+
+
+def _resolve_centroid(elem, diff_nodes: dict[int, tuple[float, float]]) -> tuple[float, float] | None:
+    """Mean of the member nodes that appear in this diff, or None if none do."""
+    if elem.tag.lower() == "way":
+        refs = [int(nd.attrib["ref"]) for nd in elem.findall("nd") if nd.attrib.get("ref")]
+    else:
+        refs = [
+            int(m.attrib["ref"]) for m in elem.findall("member")
+            if m.attrib.get("type") == "node" and m.attrib.get("ref")
+        ]
+    coords = [diff_nodes[r] for r in refs if r in diff_nodes]
+    if not coords:
+        return None
+    return (sum(c[0] for c in coords) / len(coords), sum(c[1] for c in coords) / len(coords))
+
+
+def parse_osc_stream(
+    xml_bytes: bytes,
+    known_places: dict[tuple[str, int], dict[str, Any]] | None = None,
+    pending: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     """
     Parses OSM changeset diff XML (.osc) from uncompressed bytes.
     Extracts created, modified, and deleted worship places inside Saudi Arabia.
     Strictly drops `user` and `uid`.
+
+    The minutely feed is planet-wide, so an object is only kept when it can be
+    tied to Saudi Arabia:
+    - objects in `known_places` (the dataset cache) are always kept, located by
+      their cached position (needed for deletions, which carry no tags);
+    - other worship-tagged nodes must be inside the SA bbox;
+    - other worship-tagged ways/relations are located from nodes in the same
+      diff; if that fails they are appended to `pending` (when given) for the
+      daily run to confirm, and otherwise dropped.
     """
+    known_places = known_places or {}
     events = []
     try:
         root = ET.fromstring(xml_bytes)
     except Exception as e:
         print(f"[WARN] Failed to parse OSC XML: {e}")
         return []
+
+    # Node positions in this diff, used to place ways and relations
+    diff_nodes: dict[int, tuple[float, float]] = {}
+    for action_node in root:
+        if action_node.tag.lower() not in ("create", "modify"):
+            continue
+        for elem in action_node:
+            if elem.tag.lower() == "node" and elem.attrib.get("lat") is not None and elem.attrib.get("lon") is not None:
+                diff_nodes[int(elem.attrib.get("id", 0))] = (float(elem.attrib["lat"]), float(elem.attrib["lon"]))
 
     # root contains children: <create>, <modify>, <delete>
     for action_node in root:
@@ -112,10 +172,7 @@ def parse_osc_stream(xml_bytes: bytes) -> list[dict[str, Any]]:
             osm_id = int(elem.attrib.get("id", 0))
             version = int(elem.attrib.get("version", 1))
             changeset_id = int(elem.attrib.get("changeset", 0)) or None
-            lat_str = elem.attrib.get("lat")
-            lon_str = elem.attrib.get("lon")
-            lat = float(lat_str) if lat_str is not None else None
-            lon = float(lon_str) if lon_str is not None else None
+            cached = known_places.get((osm_type, osm_id))
 
             # Collect tags
             tags = {}
@@ -125,12 +182,42 @@ def parse_osc_stream(xml_bytes: bytes) -> list[dict[str, Any]]:
                 if k and v:
                     tags[k] = v
 
-            # Check if this object is a place of worship
-            if not is_worship_tagged(tags) and kind != "deleted":
+            # Deletions have no tags, so only known places can be recognised.
+            # Other objects must be worship-tagged, unless they are known
+            # places (a known place losing its tags is still a change).
+            if kind == "deleted":
+                if not cached:
+                    continue
+            elif not is_worship_tagged(tags) and not cached:
                 continue
 
-            # Check bounding box if coordinates are present
-            if lat is not None and lon is not None:
+            # Locate the object
+            lat_str = elem.attrib.get("lat")
+            lon_str = elem.attrib.get("lon")
+            lat = float(lat_str) if lat_str is not None else None
+            lon = float(lon_str) if lon_str is not None else None
+            if lat is None or lon is None:
+                if osm_type != "node":
+                    centroid = _resolve_centroid(elem, diff_nodes) if kind != "deleted" else None
+                    if centroid is not None:
+                        lat, lon = centroid
+                if (lat is None or lon is None) and cached:
+                    lat, lon = cached["lat"], cached["lon"]
+
+            if not cached:
+                if lat is None or lon is None:
+                    # A worship-tagged way/relation we can't place yet
+                    if pending is not None and osm_type != "node":
+                        pending.append({
+                            "osm_type": osm_type,
+                            "osm_id": osm_id,
+                            "version": version,
+                            "tags": tags,
+                            "node_refs": [
+                                int(nd.attrib["ref"]) for nd in elem.findall("nd") if nd.attrib.get("ref")
+                            ],
+                        })
+                    continue
                 if not is_in_sa_bbox(lat, lon):
                     continue
 

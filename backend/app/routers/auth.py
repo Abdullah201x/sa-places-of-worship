@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -30,6 +31,37 @@ class SessionRequest(BaseModel):
 
 class UpdateMeRequest(BaseModel):
     leaderboard_opt_in: bool
+
+
+def _upsert_user_and_create_session(conn, osm_uid, display_name, avatar_url, osm_changesets, account_created_dt, is_admin):
+    """Upserts the user and creates a session row; returns (user_row, raw_session_token)."""
+    with conn.transaction():
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO users (
+                    osm_uid, display_name, avatar_url, osm_changesets,
+                    osm_account_created, is_admin, last_login_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (osm_uid) DO UPDATE SET
+                    display_name = EXCLUDED.display_name,
+                    avatar_url = EXCLUDED.avatar_url,
+                    osm_changesets = EXCLUDED.osm_changesets,
+                    is_admin = EXCLUDED.is_admin,
+                    last_login_at = NOW()
+                RETURNING osm_uid, display_name, avatar_url, osm_changesets, leaderboard_opt_in, is_admin;
+            """, (osm_uid, display_name, avatar_url, osm_changesets, account_created_dt, is_admin))
+            user_row = dict(cur.fetchone())
+
+            # 3. Create cryptographically secure random session
+            raw_token = generate_session_token()
+            token_h = hash_token(raw_token)
+
+            cur.execute("""
+                INSERT INTO sessions (token_hash, osm_uid, created_at, expires_at, last_seen_at)
+                VALUES (%s, %s, NOW(), NOW() + INTERVAL '30 days', NOW());
+            """, (token_h, osm_uid))
+    return user_row, raw_token
 
 
 @router.post("/auth/session")
@@ -112,33 +144,12 @@ async def create_session(
 
     is_admin = osm_uid in get_admin_uids()
 
-    # 2. Upsert user and create session atomically in database
-    with conn.transaction():
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO users (
-                    osm_uid, display_name, avatar_url, osm_changesets,
-                    osm_account_created, is_admin, last_login_at
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, NOW())
-                ON CONFLICT (osm_uid) DO UPDATE SET
-                    display_name = EXCLUDED.display_name,
-                    avatar_url = EXCLUDED.avatar_url,
-                    osm_changesets = EXCLUDED.osm_changesets,
-                    is_admin = EXCLUDED.is_admin,
-                    last_login_at = NOW()
-                RETURNING osm_uid, display_name, avatar_url, osm_changesets, leaderboard_opt_in, is_admin;
-            """, (osm_uid, display_name, avatar_url, osm_changesets, account_created_dt, is_admin))
-            user_row = dict(cur.fetchone())
-
-            # 3. Create cryptographically secure random session
-            raw_token = generate_session_token()
-            token_h = hash_token(raw_token)
-
-            cur.execute("""
-                INSERT INTO sessions (token_hash, osm_uid, created_at, expires_at, last_seen_at)
-                VALUES (%s, %s, NOW(), NOW() + INTERVAL '30 days', NOW());
-            """, (token_h, osm_uid))
+    # 2. Upsert user and create session atomically in database. The driver is
+    # synchronous, so run it in the threadpool rather than blocking the event loop.
+    user_row, raw_token = await run_in_threadpool(
+        _upsert_user_and_create_session,
+        conn, osm_uid, display_name, avatar_url, osm_changesets, account_created_dt, is_admin,
+    )
 
     # 4. Set HTTP-only secure cookie
     set_session_cookie(response, request, raw_token)

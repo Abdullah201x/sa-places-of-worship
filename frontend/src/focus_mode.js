@@ -387,11 +387,9 @@ export const FocusMode = {
 
       const added = EditBatch.add(item);
       if (added) {
-        // Mark locally as fixed and update properties
-        ReviewMarks.set(props, 'fixed');
-        if (focusRuleId === 'building_yes') {
-          props.building = 'mosque';
-        }
+        // The place is marked fixed (and its tags updated locally) only after
+        // the batch uploads; until then findNearestSimilarIssue skips it
+        // because it is queued, and discarding the batch leaves it untouched.
         refreshAfterEdits();
 
         const count = EditBatch.items().length;

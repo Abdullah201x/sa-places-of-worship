@@ -522,6 +522,12 @@ def update_tile_state(
 
             action = payload.action
 
+            # A tile locked by someone else can only be approved, invalidated or
+            # skipped by its lock holder (or an admin).
+            locked_by_other = tile.get("lock_uid") is not None and tile["lock_uid"] != user_uid and not is_admin
+            if action in ("approve", "invalidate", "skip") and locked_by_other:
+                raise HTTPException(status_code=403, detail="This tile is locked by another user.")
+
             if action == "lock":
                 # Check maximum active locks per user
                 cur.execute("""
@@ -571,6 +577,8 @@ def update_tile_state(
             elif action == "release":
                 if tile.get("lock_uid") != user_uid and not is_admin:
                     raise HTTPException(status_code=403, detail="Only the lock holder or an admin can release this lock.")
+                if current_state not in ("mapping", "validating"):
+                    raise HTTPException(status_code=400, detail=f"Cannot release tile in state '{current_state}'; it is not locked.")
 
                 new_state = "ready" if current_state == "mapping" else "mapped"
                 cur.execute("""
