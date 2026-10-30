@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>أدلة التحرير ورسم المساجد | منارة: خريطة بيوت الله</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📖%3C/text%3E%3C/svg%3E">
+  <link rel="canonical" href="https://manara.saudiosm.org/guides">
+  <meta name="description" content="أدلة وإرشادات رسم المساجد وبيوت الله في خريطة الشارع المفتوحة بالمملكة العربية السعودية: معايير الأسماء والترجمة الصوتية، رسم حدود المباني، وإعداد JOSM.">
+</head>
+<body data-title-key="guidesTitle">
+  <header class="page-header">
+    <nav style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <a href="/"><span data-lang="ar">← العودة إلى الخريطة</span><span data-lang="en">← Back to Map</span></a>
+      <a href="/start"><span data-lang="ar">ابدأ هنا (مسار المبتدئين)</span><span data-lang="en">Start Here</span></a>
+      <a href="/tags"><span data-lang="ar">دليل الوسوم</span><span data-lang="en">Tags</span></a>
+      <a href="/qa"><span data-lang="ar">الجودة</span><span data-lang="en">QA</span></a>
+      <a href="/community"><span data-lang="ar">المجتمع</span><span data-lang="en">Community</span></a>
+    </nav>
+    <button type="button" id="btn-toggle-lang" lang="en">English</button>
+  </header>
+
+  <main class="guides-container">
+    <div class="guides-hero">
+      <h1 data-lang="ar">أدلة وإرشادات رسم المساجد</h1>
+      <h1 data-lang="en">Mosque Mapping & Documentation Guides</h1>
+      <p data-lang="ar">
+        دليل شامل للمساهمين في خريطة الشارع المفتوحة بالمملكة: قواعد الأسماء، التمييز بين المباني والنقاط، إعداد المحررات، وآداب التعاون.
+      </p>
+      <p data-lang="en">
+        Comprehensive guides for OpenStreetMap contributors in Saudi Arabia: naming rules, outlines vs nodes, editor setup, and collaboration etiquette.
+      </p>
+    </div>
+
+    <div class="guides-list">
+      <!-- Guide 1: Naming & Transliteration -->
+      <article class="guide-article" id="names-and-transliteration">
+        <div class="guide-header">
+          <div class="guide-title-group">
+            <span class="guide-icon">🔤</span>
+            <h2 class="guide-title">
+              <span data-lang="ar">دليل تسمية المساجد والترجمة الصوتية</span>
+              <span data-lang="en">Mosque Naming & Transliteration Guide</span>
+            </h2>
+          </div>
+        </div>
+
+        <div class="guide-content" data-lang="ar">
+          <h3>1. الاسم الافتراضي name</h3>
+          <p>في المملكة العربية السعودية، الاسم الافتراضي <code>name</code> يجب أن يكون دائماً باللغة العربية مطابقاً لـ <code>name:ar</code>. لا تضع الاسم الإنجليزي في وسم <code>name</code>.</p>
+          
+          <h3>2. التمييز بين المسجد والجامع ومصلى العيد</h3>
+          <ul>
+            <li><strong>جامع:</strong> المسجد الذي تُقام فيه صلاة الجمعة. يترجم بالإنجليزية إلى <code>Grand Mosque</code> (مثل: جامع الراجحي -> <code>Al Rajhi Grand Mosque</code>).</li>
+            <li><strong>مسجد:</strong> المسجد المحلي للصلوات الخمس. يترجم بالإنجليزية إلى <code>Mosque</code> (مثل: مسجد التقوى -> <code>Al-Taqwa Mosque</code>).</li>
+            <li><strong>مصلى العيد:</strong> ساحة صلاة العيد المكشوفة. يترجم إلى <code>Eid Musalla</code>.</li>
+          </ul>
+
+          <h3>3. معايير الترجمة الصوتية الرسمية (GASGI / UNGEGN)</h3>
+          <ul>
+            <li><strong>أل التعريف:</strong> تكتب بحرف كبير يليه واصلة: <code>Al-</code> (مثل: <code>Al-Noor Mosque</code>).</li>
+            <li><strong>الأسماء المركبة مع عبد:</strong> تدمج بالإنجليزية (مثل: <code>Abdulrahman</code> / <code>Abdulaziz</code>).</li>
+            <li><strong>حذف عبارات التبجيل:</strong> تحذف عبارات مثل (رضي الله عنه، رحمه الله) من وسمي <code>name</code> و <code>name:en</code> لأنها ليست جزءاً من الاسم الجغرافي.</li>
+          </ul>
+        </div>
+
+        <div class="guide-content" data-lang="en">
+          <h3>1. The Default name Tag</h3>
+          <p>In Saudi Arabia, the default <code>name</code> tag must strictly be in Arabic, identical to <code>name:ar</code>. Transliterations belong in <code>name:en</code>.</p>
+
+          <h3>2. Jami' vs Masjid</h3>
+          <ul>
+            <li><strong>Jami' (جامع):</strong> Friday congregational mosque. Translated as <code>Grand Mosque</code> (e.g. <code>Al Rajhi Grand Mosque</code>).</li>
+            <li><strong>Masjid (مسجد):</strong> Daily neighbourhood mosque. Translated as <code>Mosque</code> (e.g. <code>Al-Taqwa Mosque</code>).</li>
+            <li><strong>Musalla (مصلى):</strong> Outdoor prayer grounds. Translated as <code>Eid Musalla</code>.</li>
+          </ul>
+
+          <h3>3. Official Transliteration Standards (GASGI / UNGEGN)</h3>
+          <ul>
+            <li><strong>Definite Article (Al-):</strong> Capitalized with hyphen: <code>Al-</code> (e.g. <code>Al-Ferdaws Mosque</code>).</li>
+            <li><strong>Compound Theophoric Names (Abd):</strong> Merged seamlessly as <code>Abdulrahman</code>, <code>Abdullah</code>.</li>
+            <li><strong>Omit Pious Honorifics:</strong> Pious eulogies are omitted from geographic name tags.</li>
+          </ul>
+        </div>
+
+        <div class="guide-action-box">
+          <a href="/tags#tag-name_en" class="guide-link-btn">
+            <span data-lang="ar">عرض وسم name:en في دليل الوسوم ←</span>
+            <span data-lang="en">View name:en in Tag Directory ←</span>
+          </a>
+        </div>
+      </article>
+
+      <!-- Guide 2: Outlines vs Nodes -->
+      <article class="guide-article" id="outlines-vs-nodes">
+        <div class="guide-header">
+          <div class="guide-title-group">
+            <span class="guide-icon">📐</span>
+            <h2 class="guide-title">
+              <span data-lang="ar">رسم حدود المباني مقابل النقاط</span>
+              <span data-lang="en">Building Outlines vs POI Nodes</span>
+            </h2>
+          </div>
+        </div>
+
+        <div class="guide-content" data-lang="ar">
+          <h3>1. الأفضلية: رسم حدود مبنى المسجد</h3>
+          <p>يفضل دائماً في خريطة الشارع المفتوحة رسم <strong>مضلع مبنى المسجد الفعلي</strong> <code>building=mosque</code> بدلاً من الاكتفاء بنقطة منفردة. هذا يعكس مساحة المبنى الدقيقة واتجاه قبلته نحو مكة المكرمة.</p>
+
+          <h3>2. دمج نقطة المسجد في المبنى لمنع التكرار</h3>
+          <p>إذا وجدت مسجداً مرسوماً كنقطة (Node) داخل مضلع مبنى (Way)، فهذا يعتبر تكراراً (<code>duplicate_poi</code>). الحل الصحيح هو نقل وسوم المسجد إلى المبنى، وتغيير وسم المبنى إلى <code>building=mosque</code>، ثم حذف النقطة المكررة.</p>
+
+          <h3>3. متى نستخدم النقطة (Node)؟</h3>
+          <p>نستخدم النقطة فقط عندما يكون المصلى غرفة صلاة داخل مبنى كبير متعدد الاستخدامات (مثل مصلى داخل مطار، أو داخل مول تجاري، أو داخل مستشفى).</p>
+        </div>
+
+        <div class="guide-content" data-lang="en">
+          <h3>1. Best Practice: Building Polygons</h3>
+          <p>Drawing the true building polygon (<code>building=mosque</code>) is always preferred over standalone nodes. It captures footprint area, structure, and prayer niche alignment.</p>
+
+          <h3>2. Subsuming Nodes into Building Outlines</h3>
+          <p>If a mosque POI node exists inside a building polygon, merge them: transfer tags to the building, ensure <code>building=mosque</code>, and delete the redundant inner node.</p>
+
+          <h3>3. When are POI Nodes Appropriate?</h3>
+          <p>Indoor musallas inside multi-purpose facilities (airports, shopping malls, hospitals, roadside rest stops).</p>
+        </div>
+
+        <div class="guide-action-box">
+          <a href="/tags#tag-building_mosque" class="guide-link-btn">
+            <span data-lang="ar">عرض وسم building=mosque ←</span>
+            <span data-lang="en">View building=mosque tag ←</span>
+          </a>
+        </div>
+      </article>
+
+      <!-- Guide 3: JOSM Remote Control Setup -->
+      <article class="guide-article" id="josm-setup">
+        <div class="guide-header">
+          <div class="guide-title-group">
+            <span class="guide-icon">⚡</span>
+            <h2 class="guide-title">
+              <span data-lang="ar">إعداد التحكم عن بُعد في JOSM</span>
+              <span data-lang="en">JOSM Remote Control Setup</span>
+            </h2>
+          </div>
+        </div>
+
+        <div class="guide-content" data-lang="ar">
+          <h3>ما هو JOSM Remote Control؟</h3>
+          <p>يتيح لك فتح أي موقع لمسجد من منصة منارة مباشرة في محرر JOSM المكتبي بضغطة زر واحدة أو بالضغط على مفتاح <code>J</code>.</p>
+
+          <h3>خطوات التفعيل في دقيقة واحدة:</h3>
+          <ol>
+            <li>افتح برنامج <strong>JOSM</strong> على جهازك.</li>
+            <li>اذهب إلى الإعدادات <strong>Edit > Preferences</strong> (أو اضغط <code>F12</code>).</li>
+            <li>اختر أيقونة <strong>التحكم عن بُعد (Remote Control)</strong>.</li>
+            <li>فعّل الخيار الأول <strong>Enable remote control</strong>.</li>
+            <li>فعّل خياري <strong>Load data for the specified bounding box</strong> و <strong>Zoom to specified bounding box</strong>.</li>
+            <li>اضغط <strong>OK</strong>. الآن أصبحت جاهزاً للتحرير السريع بنقرة واحدة!</li>
+          </ol>
+        </div>
+
+        <div class="guide-content" data-lang="en">
+          <h3>What is JOSM Remote Control?</h3>
+          <p>Enables 1-click loading of any mosque from Manara directly into your local desktop JOSM editor via localhost port 8111 (or shortcut <code>J</code>).</p>
+
+          <h3>1-Minute Setup Instructions:</h3>
+          <ol>
+            <li>Open <strong>JOSM</strong>.</li>
+            <li>Open Preferences via <strong>Edit > Preferences</strong> (shortcut <code>F12</code>).</li>
+            <li>Click the <strong>Remote Control</strong> tab.</li>
+            <li>Check <strong>Enable remote control</strong>.</li>
+            <li>Check <strong>Load data for the specified bounding box</strong> and <strong>Zoom to specified bounding box</strong>.</li>
+            <li>Click <strong>OK</strong>. You are ready for instant 1-click editing!</li>
+          </ol>
+        </div>
+      </article>
+
+      <!-- Guide 4: Review Etiquette -->
+      <article class="guide-article" id="review-etiquette">
+        <div class="guide-header">
+          <div class="guide-title-group">
+            <span class="guide-icon">🤝</span>
+            <h2 class="guide-title">
+              <span data-lang="ar">آداب مراجعة التعديلات والتواصل</span>
+              <span data-lang="en">Review Etiquette & Collaboration</span>
+            </h2>
+          </div>
+        </div>
+
+        <div class="guide-content" data-lang="ar">
+          <h3>1. حسن الظن والتواصل البنّاء</h3>
+          <p>افترض دائماً حسن النية لدى المساهمين الجدد في خريطة الشارع المفتوحة. أغلب الأخطاء ناجمة عن قلة المعرفة بالوسوم المحلية. كن ودوداً وموجهاً وشارك روابط دليل منارة لتسهيل التعلم.</p>
+
+          <h3>2. التحقق من أحدث الصور الجوية</h3>
+          <p>تأكد دائماً من مطابقة التعديل مع أحدث طبقات الصور الجوية (Esri World Imagery أو Bing Aerial)، ولا تحذف مسجداً قائماً إذا كان ظاهراً في الواقع أو مؤكداً بمصدر رسمي موثوق.</p>
+
+          <h3>3. كتابة تعليقات مفيدة لمجموعات التعديل</h3>
+          <p>احرص على كتابة وصف واضح للتعديلات المنجزة مثل: <code>إضافة الاسم الإنجليزي وتصحيح مذهب مساجد الرياض #منارة #SaudiOSM</code>.</p>
+        </div>
+
+        <div class="guide-content" data-lang="en">
+          <h3>1. Constructive Collaboration</h3>
+          <p>Always assume good faith with new contributors. Provide gentle feedback linking directly to the relevant Manara tagging entry to help them learn.</p>
+
+          <h3>2. High-Resolution Imagery Verification</h3>
+          <p>Cross-check edits against recent aerial layers (Esri, Bing). Never delete an established mosque without local ground confirmation.</p>
+
+          <h3>3. Informative Changeset Comments</h3>
+          <p>Use clear, descriptive changeset messages: <code>Add English names and Sunni denomination for Riyadh mosques #Manara #SaudiOSM</code>.</p>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <script type="module" src="/src/guides.js"></script>
+</body>
+</html>

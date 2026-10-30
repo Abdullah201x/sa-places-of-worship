@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ابدأ هنا: مسار المبتدئين | منارة: خريطة بيوت الله</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
+  <link rel="canonical" href="https://manara.saudiosm.org/start">
+  <meta name="description" content="مسار المبتدئين للمساهمين الجدد في خريطة الشارع المفتوحة بالمملكة: سجل دخولك، أصلح اسماً مقترحاً لمسجد، وتعرف على قواعد التوسيم في 3 خطوات بسيطة.">
+</head>
+<body data-title-key="startTitle">
+  <header class="page-header">
+    <nav style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <a href="/"><span data-lang="ar">← العودة إلى الخريطة</span><span data-lang="en">← Back to Map</span></a>
+      <a href="/guides"><span data-lang="ar">الأدلة والإرشادات</span><span data-lang="en">Guides</span></a>
+      <a href="/tags"><span data-lang="ar">دليل الوسوم</span><span data-lang="en">Tags</span></a>
+      <a href="/qa"><span data-lang="ar">الجودة</span><span data-lang="en">QA</span></a>
+      <a href="/community"><span data-lang="ar">المجتمع</span><span data-lang="en">Community</span></a>
+    </nav>
+    <button type="button" id="btn-toggle-lang" lang="en">English</button>
+  </header>
+
+  <main class="start-container">
+    <div class="start-hero">
+      <h1 data-lang="ar">مسار المساهمين الجدد في 3 خطوات</h1>
+      <h1 data-lang="en">New Contributor Path in 3 Steps</h1>
+      <p data-lang="ar">
+        ابدأ رحلتك في تحسين خريطة بيوت الله في المملكة: سجل دخولك، أصلح اسماً إنجليزياً واحداً مع الاقتراح الآلي، وتعرف على قواعد التوسيم.
+      </p>
+      <p data-lang="en">
+        Begin your journey improving Saudi places of worship on OSM: sign in, fix one English name with automated transliteration, and learn tagging rules.
+      </p>
+    </div>
+
+    <!-- 3-Step Wizard Navigation -->
+    <div class="wizard-steps-bar">
+      <div class="wizard-step-node active" id="step-node-1" title="Step 1: Sign in">1</div>
+      <div class="wizard-step-node active" id="step-node-2" title="Step 2: Fix a Mosque">2</div>
+      <div class="wizard-step-node" id="step-node-3" title="Step 3: Success & Next">3</div>
+    </div>
+
+    <!-- Step 1 Card -->
+    <section class="start-step-card" id="step-1-card">
+      <div class="step-header">
+        <span class="step-num-badge">1</span>
+        <h2 class="step-title">
+          <span data-lang="ar">الخطوة 1: تسجيل الدخول بحساب OpenStreetMap</span>
+          <span data-lang="en">Step 1: Sign in with OpenStreetMap</span>
+        </h2>
+      </div>
+      <div id="auth-status-container" class="auth-state-box">
+        <!-- Injected dynamically by start.js -->
+      </div>
+    </section>
+
+    <!-- Step 2 Card -->
+    <section class="start-step-card" id="step-2-card">
+      <div class="step-header">
+        <span class="step-num-badge">2</span>
+        <h2 class="step-title">
+          <span data-lang="ar">الخطوة 2: تصحيح اسم إنجليزي مقترح لمسجد</span>
+          <span data-lang="en">Step 2: Guided Fix with Automated Transliteration</span>
+        </h2>
+      </div>
+      <p style="color: var(--color-text-muted); font-size: 0.95rem; margin-top: 0;">
+        <span data-lang="ar">
+          اخترنا لك مسجداً يحمل اسماً عربياً موثقاً لكنه يفتقر إلى الاسم الإنجليزي <code>name:en</code>. قمنا بإنشاء الترجمة الصوتية الرسمية آلياً وفق معايير الهيئة العامة للمساحة (GASGI/UNGEGN). يمكنك قبولها أو تعديلها بضغطة زر:
+        </span>
+        <span data-lang="en">
+          We curated a mosque with a known Arabic name that lacks a proper <code>name:en</code>. The suggestion follows Saudi national mapping standards (GASGI/UNGEGN). Review and submit:
+        </span>
+      </p>
+
+      <div id="queue-container">
+        <!-- Rendered by start.js -->
+      </div>
+    </section>
+
+    <!-- Step 3 Card (Celebration) -->
+    <section class="start-step-card" id="step-3-container" style="display: none;">
+      <div class="step-header">
+        <span class="step-num-badge">3</span>
+        <h2 class="step-title">
+          <span data-lang="ar">الخطوة 3: مبارك! أصلحت مسجداً في الخريطة</span>
+          <span data-lang="en">Step 3: Congratulations! First Mosque Fixed</span>
+        </h2>
+      </div>
+
+      <div class="success-banner">
+        <h3>🎉 <span id="success-place-name"></span></h3>
+        <p data-lang="ar">تم إرسال تعديلك بنجاح إلى خريطة الشارع المفتوحة! أصبح المسجد الآن موثقاً باللغتين العربية والإنجليزية.</p>
+        <p data-lang="en">Your edit was published successfully to OpenStreetMap! The place of worship is now bilingual and accessible.</p>
+      </div>
+
+      <h3 style="margin-top: 24px; color: var(--color-text);">
+        <span data-lang="ar">ماذا بعد ذلك؟</span>
+        <span data-lang="en">What to do next?</span>
+      </h3>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
+        <a href="/tags#tag-name_en" class="action-btn-secondary">
+          <span data-lang="ar">تعرف على وسم name:en في دليل الوسوم ←</span>
+          <span data-lang="en">Learn more about name:en in Tag Directory ←</span>
+        </a>
+        <a href="/qa" class="action-btn-primary" style="text-decoration: none;">
+          <span data-lang="ar">انتقل إلى قائمة الجودة الكاملة (/qa) ←</span>
+          <span data-lang="en">Explore full QA Queue (/qa) ←</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/src/start.js"></script>
+</body>
+</html>

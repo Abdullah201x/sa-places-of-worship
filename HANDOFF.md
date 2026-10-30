@@ -646,3 +646,29 @@ Started Phase 3 from `REDESIGN.md` §3.2, §4.6 & §5:
    - Pytest: 120 passed.
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean production build in 225 ms.
+
+### 18.3 Phase 3 Step 3: Beginner Onboarding (`/start`) & Guides (`/guides`) — Phase 3 Complete
+1. **Curated Documentation Guides (`content/guides/*.md` & `frontend/guides.html`):**
+   - Authored 4 comprehensive bilingual guides matching [`REDESIGN.md` §3.2 & §5 Phase 3](file:///c:/Users/abdul/Desktop/GCC20260707/REDESIGN.md#L795):
+     - `names-and-transliteration.md`: Default Arabic naming, Jami' (Grand Mosque) vs Masjid (Mosque), UNGEGN/GASGI transliteration standards, omission of pious honorifics.
+     - `outlines-vs-nodes.md`: Merging POI nodes into building outlines (`building=mosque`), avoiding duplicate POIs (`duplicate_poi`), and when standalone nodes remain appropriate (indoor musallas in multi-purpose complexes).
+     - `josm-setup.md`: 1-minute setup instructions for JOSM Remote Control on localhost port `8111` with one-click editing.
+     - `review-etiquette.md`: Constructive community collaboration, high-resolution imagery verification, and descriptive changeset comments.
+   - Built [`frontend/guides.html`](file:///c:/Users/abdul/Desktop/GCC20260707/frontend/guides.html), [`frontend/src/guides.js`](file:///c:/Users/abdul/Desktop/GCC20260707/frontend/src/guides.js), and [`frontend/src/styles/guides.css`](file:///c:/Users/abdul/Desktop/GCC20260707/frontend/src/styles/guides.css).
+2. **Beginner 3-Step Onboarding Wizard (`frontend/start.html` & `frontend/src/start.js`):**
+   - Built `/start` beginner path per [`REDESIGN.md` §1.3](file:///c:/Users/abdul/Desktop/GCC20260707/REDESIGN.md#L90):
+     - **Step 1:** Sign in with OpenStreetMap (OAuth PKCE check via `OsmApi`, verified status badge).
+     - **Step 2:** Curated easy queue for `missing_name_en` where Arabic name is known; automated UNGEGN transliteration suggestion with inline editable input, tag diff preview (`+ name:en = ...`), 1-click submit via `OsmApi` or fallback edit in iD, and skip navigation.
+     - **Step 3:** Celebration banner with direct action links to `/tags#tag-name_en` and the main QA workspace (`/qa`).
+3. **AppShell & Navigation Integration:**
+   - Added `Start Here` and `Guides` to footer links in `frontend/index.html`.
+   - Added actions to Command Palette in `frontend/src/palette.js` and `frontend/src/app.js`.
+   - Registered `guides.html` and `start.html` entrypoints in `frontend/vite.config.js`.
+4. **Testing & Build Verification:**
+   - Added `frontend/tests/start_guides.test.js` (4 tests).
+   - Full Vitest suite: 77 passed across 10 test files.
+   - Full Pytest suite: 120 passed.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build in 712 ms across all 7 HTML pages (`index.html`, `qa`, `changes`, `tags.html`, `start.html`, `guides.html`, `about.html`, `privacy.html`, `community.html`).
+
+**Phase 3 is now 100% COMPLETE.** Next phase in roadmap is **Phase 4: Task Tracker & Sprints**.

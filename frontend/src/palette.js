@@ -44,6 +44,8 @@ export const ACTIONS = [
   { id: 'export_csv', name_ar: 'تصدير القائمة الحالية (CSV)', name_en: 'Export current list (CSV)', icon: '📊' },
   { id: 'edit_history', name_ar: 'فتح سجل تعديلاتي الميدانية', name_en: 'Open My Edits History', icon: '📝' },
   { id: 'shortcuts', name_ar: 'عرض اختصارات لوحة المفاتيح (?)', name_en: 'View Keyboard Shortcuts (?)', icon: '⌨️' },
+  { id: 'start', name_ar: 'مسار المبتدئين (ابدأ هنا)', name_en: 'New Contributor Onboarding (Start Here)', icon: '🚀' },
+  { id: 'guides', name_ar: 'أدلة وإرشادات التحرير', name_en: 'Open Documentation & Guides', icon: '📚' },
   { id: 'tags', name_ar: 'فتح دليل وسوم المساجد', name_en: 'Open Saudi Tag Directory', icon: '📖' },
   { id: 'community', name_ar: 'فتح إحصاءات المجتمع ولوحة الشرف', name_en: 'Open Community Stats & Leaderboard', icon: '🏆' },
   { id: 'toggle_lang', name_ar: 'تبديل اللغة (English / العربية)', name_en: 'Toggle Language (Arabic / English)', icon: '🌐' },
