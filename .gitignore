@@ -1,8 +1,12 @@
 # Large OSM source extract (download separately)
 *.osm.pbf
 
-# Generated data (rebuild via the Python pipeline)
-# sa_boundary.geojson
+# Generated data (rebuild via the Python pipeline). The core JSON/GeoJSON
+# datasets stay tracked because the Docker image bakes them in as a fallback;
+# the data-hub exports below are published by the pipeline container only.
+manifest.json
+/*.csv
+*.pmtiles
 
 
 # Python
@@ -25,10 +29,7 @@ key.pem
 *.db-wal
 *.db-shm
 
-# Domain pricing search scratch
-results.csv
-
-
+scratch/
 
 # Frontend
 frontend/node_modules/
