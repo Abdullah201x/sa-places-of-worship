@@ -672,3 +672,34 @@ Started Phase 3 from `REDESIGN.md` §3.2, §4.6 & §5:
    - Vite: clean production build in 712 ms across all 7 HTML pages (`index.html`, `qa`, `changes`, `tags.html`, `start.html`, `guides.html`, `about.html`, `privacy.html`, `community.html`).
 
 **Phase 3 is now 100% COMPLETE.** Next phase in roadmap is **Phase 4: Task Tracker & Sprints**.
+
+---
+
+## 19. Redesign Phase 4: Local Task Tracker & Sprints API (2026-10-30)
+
+Started Phase 4 from `REDESIGN.md` §3.1, §4.2, §4.7 & §5:
+
+### 19.1 Phase 4 Step 1: Database Schema & Sprints Concurrency Engine
+1. **Database Schema Expansion (`backend/app/schema.py`):**
+   - Added `sprints` table: stores area (region code or polygon), theme, rule IDs, urgency threshold, hashtag, dates, status (`draft`/`active`/`closed`), admin creator, and progress summary.
+   - Added `sprint_tiles` table: 0.02° grid cells (~2.2 km blocks) matching `calculate_gaps.py` 5x5 block aggregation. Features optimistic concurrency `rev`, states (`ready`, `mapping`, `mapped`, `validating`, `validated`, `invalidated`, `skipped`), lock TTL (2h), `lock_uid`, `lock_display_name`, `lock_kind`, `lock_expires_at`, `mapped_by`, `validated_by`, and `workload`.
+   - Added `tile_events` table: append-only audit trail logging all state transitions, reasons, notes, and user UIDs.
+2. **Sprints Concurrency & Management API (`backend/app/routers/sprints.py`):**
+   - `GET /api/v1/sprints`: lists sprints with computed progress summary (`total`, `by_state`, `workload_remaining`, `percent_complete`).
+   - `POST /api/v1/sprints`: admin-only sprint creation with area bounding (validates area <= 5,000 km², tiles <= 2,000) and automated 0.02° tile generation.
+   - `GET /api/v1/sprints/{slug}`: sprint metadata and progress.
+   - `PATCH /api/v1/sprints/{slug}`: admin-only partial update (title, instructions, status, dates, hashtag).
+   - `GET /api/v1/sprints/{slug}/tiles`: compact tile array with `ETag: W/"<rev_max>"` supporting 304 Not Modified caching for 60s background polling.
+   - `PUT /api/v1/sprints/{slug}/tiles/{tile_id}`: atomic state transitions (`lock`, `release`, `done`, `approve`, `invalidate`, `skip`, `reopen`):
+     - **Optimistic Concurrency:** checks `If-Match: rev`; returns `409 Conflict` on concurrent collisions.
+     - **Self-Validation Rejection:** returns `403 Forbidden` if a mapper attempts to validate their own tile (`mapped_by == user.osm_uid`).
+     - **Lock TTL & Auto-Expiry:** 2-hour lease with lazy expiration returning stale locks to previous stable state.
+     - **Active Locks Cap:** enforces maximum 3 active simultaneous locks per user.
+   - `GET /api/v1/sprints/{slug}/maproulette`: exports sprint tasks as a valid MapRoulette challenge GeoJSON FeatureCollection.
+3. **Integration & Test Verification:**
+   - Registered `sprints.router` in `backend/app/main.py`.
+   - Added `tests/test_sprints_api.py` (10 unit & concurrency tests).
+   - Pytest: 130 passed (up from 120).
+   - Vitest: 77 passed across 10 test files.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build in 374 ms.

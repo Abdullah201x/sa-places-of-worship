@@ -158,5 +158,65 @@ def init_app_tables(conn):
         );
 
         CREATE INDEX IF NOT EXISTS idx_tag_usage_key ON tag_usage_history (tag_key, tag_value);
+
+        CREATE TABLE IF NOT EXISTS sprints (
+            id SERIAL PRIMARY KEY,
+            slug TEXT UNIQUE NOT NULL,
+            title JSONB NOT NULL,
+            instructions JSONB NOT NULL DEFAULT '{}'::jsonb,
+            theme TEXT NOT NULL DEFAULT 'worship',
+            area JSONB NOT NULL,
+            rule_ids TEXT[] DEFAULT '{}'::text[],
+            gap_min_urgency INT,
+            hashtag TEXT NOT NULL,
+            starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            ends_at TIMESTAMPTZ,
+            status TEXT NOT NULL DEFAULT 'draft',
+            created_by BIGINT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sprints_status ON sprints (status);
+        CREATE INDEX IF NOT EXISTS idx_sprints_slug ON sprints (slug);
+
+        CREATE TABLE IF NOT EXISTS sprint_tiles (
+            sprint_id INT NOT NULL REFERENCES sprints(id) ON DELETE CASCADE,
+            tile_id TEXT NOT NULL,
+            bbox REAL[] NOT NULL,
+            state TEXT NOT NULL DEFAULT 'ready',
+            rev INT NOT NULL DEFAULT 1,
+            workload INT NOT NULL DEFAULT 0,
+            pending_refresh BOOLEAN NOT NULL DEFAULT FALSE,
+            lock_uid BIGINT,
+            lock_display_name TEXT,
+            lock_kind TEXT,
+            lock_expires_at TIMESTAMPTZ,
+            mapped_by BIGINT,
+            validated_by BIGINT,
+            skip_reason TEXT,
+            note TEXT,
+            auto BOOLEAN NOT NULL DEFAULT FALSE,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (sprint_id, tile_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sprint_tiles_sprint_state ON sprint_tiles (sprint_id, state);
+        CREATE INDEX IF NOT EXISTS idx_sprint_tiles_lock ON sprint_tiles (lock_uid, lock_expires_at);
+
+        CREATE TABLE IF NOT EXISTS tile_events (
+            id SERIAL PRIMARY KEY,
+            sprint_id INT NOT NULL REFERENCES sprints(id) ON DELETE CASCADE,
+            tile_id TEXT NOT NULL,
+            osm_uid BIGINT NOT NULL,
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL,
+            reason TEXT,
+            note TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_tile_events_sprint_tile ON tile_events (sprint_id, tile_id);
+        CREATE INDEX IF NOT EXISTS idx_tile_events_created_at ON tile_events (created_at DESC);
         """)
 

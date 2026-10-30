@@ -19,6 +19,7 @@ from app.routers import (
     reviews,
     search,
     seo,
+    sprints,
     stats,
     suggestions,
     transliterate,
@@ -72,6 +73,7 @@ app.include_router(healthz.router)
 app.include_router(auth.router)
 app.include_router(issues.router)
 app.include_router(changes.router)
+app.include_router(sprints.router)
 app.include_router(reviews.router)
 app.include_router(edits.router)
 app.include_router(community_data.router)
