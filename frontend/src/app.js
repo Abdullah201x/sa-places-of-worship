@@ -1,4 +1,5 @@
-import './leaflet-bundle.js';
+import { kit } from './map_kit.js';
+import { worldPixel } from './gap_field.js';
 import { safeUrl, showToast, showLoadingText } from './ui.js';
 // The other map modules (editing, review, exporters) still import these from app.js.
 export { safeUrl, showToast, showLoadingText };
@@ -171,7 +172,7 @@ export const ESRI_MAX_PROBE_ZOOM = 21;   // Esri rarely publishes real imagery d
 export const esriMaxZoomCache = new Map();
 
 export async function esriTilesAvailable(zoom, centerLatLng) {
-  const point = map.project(centerLatLng, zoom);
+  const point = worldPixel(centerLatLng.lat, centerLatLng.lng, zoom);
   const tileSize = 256;
   const x = Math.floor(point.x / tileSize);
   const y = Math.floor(point.y / tileSize);
@@ -191,7 +192,7 @@ export async function esriTilesAvailable(zoom, centerLatLng) {
 // zoom with real imagery at the given point.
 export async function findEsriMaxZoom(centerLatLng) {
   // Determine regional cache key at zoom level 13 to avoid redundant checks when panning locally
-  const point13 = map.project(centerLatLng, 13);
+  const point13 = worldPixel(centerLatLng.lat, centerLatLng.lng, 13);
   const x13 = Math.floor(point13.x / 256);
   const y13 = Math.floor(point13.y / 256);
   const cacheKey = `${x13}_${y13}`;
@@ -467,27 +468,7 @@ export function setSuggestionsVisible(visible) {
 
       updateSuggestionsCounts();
 
-      suggestionsLayer = L.markerClusterGroup({
-        showCoverageOnHover: false,
-        chunkedLoading: true,
-        chunkInterval: 100,
-        chunkDelay: 20,
-        maxClusterRadius: 50,
-        disableClusteringAtZoom: 17,
-        iconCreateFunction: function (cluster) {
-          const childCount = cluster.getChildCount();
-          let size = 32;
-          if (childCount < 10) size = 32;
-          else if (childCount < 100) size = 42;
-          else size = 52;
-
-          return L.divIcon({
-            html: `<div class="suggestion-cluster" style="width: ${size}px; height: ${size}px; font-size: ${size > 40 ? 12 : 11}px;"><span>${fmtNum(childCount)}</span></div>`,
-            className: 'marker-cluster-custom',
-            iconSize: new L.Point(size, size)
-          });
-        }
-      });
+      suggestionsLayer = kit.createSuggestionLayer({ formatCount: fmtNum });
 
       suggestionsMarkers = [];
       suggestionsAllFeatures.forEach(f => {
@@ -496,18 +477,15 @@ export function setSuggestionsVisible(visible) {
         const isUnnamed = props.is_unnamed;
         suggestionsByQid[props.qid] = { ...props, lat, lon };
 
-        const marker = L.circleMarker([lat, lon], {
-          radius: 6,
-          color: isUnnamed ? '#64748b' : '#d97706',
-          fillColor: isUnnamed ? '#94a3b8' : '#f59e0b',
-          fillOpacity: 0.85,
-          weight: 1.5
+        const marker = kit.createSuggestionMarker({
+          lat, lon,
+          unnamed: Boolean(isUnnamed),
+          popupContent: () => buildSuggestionPopup(props, lat, lon)
         });
 
         marker.qid = props.qid;
         marker._sugProperties = props;
         marker._sugCoords = [lat, lon];
-        marker.bindPopup(() => buildSuggestionPopup(props, lat, lon));
         suggestionsMarkers.push(marker);
       });
 
@@ -1121,7 +1099,8 @@ export function setupAppShell() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+// main.js loads the map kit first, so this module can run after DOMContentLoaded.
+function boot() {
   onLanguageChange(refreshLanguageDependentUI);
   if (currentLang !== 'ar') setLanguage(currentLang);
   document.getElementById('btn-toggle-lang').addEventListener('click', () => {
@@ -1137,76 +1116,14 @@ document.addEventListener('DOMContentLoaded', () => {
   OsmApi.handleCallback().then(() => {
     loadData();
   });
-});
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
 
 // Build basemap layers according to whether a CARTO API key is provided
 export function createBasemapLayers() {
   const cartoKey = (localStorage.getItem('carto_api_key') || '').trim();
-  const cartoParam = cartoKey ? `?key=${encodeURIComponent(cartoKey)}` : '';
-
-  let darkLayer;
-  let lightLayer;
-
-  if (cartoKey) {
-    // If CARTO API key is provided, use official CARTO Dark Matter & Positron without watermark
-    darkLayer = L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png${cartoParam}`, {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20
-    });
-    lightLayer = L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png${cartoParam}`, {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 20
-    });
-  } else {
-    // Keyless, watermark-free Esri Canvas layers by default
-    darkLayer = L.layerGroup([
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-        maxZoom: 20,
-        maxNativeZoom: 19
-      }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '',
-        maxZoom: 20,
-        maxNativeZoom: 19
-      })
-    ]);
-    darkLayer.options = { maxZoom: 20 };
-
-    lightLayer = L.layerGroup([
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-        maxZoom: 20,
-        maxNativeZoom: 19
-      }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '',
-        maxZoom: 20,
-        maxNativeZoom: 19
-      })
-    ]);
-    lightLayer.options = { maxZoom: 20 };
-  }
-
-  const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    maxZoom: 20,
-    maxNativeZoom: 19
-  });
-
-  const streetsLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012',
-    maxZoom: 20
-  });
-
-  return {
-    'dark': darkLayer,
-    'satellite': satelliteLayer,
-    'light': lightLayer,
-    'streets': streetsLayer
-  };
+  return kit.createBasemaps({ cartoKey });
 }
 
 // Switches the active basemap on the map
@@ -1364,20 +1281,9 @@ export function setupCartoModalEvents() {
   }
 }
 
-// Initialize Leaflet Map
+// Initialize the map through the active kit (Leaflet or MapLibre)
 export function initMap() {
-  map = L.map('map', {
-    zoomControl: false // Custom styled zoom controls
-  }).setView(MAP_INITIAL_CENTER, MAP_INITIAL_ZOOM);
-
-  // The overlays are OSM data whatever the basemap, so the ODbL attribution
-  // stays on even over the Esri tiles.
-  map.attributionControl.addAttribution('Data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)');
-
-  // Position Zoom Control on the bottom-left to avoid sidebar overlap on the right (RTL layout)
-  L.control.zoom({
-    position: 'bottomleft'
-  }).addTo(map);
+  map = kit.createMap('map', { center: MAP_INITIAL_CENTER, zoom: MAP_INITIAL_ZOOM });
 
   // Define available basemaps (uses keyless Esri Dark/Light by default, or CARTO if API key is provided)
   basemaps = createBasemapLayers();
@@ -1388,33 +1294,7 @@ export function initMap() {
   currentBasemap.addTo(map);
 
   // Initialize Marker Cluster Layer for POI/Improve mode
-  markerClusterLayer = L.markerClusterGroup({
-    showCoverageOnHover: false,
-    maxClusterRadius: 50,
-    iconCreateFunction: function (cluster) {
-      const childCount = cluster.getChildCount();
-      let colorPrimary = currentMode === 'improve' ? '#ffb03a' : 'var(--color-primary)';
-      let c = currentMode === 'improve' ? 'rgba(255, 176, 58, ' : 'rgba(0, 242, 254, ';
-      
-      let size = 30;
-      if (childCount < 10) {
-        c += '0.2)';
-        size = 30;
-      } else if (childCount < 100) {
-        c += '0.4)';
-        size = 40;
-      } else {
-        c += '0.6)';
-        size = 50;
-      }
-      
-      return new L.DivIcon({
-        html: `<div style="background-color: ${c}; width: ${size}px; height: ${size}px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid ${colorPrimary}; box-shadow: 0 0 10px ${colorPrimary}; font-weight: bold; color: white;"><span>${childCount}</span></div>`,
-        className: 'marker-cluster-custom',
-        iconSize: new L.Point(size, size)
-      });
-    }
-  });
+  markerClusterLayer = kit.createPlaceLayer({ getMode: () => currentMode });
 
   // Track map movements/zooming to update stats.
   // Stat recomputation loops over every feature, so debounce it to keep panning smooth.
@@ -1440,7 +1320,7 @@ export function initMap() {
 
   // OSM Notes: layer for existing + newly-created note markers, click-to-place
   // handling in Add Note mode, and refetching nearby notes as the view moves.
-  noteMarkersLayer = L.layerGroup().addTo(map);
+  noteMarkersLayer = kit.createNoteLayer(map);
   map.on('click', (e) => {
     if (addMosqueMode) {
       handleMapClickForAddMosque(e);
@@ -1459,10 +1339,7 @@ export function initMap() {
       <button type="button" class="context-menu-btn ctx-add-mosque">${t('addMosqueContextAction')}</button>
       <button type="button" class="context-menu-btn ctx-add-note">${t('noteContextAction')}</button>
     `;
-    const popup = L.popup({ className: 'custom-context-popup', closeButton: true })
-      .setLatLng(e.latlng)
-      .setContent(container)
-      .openOn(map);
+    const popup = kit.openPopup(map, e.latlng, container, { className: 'custom-context-popup' });
 
     container.querySelector('.ctx-add-mosque').addEventListener('click', () => {
       map.closePopup(popup);
@@ -1628,13 +1505,7 @@ export function initializeDashboard(poiData, gapData, boundaryData, sizeData, an
 
   // Reconfigure Esri Satellite as a BoundaryCanvas layer restricted to the Saudi Arabia boundary
   if (boundaryData && boundaryData.geometry) {
-    basemaps['satellite'] = L.TileLayer.boundaryCanvas('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      boundary: boundaryData.geometry,
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      maxZoom: 20,
-      maxNativeZoom: 19,
-      crossOrigin: true
-    });
+    basemaps['satellite'] = kit.createClippedSatellite(boundaryData.geometry);
   }
 
   // Derive the date-slider bounds from the real edited_at range in the data.
@@ -1710,30 +1581,6 @@ export function toggleLayersByZoom() {
 // the blob radius on screen, which is exactly what happens when zoomed into
 // dense cities to inspect detail.
 export let GAP_GRID_SIZE_DEG = 0.004; // overridden by worship_gaps_sa.json's grid_size
-export const GAP_GRADIENT_STOPS = [
-  { stop: 0.0, color: [63, 43, 150] },   // Deep Indigo
-  { stop: 0.5, color: [168, 192, 255] }, // Soft Lilac
-  { stop: 0.8, color: [236, 0, 140] },   // Neon Magenta
-  { stop: 1.0, color: [252, 103, 103] }  // Flame Orange/Red
-];
-
-export function gapScoreToColor(t) {
-  t = Math.max(0, Math.min(1, t));
-  for (let i = 1; i < GAP_GRADIENT_STOPS.length; i++) {
-    const a = GAP_GRADIENT_STOPS[i - 1];
-    const b = GAP_GRADIENT_STOPS[i];
-    if (t <= b.stop) {
-      const localT = (t - a.stop) / (b.stop - a.stop || 1);
-      return [
-        a.color[0] + (b.color[0] - a.color[0]) * localT,
-        a.color[1] + (b.color[1] - a.color[1]) * localT,
-        a.color[2] + (b.color[2] - a.color[2]) * localT
-      ];
-    }
-  }
-  return GAP_GRADIENT_STOPS[GAP_GRADIENT_STOPS.length - 1].color;
-}
-
 // worship_gaps_sa.json stores one [gx, gy, road_length_m, gap_score] row per
 // cell; a cell's position is implied by its grid index, so expand each row to
 // a small object with the cell-centre coordinates used for viewport counts.
@@ -1804,82 +1651,6 @@ export function buildSmoothedLookup(rawMap, rawMaxScore, radiusCells) {
   return { scoreByCell: smoothed, maxScore };
 }
 
-export const GapGradientLayer = L.GridLayer.extend({
-  initialize: function (scoreByCell, maxScore, options) {
-    L.GridLayer.prototype.initialize.call(this, options);
-    this._scoreByCell = scoreByCell;
-    this._maxScore = maxScore || 1;
-  },
-
-  _cellScore: function (gx, gy) {
-    const v = this._scoreByCell.get(gx + ',' + gy);
-    return v === undefined ? 0 : v;
-  },
-
-  // Bilinear interpolation between the 4 grid cells surrounding (lon, lat),
-  // so color is continuous across the real analysis grid at any zoom.
-  // Cell (gx, gy) spans [gx*G, (gx+1)*G) (calculate_gaps.py uses int(lon/G)),
-  // so its value sits at the cell centre: shift by half a cell before
-  // interpolating, otherwise the whole field is offset ~220 m south-west.
-  _interpolate: function (lon, lat) {
-    const fx = lon / GAP_GRID_SIZE_DEG - 0.5;
-    const fy = lat / GAP_GRID_SIZE_DEG - 0.5;
-    const x0 = Math.floor(fx), y0 = Math.floor(fy);
-    const tx = fx - x0, ty = fy - y0;
-
-    const s00 = this._cellScore(x0, y0);
-    const s10 = this._cellScore(x0 + 1, y0);
-    const s01 = this._cellScore(x0, y0 + 1);
-    const s11 = this._cellScore(x0 + 1, y0 + 1);
-
-    const top = s00 + (s10 - s00) * tx;
-    const bottom = s01 + (s11 - s01) * tx;
-    return top + (bottom - top) * ty;
-  },
-
-  createTile: function (coords) {
-    const tileSize = this.getTileSize();
-    const canvas = L.DomUtil.create('canvas', 'leaflet-tile');
-    canvas.width = tileSize.x;
-    canvas.height = tileSize.y;
-    const ctx = canvas.getContext('2d');
-    const step = 4; // sample every 4px and fill blocks, for performance
-
-    for (let py = 0; py < tileSize.y; py += step) {
-      for (let px = 0; px < tileSize.x; px += step) {
-        const tilePoint = coords.scaleBy(tileSize).add([px, py]);
-        const latlng = this._map.unproject(tilePoint, coords.z);
-        const score = this._interpolate(latlng.lng, latlng.lat);
-
-        if (score <= 0.001) continue;
-
-        const t = Math.min(score / this._maxScore, 1);
-        const [r, g, b] = gapScoreToColor(t);
-        const alpha = 0.15 + t * 0.65; // keep low scores subtle, peak gaps vivid
-
-        ctx.fillStyle = `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${alpha})`;
-        ctx.fillRect(px, py, step, step);
-      }
-    }
-
-    return canvas;
-  }
-});
-
-// One shared icon per marker class instead of a new divIcon per place.
-export const MARKER_ICONS = {};
-export function markerIcon(markerClass) {
-  if (!MARKER_ICONS[markerClass]) {
-    MARKER_ICONS[markerClass] = L.divIcon({
-      html: '<div class="custom-marker-inner"></div>',
-      className: `custom-marker ${markerClass}`,
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
-    });
-  }
-  return MARKER_ICONS[markerClass];
-}
-
 // Display name in the UI language (the Arabic name when no name:en exists).
 export function placeName(props) {
   return currentLang === 'en' ? props.name_en || props.name : props.name;
@@ -1926,10 +1697,10 @@ export function getPlaceMarker(f) {
     if (props.religion === 'christian') markerClass = 'christian';
   }
 
-  const marker = L.marker([lat, lon], { icon: markerIcon(markerClass) });
-  marker.bindPopup(() => buildPlacePopup(props, mode), { closeButton: false });
-  marker.on('click', () => {
-    showDetails(props, lat, lon);
+  const marker = kit.createPlaceMarker({
+    lat, lon, markerClass,
+    popupHtml: () => buildPlacePopup(props, mode),
+    onClick: () => showDetails(props, lat, lon)
   });
   f._markers[mode] = marker;
   return marker;
@@ -1973,7 +1744,7 @@ export function updateMapLayers() {
       1.0: '#ff3b30'   // Red
     };
 
-    heatmapLayer = L.heatLayer(heatPoints, {
+    heatmapLayer = kit.createHeatLayer(heatPoints, {
       radius: radiusVal,
       blur: blurVal,
       maxZoom: 14,
@@ -1998,7 +1769,7 @@ export function updateMapLayers() {
     // Explicit zIndex keeps the heatmap above whichever basemap tile layer is active, since
     // GridLayer has no bringToFront/bringToBack (those only exist on L.Path) and basemap
     // swaps re-append a fresh tile container that would otherwise stack on top by DOM order.
-    heatmapLayer = new GapGradientLayer(smoothed.scoreByCell, smoothed.maxScore, { maxZoom: 19, zIndex: 650 }).addTo(map);
+    heatmapLayer = kit.createGapLayer(smoothed.scoreByCell, smoothed.maxScore, { gridSize: GAP_GRID_SIZE_DEG }).addTo(map);
 
     // Disable marker clusters in gap mode since points are virtual grid cells
     toggleLayersByZoom();
@@ -3256,21 +3027,17 @@ export function renderNoteMarker(noteFeature) {
   const isClosed = props.status === 'closed';
   const commentText = (props.comments && props.comments.length) ? props.comments[0].text : '';
 
-  const icon = L.divIcon({
-    html: '<div class="note-marker-inner">📝</div>',
-    className: `note-marker ${isClosed ? 'closed' : ''}`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 22]
-  });
-
-  const marker = L.marker([lat, lon], { icon });
   const noteUrl = `https://www.openstreetmap.org/note/${props.id}`;
-  marker.bindPopup(`
+  const marker = kit.createNoteMarker({
+    lat, lon,
+    closed: isClosed,
+    popupHtml: `
     <div style="font-family: var(--font-body); text-align: start; padding: 2px; max-width: 220px;">
       <p style="margin: 0 0 6px 0; font-size: 12px; color: #333; white-space: pre-wrap;">${escapeHtml(commentText)}</p>
       <a href="${noteUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 11px;">${t('noteOpenOnOsm')}</a>
     </div>
-  `, { closeButton: false });
+  `
+  });
 
   noteMarkersLayer.addLayer(marker);
 }
@@ -3378,25 +3145,20 @@ export function placeMosqueMarker(lat, lon) {
   if (pendingMosqueMarker) {
     pendingMosqueMarker.setLatLng([lat, lon]);
   } else {
-    const icon = L.divIcon({
-      html: '<div class="add-mosque-marker-pin"><span class="marker-pulse"></span><span class="marker-icon-inner">🕌</span></div>',
-      className: 'add-mosque-marker',
-      iconSize: [36, 36],
-      iconAnchor: [18, 36]
-    });
-    pendingMosqueMarker = L.marker([lat, lon], { icon, draggable: true }).addTo(map);
-    pendingMosqueMarker.on('drag', (e) => {
-      const pos = e.target.getLatLng();
-      pendingMosqueLatLng = { lat: pos.lat, lon: pos.lng };
-      const display = document.getElementById('add-mosque-coords-display');
-      if (display) display.innerText = `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`;
+    pendingMosqueMarker = kit.createPendingMarker(map, {
+      lat, lon,
+      onDrag: (mLat, mLon) => {
+        pendingMosqueLatLng = { lat: mLat, lon: mLon };
+        const display = document.getElementById('add-mosque-coords-display');
+        if (display) display.innerText = `${mLat.toFixed(5)}, ${mLon.toFixed(5)}`;
+      }
     });
   }
 }
 
 export function removeMosqueMarker() {
   if (pendingMosqueMarker) {
-    if (map) map.removeLayer(pendingMosqueMarker);
+    pendingMosqueMarker.remove();
     pendingMosqueMarker = null;
   }
 }
