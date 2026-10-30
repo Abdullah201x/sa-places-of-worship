@@ -273,10 +273,15 @@ def publish():
     os.replace(tmp_link, CURRENT_LINK)
     log(f"Published {version}")
 
+    # Staging dirs are named per version, so one left by an interrupted run
+    # (e.g. a redeploy mid-publish) is never reused: drop them.
+    for d in os.listdir(PUBLISH_DIR):
+        if d.endswith(".staging"):
+            shutil.rmtree(os.path.join(PUBLISH_DIR, d), ignore_errors=True)
+
     # Keep the live version and the one before it (for a manual rollback).
     versions = sorted(d for d in os.listdir(PUBLISH_DIR)
-                      if d.startswith("v") and os.path.isdir(os.path.join(PUBLISH_DIR, d))
-                      and not d.endswith(".staging"))
+                      if d.startswith("v") and os.path.isdir(os.path.join(PUBLISH_DIR, d)))
     for old in versions[:-2]:
         shutil.rmtree(os.path.join(PUBLISH_DIR, old), ignore_errors=True)
     return version
