@@ -17,7 +17,15 @@ export default defineConfig({
     baseURL: 'https://localhost:8000',
     ignoreHTTPSErrors: true,
     channel: process.env.CI ? undefined : 'chrome',
-    launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
+    launchOptions: {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--use-angle=swiftshader',
+        '--enable-unsafe-swiftshader',
+      ],
+    },
     trace: 'retain-on-failure',
   },
   projects: [

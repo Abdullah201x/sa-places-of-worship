@@ -21,9 +21,11 @@ export function watchPage(page) {
   return problems;
 }
 
-// Loads a page and waits for the network to settle. Hash params (map view, mode, lang) go on the URL.
-export async function open(page, path, { settle = 2500 } = {}) {
-  await page.goto(path, { waitUntil: 'networkidle' });
+// Loads a page and waits for DOM ready + settle time.
+// Avoid 'networkidle' because background proxy calls (/api) and tile streaming
+// cause networkidle to hang or delay 30s+ on every navigation.
+export async function open(page, path, { settle = 1500 } = {}) {
+  await page.goto(path, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(settle);
 }
 
