@@ -478,6 +478,115 @@ def swap_staging_to_production(conn):
     print("  [SUCCESS] All tables swapped to production atomically!")
 
 
+
+def update_sprint_workloads(conn):
+    """
+    Computes and updates tile workloads and pending_refresh for active/draft sprints.
+    Workload = count of issues matching sprint rules + count of gaps exceeding min urgency within tile bbox.
+    pending_refresh = TRUE if verified edits exist newer than published_at for places within the tile.
+    """
+    print("Updating active sprint tile workloads and pending refresh flags...")
+    with conn.cursor() as cur:
+        # Check if sprints table exists
+        cur.execute("SELECT to_regclass('public.sprints');")
+        res = cur.fetchone()
+        if not res or not res[0]:
+            print("  [SKIP] sprints table does not exist.")
+            return
+
+        cur.execute("""
+            SELECT id, slug, rule_ids, gap_min_urgency
+            FROM sprints
+            WHERE status IN ('draft', 'active');
+        """)
+        active_sprints = cur.fetchall()
+        if not active_sprints:
+            print("  [SKIP] No active or draft sprints found.")
+            return
+
+        # Fetch latest dataset published_at timestamp
+        cur.execute("""
+            SELECT published_at FROM dataset_versions
+            ORDER BY published_at DESC LIMIT 1;
+        """)
+        row = cur.fetchone()
+        latest_published = row[0] if row else None
+
+        for sprint_id, slug, rule_ids, gap_min_urgency in active_sprints:
+            # 1. Update workload per tile
+            cur.execute("""
+                WITH tile_boxes AS (
+                    SELECT
+                        st.tile_id,
+                        ST_MakeEnvelope(st.bbox[1]::double precision, st.bbox[2]::double precision,
+                                        st.bbox[3]::double precision, st.bbox[4]::double precision, 4326) AS envelope
+                    FROM sprint_tiles st
+                    WHERE st.sprint_id = %s
+                ),
+                tile_issues AS (
+                    SELECT
+                        tb.tile_id,
+                        COUNT(i.rule_id) AS issue_count
+                    FROM tile_boxes tb
+                    JOIN places p ON ST_Within(p.geom, tb.envelope)
+                    JOIN issues i ON i.osm_type = p.osm_type AND i.osm_id = p.osm_id
+                    WHERE (%s::text[] IS NULL OR cardinality(%s::text[]) = 0 OR i.rule_id = ANY(%s::text[]))
+                    GROUP BY tb.tile_id
+                ),
+                tile_gaps AS (
+                    SELECT
+                        tb.tile_id,
+                        COUNT(g.id) AS gap_count
+                    FROM tile_boxes tb
+                    JOIN gaps g ON ST_Within(g.geom, tb.envelope)
+                    WHERE (%s::int IS NULL OR g.urgency_score >= %s::int)
+                    GROUP BY tb.tile_id
+                )
+                UPDATE sprint_tiles st
+                SET workload = COALESCE(ti.issue_count, 0) + COALESCE(tg.gap_count, 0)
+                FROM tile_boxes tb
+                LEFT JOIN tile_issues ti ON tb.tile_id = ti.tile_id
+                LEFT JOIN tile_gaps tg ON tb.tile_id = tg.tile_id
+                WHERE st.sprint_id = %s
+                  AND st.tile_id = tb.tile_id;
+            """, (sprint_id, rule_ids, rule_ids, rule_ids, gap_min_urgency, gap_min_urgency, sprint_id))
+
+            # 2. Update pending_refresh based on verified edits newer than published_at
+            if not latest_published:
+                cur.execute("UPDATE sprint_tiles SET pending_refresh = FALSE WHERE sprint_id = %s;", (sprint_id,))
+            else:
+                cur.execute("""
+                    WITH recent_edits AS (
+                        SELECT jsonb_array_elements(objects) AS obj
+                        FROM edits
+                        WHERE created_at > %s
+                    ),
+                    edited_places AS (
+                        SELECT p.geom
+                        FROM recent_edits re
+                        JOIN places p ON p.osm_type = (re.obj->>'type') AND p.osm_id = (re.obj->>'id')::bigint
+                    ),
+                    refreshed_tiles AS (
+                        SELECT DISTINCT st.tile_id
+                        FROM sprint_tiles st
+                        JOIN edited_places ep ON ST_Within(
+                            ep.geom,
+                            ST_MakeEnvelope(st.bbox[1]::double precision, st.bbox[2]::double precision,
+                                            st.bbox[3]::double precision, st.bbox[4]::double precision, 4326)
+                        )
+                        WHERE st.sprint_id = %s
+                    )
+                    UPDATE sprint_tiles st
+                    SET pending_refresh = (rt.tile_id IS NOT NULL)
+                    FROM sprint_tiles st2
+                    LEFT JOIN refreshed_tiles rt ON st2.tile_id = rt.tile_id AND st2.sprint_id = %s
+                    WHERE st.sprint_id = %s
+                      AND st.tile_id = st2.tile_id;
+                """, (latest_published, sprint_id, sprint_id, sprint_id))
+
+            print(f"  [OK] Updated workloads and refresh status for sprint '{slug}' (ID {sprint_id}).")
+
+
 def main():
     if not DATABASE_URL:
         print("[SKIP] No DATABASE_URL set; database loading skipped.")
@@ -490,6 +599,7 @@ def main():
         init_db(conn)
         load_staging_data(conn)
         swap_staging_to_production(conn)
+        update_sprint_workloads(conn)
         print(f"Database loading finished successfully in {time.time() - started:.1f}s.")
     finally:
         conn.close()

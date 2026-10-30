@@ -725,3 +725,20 @@ Started Phase 4 from `REDESIGN.md` §3.1, §4.2, §4.7 & §5:
    - Vitest: 87 passed across 11 test suites.
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean build in 263 ms.
+
+### 19.3 Phase 4 Step 3: Pipeline Workload Computation & Pending Refresh Engine
+1. **Automated Sprint Tile Workload Ingestion (`pipeline/load_db.py`):**
+   - Added `update_sprint_workloads(conn)` executed atomically right after staging table production swap.
+   - For all active or draft sprints, queries spatial boundaries via `ST_MakeEnvelope(min_lon, min_lat, max_lon, max_lat, 4326)`.
+   - Aggregates issues from `issues` matching `sprint.rule_ids` (if configured) joined with `places` spatial containment.
+   - Aggregates coverage gaps from `gaps` exceeding `sprint.gap_min_urgency` (if configured).
+   - Writes computed sum `workload = issue_count + gap_count` to each tile in `sprint_tiles`.
+2. **Pending Refresh Lifecycle Management:**
+   - Detects verified edits in `edits` created after the latest dataset `published_at` timestamp.
+   - Sets `pending_refresh = TRUE` for any tile intersecting an edited place; clears back to `FALSE` as new daily Geofabrik extracts are published.
+3. **Automated Verification:**
+   - Authored test suite `tests/test_sprint_workload.py` covering missing tables, empty active sprints, and query execution for workload and pending refresh.
+   - Pytest: 134 passed (up from 130).
+   - Vitest: 87 passed across 11 test suites.
+
+**Phase 4 is now 100% COMPLETE.** Next phase in roadmap is **Phase 5: Data Hub & Vector Overlays (PMTiles & MapLibre)**.
