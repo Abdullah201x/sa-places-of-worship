@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 && (apt-get install -y --no-install-recommends tippecanoe || true) && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first for Docker layer caching
 COPY pipeline/requirements.txt /app/requirements.txt

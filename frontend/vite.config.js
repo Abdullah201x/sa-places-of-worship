@@ -26,6 +26,9 @@ const DATA_FILES = new Set([
   'places_of_worship_sa.csv',
   'worship_gaps_sa.csv',
   'suggested_mosques_sa.csv',
+  'places.pmtiles',
+  'gaps.pmtiles',
+  'suggestions.pmtiles',
 ]);
 const dataDir = path.resolve(here, process.env.MANARA_DATA_DIR || '..');
 
@@ -47,11 +50,49 @@ function serveData(req, res, next) {
     res.statusCode = 404;
     return res.end('Not found');
   }
-  const type = name.endsWith('.geojson') ? 'application/geo+json' : name.endsWith('.csv') ? 'text/csv; charset=utf-8' : 'application/json';
-  res.setHeader('Content-Type', `${type}; charset=utf-8`);
-  fs.createReadStream(path.join(dataDir, name))
-    .on('error', () => { res.statusCode = 404; res.end('Not found'); })
-    .pipe(res);
+  const filePath = path.join(dataDir, name);
+  let stat;
+  try {
+    stat = fs.statSync(filePath);
+  } catch (_) {
+    res.statusCode = 404;
+    return res.end('Not found');
+  }
+
+  const type = name.endsWith('.geojson')
+    ? 'application/geo+json; charset=utf-8'
+    : name.endsWith('.csv')
+    ? 'text/csv; charset=utf-8'
+    : name.endsWith('.pmtiles')
+    ? 'application/vnd.pmtiles'
+    : 'application/json; charset=utf-8';
+
+  res.setHeader('Content-Type', type);
+  res.setHeader('Accept-Ranges', 'bytes');
+
+  const range = req.headers.range;
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+    if (isNaN(start) || isNaN(end) || start >= stat.size || end >= stat.size || start > end) {
+      res.statusCode = 416;
+      res.setHeader('Content-Range', `bytes */${stat.size}`);
+      return res.end('Requested Range Not Satisfiable');
+    }
+    const chunksize = end - start + 1;
+    res.statusCode = 206;
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
+    res.setHeader('Content-Length', chunksize);
+    fs.createReadStream(filePath, { start, end })
+      .on('error', () => { res.statusCode = 404; res.end('Not found'); })
+      .pipe(res);
+  } else {
+    res.setHeader('Content-Length', stat.size);
+    fs.createReadStream(filePath)
+      .on('error', () => { res.statusCode = 404; res.end('Not found'); })
+      .pipe(res);
+  }
 }
 
 // Clean URLs for the content pages, as Caddy's try_files does in production.

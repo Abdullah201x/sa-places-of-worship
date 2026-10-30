@@ -75,6 +75,7 @@ STEPS = [
     ["import_wikidata_suggestions.py"],
     ["tag_stats.py"],
     ["build_data_hub.py"],
+    ["build_overlays.py"],
     ["validate_data.py"],
     ["load_db.py"],
 ]
@@ -96,6 +97,9 @@ PUBLISHED_FILES = [
     "suggested_mosques_sa.csv",
     "tag_stats_sa.json",
     "tags.json",
+    "places.pmtiles",
+    "gaps.pmtiles",
+    "suggestions.pmtiles",
 ]
 
 

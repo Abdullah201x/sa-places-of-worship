@@ -269,6 +269,30 @@ def build_manifest(data_dir=DATA_DIR):
             "filename": "sa_regions.geojson",
             "features": summary.get("datasets", {}).get("regions", {}).get("count", 13),
         },
+        {
+            "id": "places-sa-pmtiles",
+            "scope": "SA",
+            "layer": "places",
+            "format": "pmtiles",
+            "filename": "places.pmtiles",
+            "features": places_count or summary.get("datasets", {}).get("places", {}).get("count", 0),
+        },
+        {
+            "id": "gaps-sa-pmtiles",
+            "scope": "SA",
+            "layer": "gaps",
+            "format": "pmtiles",
+            "filename": "gaps.pmtiles",
+            "features": gaps_count or summary.get("datasets", {}).get("gaps", {}).get("count", 0),
+        },
+        {
+            "id": "suggestions-sa-pmtiles",
+            "scope": "SA",
+            "layer": "suggestions",
+            "format": "pmtiles",
+            "filename": "suggestions.pmtiles",
+            "features": sug_count or summary.get("datasets", {}).get("suggestions", {}).get("count", 0),
+        },
     ]
 
     files_list = []

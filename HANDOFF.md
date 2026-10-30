@@ -772,3 +772,19 @@ Started Phase 5 from `REDESIGN.md` §3.6, §4.6 & §5:
    - Vitest: 97 passed across 12 test suites (up from 87).
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean production build in 287 ms.
+
+### 20.2 Phase 5 Step 2: PMTiles Vector Overlay Builder & HTTP Range Serving
+1. **PMTiles Vector Overlay Builder (`pipeline/build_overlays.py`):**
+   - Implemented automated building of `places.pmtiles`, `gaps.pmtiles`, and `suggestions.pmtiles` conforming to PMTiles v3 specification.
+   - Trims `places` properties to core metadata (`id`, `osm_type`, `osm_id`, `name`, `name_en`, `religion`, `denomination`, `building`, `amenity`), reducing transfer payload for mobile rendering.
+   - Integrates with `tippecanoe` when available; provides a compliant fallback PMTiles v3 archive with exact 127-byte header and gzip-compressed JSON metadata for environments without native tippecanoe binary.
+   - Integrated `build_overlays.py` into `pipeline/run.py` sequence and updated `pipeline/Dockerfile`.
+2. **HTTP Range Request Serving (`frontend/vite.config.js`):**
+   - Added `'places.pmtiles'`, `'gaps.pmtiles'`, `'suggestions.pmtiles'` to `DATA_FILES`.
+   - Added HTTP 206 Partial Content Range serving with `Accept-Ranges: bytes` and `Content-Range: bytes start-end/size` in dev/preview server middleware.
+3. **Automated Verification:**
+   - Authored `tests/test_build_overlays.py` (3 tests verifying 127-byte PMTiles v3 header, gzip metadata parsing, and overlay generation).
+   - Pytest: 142 passed (up from 139).
+   - Vitest: 97 passed across 12 test suites.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build in 257 ms.

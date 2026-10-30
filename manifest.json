@@ -73,6 +73,36 @@
       "bytes": 122823,
       "sha256": "85ee0cfde90a6eda0ad7d4dea8b02c283a5f997f3df4fac629713e0cb6011b4e",
       "features": 1
+    },
+    {
+      "id": "places-sa-pmtiles",
+      "scope": "SA",
+      "layer": "places",
+      "format": "pmtiles",
+      "path": "places.pmtiles",
+      "bytes": 312,
+      "sha256": "9caa8cf7e9bd694adc5358369cc0596e0a977462548f13e1b4ea9d413c0ca4c5",
+      "features": 14022
+    },
+    {
+      "id": "gaps-sa-pmtiles",
+      "scope": "SA",
+      "layer": "gaps",
+      "format": "pmtiles",
+      "path": "gaps.pmtiles",
+      "bytes": 312,
+      "sha256": "0e59dff4d26a5c47d4b29f5eadabd5d6bdca09d30010c860fbca331cf942a2e0",
+      "features": 59681
+    },
+    {
+      "id": "suggestions-sa-pmtiles",
+      "scope": "SA",
+      "layer": "suggestions",
+      "format": "pmtiles",
+      "path": "suggestions.pmtiles",
+      "bytes": 316,
+      "sha256": "c3fe7b040dd7120e3117908087414d5ce20bb21a731595ac278156cd2bd0099b",
+      "features": 54503
     }
   ],
   "overpass_presets": [
