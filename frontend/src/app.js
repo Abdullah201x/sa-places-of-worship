@@ -1,3 +1,7 @@
+import './leaflet-bundle.js';
+import { safeUrl, showToast, showLoadingText } from './ui.js';
+// The other map modules (editing, review, exporters) still import these from app.js.
+export { safeUrl, showToast, showLoadingText };
 import { setupCommandPalette } from './palette.js';
 import { setupQAWorkspace, openQAWorkspace, closeQAWorkspace } from './qa_view.js';
 import { setupChangesWorkspace, openChangesWorkspace, closeChangesWorkspace } from './changes_view.js';
@@ -259,10 +263,6 @@ export function escapeHtml(str) {
 }
 
 // Returns the URL only if it uses http(s); blocks javascript: and similar schemes.
-export function safeUrl(url) {
-  const s = String(url || '').trim();
-  return /^https?:\/\//i.test(s) ? s : '';
-}
 
 // OSM element type ('node' | 'way' | 'relation') for a place's properties.
 export function osmTypeOf(props) {
@@ -783,39 +783,6 @@ export function addSuggestionInJOSM(qid) {
 
 // Show animated non-blocking toast notification. The message is plain text
 // (it can contain server error text); pass { link: { href, text } } to append a link.
-export function showToast(message, type = 'success', options = {}) {
-  // Remove existing toast if any
-  const existingToast = document.querySelector('.toast-notification');
-  if (existingToast) {
-    existingToast.remove();
-  }
-
-  const toast = document.createElement('div');
-  toast.className = `toast-notification ${type}`;
-  const span = document.createElement('span');
-  span.textContent = message;
-  const href = options.link && safeUrl(options.link.href);
-  if (href) {
-    const a = document.createElement('a');
-    a.href = href;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.className = 'toast-link';
-    a.textContent = options.link.text;
-    span.append(' ', a);
-  }
-  toast.appendChild(span);
-  document.body.appendChild(toast);
-  
-  // Trigger slide-out and removal
-  setTimeout(() => {
-    toast.style.animation = 'slide-out-left 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards';
-    toast.addEventListener('animationend', () => {
-      toast.remove();
-    });
-  }, 4500);
-}
-
 // Calculate Great Circle bearing between two lat/lon points
 export function calculateBearing(lat1, lon1, lat2, lon2) {
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -3346,16 +3313,6 @@ export function redirectToOSM() {
   OsmApi.startLogin().then(started => {
     if (!started) document.querySelector('#osm-auth-overlay .auth-advanced')?.setAttribute('open', '');
   });
-}
-
-export function showLoadingText(message) {
-  const overlay = document.getElementById('loading-overlay');
-  const text = document.getElementById('loading-text');
-  if (overlay) {
-    overlay.classList.remove('hidden');
-    overlay.classList.remove('error');
-  }
-  if (text) text.innerText = message;
 }
 
 export function updateUserWidgetUI() {

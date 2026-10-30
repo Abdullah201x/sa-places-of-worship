@@ -37,8 +37,8 @@ let easyQueue = [];
 let currentIndex = 0;
 
 function checkAuthStatus() {
-  const token = OsmApi.getAccessToken();
-  const username = OsmApi.getUserDisplayName();
+  const token = OsmApi.token();
+  const username = OsmApi.userName();
 
   const node1 = document.getElementById('step-node-1');
   const authBox = document.getElementById('auth-status-container');
@@ -209,7 +209,7 @@ function renderCurrentQueueItem() {
     const finalNameEn = input ? input.value.trim() : suggestedEn;
     if (!finalNameEn) return;
 
-    const token = OsmApi.getAccessToken();
+    const token = OsmApi.token();
     if (!token) {
       alert(currentLang === 'ar'
         ? 'يرجى تسجيل الدخول بحساب OpenStreetMap في الخطوة 1 أولاً لنتمكن من حفظ تعديلك!'

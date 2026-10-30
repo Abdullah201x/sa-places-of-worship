@@ -2,7 +2,7 @@
 // osm x wikidata project's js/osm_oauth.js (linkOsmElement /
 // linkOsmElementsBatch), which itself started from this project's login code.
 import { addTranslations, t } from './i18n.js';
-import { showToast, showLoadingText } from './app.js';
+import { showToast, showLoadingText } from './ui.js';
 import { trackEvent } from './analytics.js';
 import { MAX_TAG_LENGTH, upgradeTags } from './presets.js';
 

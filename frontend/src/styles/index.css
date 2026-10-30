@@ -40,6 +40,7 @@ body {
 
 #app-container {
   display: flex;
+  flex-direction: column; /* top bar above the map */
   position: relative;
   width: 100%;
   height: 100%;
@@ -47,7 +48,7 @@ body {
 
 #map {
   flex: 1;
-  height: 100%;
+  min-height: 0;
   width: 100%;
   background-color: var(--bg-dark);
   z-index: 1;
@@ -61,7 +62,7 @@ body {
 /* Glassmorphism Sidebar */
 #sidebar {
   position: absolute;
-  top: 20px;
+  top: 52px; /* below the 40px top bar */
   right: 20px; /* Positioned on the right for RTL layout */
   bottom: 20px;
   width: 420px;
@@ -2025,7 +2026,7 @@ h1 {
    ========================================================================== */
 .sidebar-toggle-btn {
   position: absolute;
-  top: 20px;
+  top: 52px;
   right: 440px; /* just outside the expanded sidebar's left edge (420px width + 20px margin) */
   z-index: 11; /* above #sidebar (10), below loading/auth overlays (1000/9999) */
   width: 40px;
@@ -2070,7 +2071,7 @@ h1 {
    ========================================================================== */
 @media (max-width: 768px) {
   #sidebar {
-    top: 12px;
+    top: 52px;
     right: 12px;
     left: 12px;
     bottom: 12px;
@@ -2083,7 +2084,7 @@ h1 {
   }
 
   .sidebar-toggle-btn {
-    top: 16px;
+    top: 56px;
     right: 16px;
   }
 
@@ -3351,7 +3352,15 @@ kbd {
    AppShell Styles (Top Bar, Status Bar, Command Palette)
    ========================================================================== */
 
+/* The top bar holds both languages in [data-lang] spans (as the content pages do);
+   show the one matching <html lang>. */
+html[lang="ar"] [data-lang="en"],
+html[lang="en"] [data-lang="ar"] {
+  display: none;
+}
+
 .app-topbar {
+  margin: 0; /* a generic header rule adds a 24px bottom margin */
   display: flex;
   align-items: center;
   justify-content: space-between;
