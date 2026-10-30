@@ -6,20 +6,19 @@ Builds versioned vector tile overlays in PMTiles v3 format for:
   - suggestions.pmtiles (z5–z14, qid, name_ar, name_en, nearest_osm_m, is_unnamed)
 
 Conforms to REDESIGN.md §3.6, §4.6, §5.
-Uses tippecanoe when available; provides a compliant PMTiles v3 fallback archive
-when tippecanoe is not installed on the system (e.g. Windows dev environments).
+Uses tippecanoe when available. Otherwise (or if it fails) pmtiles_writer.py tiles
+the points itself, so the overlays always contain real tiles.
 """
 
-import gzip
 import json
 import os
 import shutil
 import struct
 import subprocess
-import sys
 import tempfile
 
 from common import BASE_DIR, configure_utf8_output
+from pmtiles_writer import write_pmtiles
 
 configure_utf8_output()
 
@@ -103,207 +102,120 @@ def create_pmtiles_v3_header(
     return header
 
 
-def write_fallback_pmtiles(output_path, layer_name, min_zoom=5, max_zoom=14, extra_meta=None):
-    """
-    Writes a structurally valid PMTiles v3 archive containing layer metadata.
-    Used when tippecanoe is not installed on the host.
-    """
-    metadata = {
-        "name": layer_name,
-        "description": f"Manara {layer_name} vector overlay",
-        "version": "1.0",
-        "type": "overlay",
-        "format": "pbf",
-        "minzoom": min_zoom,
-        "maxzoom": max_zoom,
-        "bounds": f"{SA_BBOX[0]},{SA_BBOX[1]},{SA_BBOX[2]},{SA_BBOX[3]}",
-        "center": f"{SA_CENTER[0]},{SA_CENTER[1]},{SA_CENTER[2]}",
-        "vector_layers": [{"id": layer_name, "description": f"Manara {layer_name} layer"}],
-    }
-    if extra_meta:
-        metadata.update(extra_meta)
+PLACE_PROPS = ("osm_type", "osm_id", "name", "name_norm", "name_en", "religion",
+               "denomination", "building", "amenity")
 
-    # Compress metadata with gzip
-    compressed_meta = gzip.compress(json.dumps(metadata).encode("utf-8"))
+# (min zoom, max zoom). Gap cells are 0.004 deg (~440 m), so z12 already shows
+# every cell on its own; MapLibre overzooms the source beyond that.
+ZOOMS = {"places": (5, 14), "gaps": (5, 12), "suggestions": (5, 14)}
 
-    header_len = 127
-    root_dir = b""  # Empty root directory
-    root_dir_offset = header_len
-    root_dir_len = len(root_dir)
 
-    metadata_offset = root_dir_offset + root_dir_len
-    metadata_len = len(compressed_meta)
-
-    tile_data_offset = metadata_offset + metadata_len
-    tile_data_len = 0
-
-    header = create_pmtiles_v3_header(
-        root_dir_offset=root_dir_offset,
-        root_dir_len=root_dir_len,
-        metadata_offset=metadata_offset,
-        metadata_len=metadata_len,
-        tile_data_offset=tile_data_offset,
-        tile_data_len=tile_data_len,
-        min_zoom=min_zoom,
-        max_zoom=max_zoom,
+def write_fallback_pmtiles(output_path, layer_name, min_zoom=5, max_zoom=14, extra_meta=None, points=()):
+    """Writes a PMTiles v3 archive with the pure-Python tiler (see pmtiles_writer.py)."""
+    n = write_pmtiles(
+        output_path, layer_name, list(points), min_zoom, max_zoom,
+        bounds=SA_BBOX, center=SA_CENTER, extra_meta=extra_meta,
+        header_builder=create_pmtiles_v3_header,
     )
-
-    with open(output_path, "wb") as f:
-        f.write(header)
-        f.write(root_dir)
-        f.write(compressed_meta)
-
-    print(f"  [FALLBACK] Created PMTiles v3 archive for '{layer_name}' ({os.path.getsize(output_path)} bytes)")
+    print(f"  [FALLBACK] Wrote {n} tiles to '{layer_name}' ({os.path.getsize(output_path)} bytes)")
 
 
-def build_places_overlay(data_dir, tippecanoe_bin):
-    """Builds places.pmtiles with trimmed properties."""
-    src = os.path.join(data_dir, "places_of_worship_sa.geojson")
-    out = os.path.join(data_dir, "places.pmtiles")
-    if not os.path.exists(src):
-        print("  [SKIP] places_of_worship_sa.geojson not found.")
-        return False
-
-    if not tippecanoe_bin:
-        write_fallback_pmtiles(out, "places", min_zoom=5, max_zoom=14)
-        return True
-
-    # Prepare trimmed GeoJSON
-    with open(src, "r", encoding="utf-8") as f:
-        geojson = json.load(f)
-
-    trimmed_features = []
-    allowed_props = {"osm_type", "osm_id", "name", "name_norm", "name_en", "religion", "denomination", "building", "amenity"}
-
-    for feat in geojson.get("features", []):
-        p = feat.get("properties", {})
-        trimmed_p = {k: v for k, v in p.items() if k in allowed_props}
-        trimmed_features.append({
-            "type": "Feature",
-            "id": feat.get("id"),
-            "geometry": feat.get("geometry"),
-            "properties": trimmed_p,
-        })
-
-    with tempfile.NamedTemporaryFile("w", suffix=".geojson", delete=False, encoding="utf-8") as tmp:
-        json.dump({"type": "FeatureCollection", "features": trimmed_features}, tmp)
-        tmp_path = tmp.name
-
-    try:
-        cmd = [
-            tippecanoe_bin,
-            "-o", out,
-            "-z14", "-Z5",
-            "--drop-densest-as-needed",
-            "--extend-zooms-if-still-dropping",
-            "-l", "places",
-            "--force",
-            tmp_path,
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        print(f"  [OK] places.pmtiles built with tippecanoe ({os.path.getsize(out)} bytes).")
-        return True
-    except Exception as e:
-        print(f"  [WARN] tippecanoe failed for places: {e}. Falling back to PMTiles writer.")
-        write_fallback_pmtiles(out, "places")
-        return True
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+def _load_places(data_dir):
+    path = os.path.join(data_dir, "places_of_worship_sa.geojson")
+    if not os.path.exists(path):
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        feats = json.load(f).get("features", [])
+    pts = []
+    for ft in feats:
+        geom = ft.get("geometry") or {}
+        if geom.get("type") != "Point":
+            continue
+        p = ft.get("properties") or {}
+        lon, lat = geom["coordinates"][:2]
+        pts.append((lon, lat, {k: p[k] for k in PLACE_PROPS if k in p}, 0))
+    return pts
 
 
-def build_gaps_overlay(data_dir, tippecanoe_bin):
-    """Builds gaps.pmtiles from worship_gaps_sa.json."""
-    src = os.path.join(data_dir, "worship_gaps_sa.json")
-    out = os.path.join(data_dir, "gaps.pmtiles")
-    if not os.path.exists(src):
-        print("  [SKIP] worship_gaps_sa.json not found.")
-        return False
-
-    if not tippecanoe_bin:
-        write_fallback_pmtiles(out, "gaps", min_zoom=5, max_zoom=14)
-        return True
-
-    with open(src, "r", encoding="utf-8") as f:
+def _load_gaps(data_dir):
+    path = os.path.join(data_dir, "worship_gaps_sa.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
-
     cells = data.get("cells", []) if isinstance(data, dict) else data
-    grid_size = float(data.get("grid_size", 0.004)) if isinstance(data, dict) else 0.004
-
-    features = []
+    grid = float(data.get("grid_size", 0.004)) if isinstance(data, dict) else 0.004
+    pts = []
     for row in cells:
-        if len(row) >= 4:
-            gx, gy, road_len, score = row[0], row[1], row[2], row[3]
-            urgency = row[4] if len(row) > 4 else 0.0
-            lon = round((float(gx) + 0.5) * grid_size, 6)
-            lat = round((float(gy) + 0.5) * grid_size, 6)
-            features.append({
-                "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [lon, lat]},
-                "properties": {
-                    "grid_x": gx,
-                    "grid_y": gy,
-                    "road_len": road_len,
-                    "gap_score": score,
-                    "urgency": urgency,
-                },
-            })
+        if len(row) < 4:
+            continue
+        gx, gy, road_len, score = row[0], row[1], row[2], row[3]
+        urgency = row[4] if len(row) > 4 else 0.0
+        pts.append((
+            round((float(gx) + 0.5) * grid, 6), round((float(gy) + 0.5) * grid, 6),
+            {"grid_x": gx, "grid_y": gy, "road_len": road_len, "gap_score": score, "urgency": urgency},
+            urgency,
+        ))
+    return pts
 
+
+def _load_suggestions(data_dir):
+    path = os.path.join(data_dir, "suggested_mosques_sa.geojson")
+    if not os.path.exists(path):
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        feats = json.load(f).get("features", [])
+    pts = []
+    for ft in feats:
+        geom = ft.get("geometry") or {}
+        if geom.get("type") != "Point":
+            continue
+        p = ft.get("properties") or {}
+        lon, lat = geom["coordinates"][:2]
+        props = {k: p[k] for k in ("qid", "name_ar", "name_en", "nearest_osm_m", "is_unnamed") if k in p}
+        # Named suggestions that are far from any mapped mosque matter most.
+        prio = (0 if p.get("is_unnamed") else 1) * 1e6 + float(p.get("nearest_osm_m") or 0)
+        pts.append((lon, lat, props, prio))
+    return pts
+
+
+LOADERS = {"places": _load_places, "gaps": _load_gaps, "suggestions": _load_suggestions}
+SOURCES = {"places": "places_of_worship_sa.geojson", "gaps": "worship_gaps_sa.json",
+           "suggestions": "suggested_mosques_sa.geojson"}
+
+
+def _run_tippecanoe(tippecanoe_bin, out, layer, points, min_zoom, max_zoom):
+    feats = [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [lon, lat]}, "properties": props}
+             for lon, lat, props, _prio in points]
     with tempfile.NamedTemporaryFile("w", suffix=".geojson", delete=False, encoding="utf-8") as tmp:
-        json.dump({"type": "FeatureCollection", "features": features}, tmp)
+        json.dump({"type": "FeatureCollection", "features": feats}, tmp, ensure_ascii=False)
         tmp_path = tmp.name
-
     try:
-        cmd = [
-            tippecanoe_bin,
-            "-o", out,
-            "-z14", "-Z5",
-            "--drop-densest-as-needed",
-            "-l", "gaps",
-            "--force",
-            tmp_path,
-        ]
+        cmd = [tippecanoe_bin, "-o", out, f"-z{max_zoom}", f"-Z{min_zoom}", "--drop-densest-as-needed",
+               "-l", layer, "--force", tmp_path]
         subprocess.run(cmd, capture_output=True, text=True, check=True)
-        print(f"  [OK] gaps.pmtiles built with tippecanoe ({os.path.getsize(out)} bytes).")
-        return True
-    except Exception as e:
-        print(f"  [WARN] tippecanoe failed for gaps: {e}. Falling back to PMTiles writer.")
-        write_fallback_pmtiles(out, "gaps")
-        return True
     finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        os.remove(tmp_path)
 
 
-def build_suggestions_overlay(data_dir, tippecanoe_bin):
-    """Builds suggestions.pmtiles from suggested_mosques_sa.geojson."""
-    src = os.path.join(data_dir, "suggested_mosques_sa.geojson")
-    out = os.path.join(data_dir, "suggestions.pmtiles")
-    if not os.path.exists(src):
-        print("  [SKIP] suggested_mosques_sa.geojson not found.")
+def build_overlay(data_dir, layer, tippecanoe_bin):
+    """Builds <layer>.pmtiles from its source file. Returns False if the source is missing."""
+    points = LOADERS[layer](data_dir)
+    if points is None:
+        print(f"  [SKIP] {SOURCES[layer]} not found.")
         return False
+    out = os.path.join(data_dir, f"{layer}.pmtiles")
+    min_zoom, max_zoom = ZOOMS[layer]
 
-    if not tippecanoe_bin:
-        write_fallback_pmtiles(out, "suggestions", min_zoom=5, max_zoom=14)
-        return True
-
-    try:
-        cmd = [
-            tippecanoe_bin,
-            "-o", out,
-            "-z14", "-Z5",
-            "--drop-densest-as-needed",
-            "-l", "suggestions",
-            "--force",
-            src,
-        ]
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
-        print(f"  [OK] suggestions.pmtiles built with tippecanoe ({os.path.getsize(out)} bytes).")
-        return True
-    except Exception as e:
-        print(f"  [WARN] tippecanoe failed for suggestions: {e}. Falling back to PMTiles writer.")
-        write_fallback_pmtiles(out, "suggestions")
-        return True
+    if tippecanoe_bin:
+        try:
+            _run_tippecanoe(tippecanoe_bin, out, layer, points, min_zoom, max_zoom)
+            print(f"  [OK] {layer}.pmtiles built with tippecanoe ({os.path.getsize(out)} bytes).")
+            return True
+        except Exception as e:
+            print(f"  [WARN] tippecanoe failed for {layer}: {e}. Falling back to the Python tiler.")
+    write_fallback_pmtiles(out, layer, min_zoom, max_zoom, points=points)
+    return True
 
 
 def build_all_overlays(data_dir=DATA_DIR):
@@ -313,14 +225,12 @@ def build_all_overlays(data_dir=DATA_DIR):
     if tippecanoe_bin:
         print(f"  Found tippecanoe at: {tippecanoe_bin}")
     else:
-        print("  tippecanoe not found on PATH; fallback PMTiles v3 archives will be generated.")
+        print("  tippecanoe not found on PATH; using the built-in Python tiler.")
 
-    p_ok = build_places_overlay(data_dir, tippecanoe_bin)
-    g_ok = build_gaps_overlay(data_dir, tippecanoe_bin)
-    s_ok = build_suggestions_overlay(data_dir, tippecanoe_bin)
+    results = [build_overlay(data_dir, layer, tippecanoe_bin) for layer in ("places", "gaps", "suggestions")]
 
     print("PMTiles overlay generation complete.")
-    return p_ok and g_ok and s_ok
+    return all(results)
 
 
 if __name__ == "__main__":

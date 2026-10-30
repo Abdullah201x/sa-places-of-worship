@@ -788,3 +788,15 @@ Started Phase 5 from `REDESIGN.md` §3.6, §4.6 & §5:
    - Vitest: 97 passed across 12 test suites.
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean production build in 257 ms.
+
+### 20.3 Phase 5 Step 2b: Real tiles from the fallback tiler (2026-10-30)
+
+**Problem found:** the "fallback" PMTiles archives from step 2 were structurally valid but **contained zero tiles** (empty root directory, `tile_data_len = 0`). `pipeline/Dockerfile` installs tippecanoe with `|| true`, and the package is not guaranteed on `python:3.12-slim`, so production could have shipped empty overlays without any error. A MapLibre map built on them would have drawn nothing.
+
+1. **`pipeline/pmtiles_writer.py` (new, no dependencies):** point-only tiler. Web Mercator tiling for z5 up to the layer's max zoom, hand-encoded MVT 2.1 (4096 extent, 80-unit edge buffer so circles are not cut at tile borders), Hilbert tile IDs, gzip tiles, root plus leaf directories (root kept under 16 KiB as the spec requires). Below the top zoom it keeps one point per 32x32 block of the tile, highest priority first (gaps by urgency, suggestions named-first then farthest from a mapped mosque).
+2. **`pipeline/build_overlays.py` restructured:** one loader per layer returns a point list; the same list feeds tippecanoe (preferred, if on PATH) or the Python tiler (if tippecanoe is missing or fails). Gaps now stop at z12 (cells are ~440 m, MapLibre overzooms beyond that); places and suggestions stay z5–z14. The `write_fallback_pmtiles` signature gained `points=`.
+3. **Measured on the real data (Windows, no tippecanoe):** places 3.5 MB / 9,801 tiles, gaps 8.7 MB / 8,581 tiles, suggestions 14.4 MB / 25,549 tiles; about 22 s for all three. Two versions are retained, so roughly 55 MB of disk.
+4. **Cross-checked against the reference implementation** (`pip install pmtiles mapbox-vector-tile` into a temp dir, not a project dependency): tile IDs match `pmtiles.tile.zxy_to_tileid` for 750 random tiles across z0–14, and the reference `Reader` decodes the root and leaf directories and the MVT tiles (properties and Arabic names intact).
+5. **Tests (`tests/test_build_overlays.py`, 7 tests):** Hilbert IDs, empty archive, full round trip through an in-test PMTiles and MVT decoder, thinning vs top zoom, leaf directories (forced with a tiny root budget), and an end-to-end check that untrimmed property keys never reach the tiles. Pytest: 146 passed (up from 142).
+
+**Next (Phase 5 step 3): MapLibre.** Install `maplibre-gl` (CSP build + worker) and `pmtiles`; add an opt-in `?map=gl` view that reads the three overlays through the `pmtiles://` protocol, keeping Leaflet as the default until it reaches parity (REDESIGN.md §5 Phase 5 items 3–4). Needs the CSP additions in `deploy/Caddyfile.container` (`worker-src 'self' blob:`; `'wasm-unsafe-eval'` only if the RTL text plugin requires it). Still open: per-region exports and optional `.osm.pbf` cuts (§5 Phase 5 item 1).
