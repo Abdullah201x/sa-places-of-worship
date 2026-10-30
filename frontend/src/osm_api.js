@@ -67,6 +67,11 @@ export const OsmApi = {
     return localStorage.getItem('osm_access_token');
   },
 
+  uid() {
+    const raw = localStorage.getItem('osm_uid');
+    return raw ? parseInt(raw, 10) : null;
+  },
+
   grantedScopes() {
     return (localStorage.getItem('osm_granted_scope') || '').split(/\s+/).filter(Boolean);
   },
@@ -193,8 +198,13 @@ export const OsmApi = {
       const response = await fetch(this.urls().userDetails, { headers: { Authorization: `Bearer ${token}` } });
       if (response.ok) {
         const data = await response.json();
-        if (data.user && data.user.display_name) {
-          localStorage.setItem('osm_user_display_name', data.user.display_name);
+        if (data.user) {
+          if (data.user.id) {
+            localStorage.setItem('osm_uid', String(data.user.id));
+          }
+          if (data.user.display_name) {
+            localStorage.setItem('osm_user_display_name', data.user.display_name);
+          }
           return true;
         }
       } else if (response.status === 401 || response.status === 403) {
@@ -213,7 +223,7 @@ export const OsmApi = {
         headers: { 'X-Manara-CSRF': '1' }
       });
     } catch (_) {}
-    ['osm_access_token', 'osm_user_display_name', 'osm_granted_scope'].forEach(k => localStorage.removeItem(k));
+    ['osm_access_token', 'osm_user_display_name', 'osm_granted_scope', 'osm_uid'].forEach(k => localStorage.removeItem(k));
     if (reload) {
       showToast(t('authLoggedOut'));
       window.location.reload();

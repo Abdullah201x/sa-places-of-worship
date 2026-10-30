@@ -43,3 +43,8 @@ deploy/.env
 test-results/
 frontend/test-results/
 frontend/playwright-report/
+
+# Local scratch prompts and chat logs
+handover.md
+design prompt.md
+an idea.md

@@ -18,7 +18,10 @@
       <a href="/tags"><span data-lang="ar">دليل الوسوم</span><span data-lang="en">Tags</span></a>
       <a href="/community"><span data-lang="ar">المجتمع</span><span data-lang="en">Community</span></a>
     </nav>
-    <button type="button" id="btn-toggle-lang" lang="en">English</button>
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <div id="user-auth-widget" class="user-auth-widget"></div>
+      <button type="button" id="btn-toggle-lang" lang="en">English</button>
+    </div>
   </header>
 
   <main class="tasks-container">
@@ -49,6 +52,7 @@
 
     <!-- View 2: Sprint Board / Tile Grid View -->
     <section id="sprint-board-view" style="display: none;">
+      <div id="demo-mode-banner" class="demo-mode-banner" style="display: none;"></div>
       <div class="board-header">
         <div class="board-top-row">
           <div>
@@ -90,11 +94,30 @@
         </div>
       </div>
 
-      <div class="board-layout">
-        <!-- Left: Tile Grid Matrix -->
-        <div class="tile-grid-view">
-          <div id="tile-grid-matrix" class="tile-grid-matrix">
-            <!-- Tiles rendered by /src/tasks.js -->
+      <div class="board-view-controls">
+        <div class="view-switch-group">
+          <button type="button" class="view-switch-btn active" id="btn-view-map">
+            🗺️ <span data-lang="ar">الخريطة</span><span data-lang="en">Map</span>
+          </button>
+          <button type="button" class="view-switch-btn" id="btn-view-split">
+            ◫ <span data-lang="ar">مدمج</span><span data-lang="en">Split</span>
+          </button>
+          <button type="button" class="view-switch-btn" id="btn-view-grid">
+            ⊞ <span data-lang="ar">الشبكة</span><span data-lang="en">Grid</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="board-layout view-mode-map" id="board-layout-container">
+        <!-- Center/Left: Spatial Map & Grid Container -->
+        <div class="board-visual-area">
+          <div id="board-map-view" class="board-map-container">
+            <div id="sprint-leaflet-map" style="width: 100%; height: 100%; min-height: 540px;"></div>
+          </div>
+          <div id="board-grid-view" class="tile-grid-view" style="display: none;">
+            <div id="tile-grid-matrix" class="tile-grid-matrix">
+              <!-- Tiles rendered by /src/tasks.js -->
+            </div>
           </div>
         </div>
 

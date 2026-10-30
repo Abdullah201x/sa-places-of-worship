@@ -5,7 +5,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 
-from app.auth import get_current_user, get_optional_user, require_admin
+from app.auth import get_current_user, get_optional_user, require_admin, verify_csrf
 from app.database import get_db
 
 router = APIRouter(prefix="/api/v1/sprints", tags=["sprints"])
@@ -227,6 +227,7 @@ def list_sprints(
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_sprint(
     payload: CreateSprintRequest,
+    _csrf: None = Depends(verify_csrf),
     admin: dict = Depends(require_admin),
     conn=Depends(get_db),
 ):
@@ -350,6 +351,7 @@ def get_sprint_by_slug(
 def update_sprint(
     slug: str,
     payload: UpdateSprintRequest,
+    _csrf: None = Depends(verify_csrf),
     admin: dict = Depends(require_admin),
     conn=Depends(get_db),
 ):
@@ -460,6 +462,7 @@ def update_tile_state(
     tile_id: str,
     payload: TileActionRequest,
     if_match: str | None = Header(None, alias="If-Match"),
+    _csrf: None = Depends(verify_csrf),
     user: dict = Depends(get_current_user),
     conn=Depends(get_db),
 ):

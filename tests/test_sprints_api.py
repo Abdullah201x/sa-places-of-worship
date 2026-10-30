@@ -46,6 +46,14 @@ def test_list_sprints_empty(client):
     assert res.json() == []
 
 
+def test_sprint_csrf_protection_enforced(client):
+    c, _ = client
+    payload = {"slug": "test", "title": {"en": "Test"}, "hashtag": "#t", "area": {"region_code": "SA-01"}}
+    res = c.post("/api/v1/sprints", json=payload)
+    assert res.status_code == 403
+    assert "CSRF" in res.json()["detail"]
+
+
 def test_create_sprint_admin_only(client):
     c, (conn, cur) = client
 
@@ -56,7 +64,7 @@ def test_create_sprint_admin_only(client):
         "hashtag": "#manara-kharj",
         "area": {"region_code": "SA-01"},
     }
-    res = c.post("/api/v1/sprints", json=payload)
+    res = c.post("/api/v1/sprints", json=payload, headers={"X-Manara-CSRF": "1"})
     assert res.status_code == 401
 
 
@@ -107,7 +115,7 @@ def test_create_sprint_success(client):
         "status": "active"
     }
 
-    res = c.post("/api/v1/sprints", json=payload)
+    res = c.post("/api/v1/sprints", json=payload, headers={"X-Manara-CSRF": "1"})
     assert res.status_code == 201
     data = res.json()
     assert data["slug"] == "al-kharj-sprint"
@@ -199,7 +207,8 @@ def test_optimistic_concurrency_conflict_409(client):
     # Client thinks rev is 4 -> must return 409 Conflict
     res = c.put(
         "/api/v1/sprints/al-kharj-sprint/tiles/2330:1225",
-        json={"action": "lock", "rev": 4, "kind": "mapping"}
+        json={"action": "lock", "rev": 4, "kind": "mapping"},
+        headers={"X-Manara-CSRF": "1"}
     )
     assert res.status_code == 409
     assert "Conflict" in res.json()["detail"]
@@ -232,7 +241,8 @@ def test_self_validation_rejected_403(client):
     # Mapper tries to lock their own mapped tile for validation -> 403 Forbidden!
     res = c.put(
         "/api/v1/sprints/al-kharj-sprint/tiles/2330:1225",
-        json={"action": "lock", "rev": 2, "kind": "validation"}
+        json={"action": "lock", "rev": 2, "kind": "validation"},
+        headers={"X-Manara-CSRF": "1"}
     )
     assert res.status_code == 403
     assert "Self-validation is not allowed" in res.json()["detail"]
@@ -263,7 +273,8 @@ def test_max_locks_limit_enforced_403(client):
 
     res = c.put(
         "/api/v1/sprints/al-kharj-sprint/tiles/2330:1225",
-        json={"action": "lock", "rev": 1, "kind": "mapping"}
+        json={"action": "lock", "rev": 1, "kind": "mapping"},
+        headers={"X-Manara-CSRF": "1"}
     )
     assert res.status_code == 403
     assert "simultaneous locks" in res.json()["detail"]
@@ -305,7 +316,8 @@ def test_tile_done_and_validation_lifecycle(client):
 
     res_done = c.put(
         "/api/v1/sprints/al-kharj-sprint/tiles/2330:1225",
-        json={"action": "done", "rev": 2, "note": "Mapped all 3 mosques"}
+        json={"action": "done", "rev": 2, "note": "Mapped all 3 mosques"},
+        headers={"X-Manara-CSRF": "1"}
     )
     assert res_done.status_code == 200
     assert res_done.json()["state"] == "mapped"
@@ -343,7 +355,8 @@ def test_tile_done_and_validation_lifecycle(client):
 
     res_approve = c.put(
         "/api/v1/sprints/al-kharj-sprint/tiles/2330:1225",
-        json={"action": "approve", "rev": 3, "note": "Verified tags and outlines"}
+        json={"action": "approve", "rev": 3, "note": "Verified tags and outlines"},
+        headers={"X-Manara-CSRF": "1"}
     )
     assert res_approve.status_code == 200
     assert res_approve.json()["state"] == "validated"
@@ -375,7 +388,8 @@ def test_tile_invalidate_requires_reason(client):
     # Invalidate without reason -> 400
     res_no_reason = c.put(
         "/api/v1/sprints/al-kharj-sprint/tiles/2330:1225",
-        json={"action": "invalidate", "rev": 3}
+        json={"action": "invalidate", "rev": 3},
+        headers={"X-Manara-CSRF": "1"}
     )
     assert res_no_reason.status_code == 400
 
@@ -405,7 +419,8 @@ def test_tile_invalidate_requires_reason(client):
 
     res_valid = c.put(
         "/api/v1/sprints/al-kharj-sprint/tiles/2330:1225",
-        json={"action": "invalidate", "rev": 3, "reason": "Missing mosque outline on north side"}
+        json={"action": "invalidate", "rev": 3, "reason": "Missing mosque outline on north side"},
+        headers={"X-Manara-CSRF": "1"}
     )
     assert res_valid.status_code == 200
     assert res_valid.json()["state"] == "invalidated"

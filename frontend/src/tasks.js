@@ -4,6 +4,10 @@ import './styles/page.css';
 import './styles/tasks.css';
 import { currentLang, setLanguage, addTranslations } from './i18n.js';
 import { initAnalytics } from './analytics.js';
+import { OsmApi } from './osm_api.js';
+import { showToast } from './ui.js';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   TILE_STATE_LABELS,
   generateIdEditorUrl,
@@ -59,6 +63,12 @@ addTranslations({
   btnConfirmInvalidate: ['تأكيد الرفض', 'Confirm Invalidation'],
   readyToLock: ['متاح للقفل والعمل', 'Available to lock'],
   noTileSelected: ['اختر مربعاً من اللوحة للبدء، أو اضغط N للمربع التالي', 'Select a tile from the grid or press N for next ready tile'],
+  authNeededToast: ['يرجى تسجيل الدخول بحساب OpenStreetMap للقيام بهذا الإجراء.', 'Please sign in with OpenStreetMap to perform this action.'],
+  authExpiredToast: ['انتهت جلستك، يرجى تسجيل الدخول مجدداً عبر OSM.', 'Session expired. Please log in again via OpenStreetMap.'],
+  notFoundToast: ['المربع أو الحملة غير موجودة على الخادم.', 'Tile or sprint not found on server.'],
+  conflictToast: ['تم تعديل المربع من قبل مستخدم آخر، سيتم تحديث اللوحة.', 'Conflict: Tile was modified by another user. Reloading...'],
+  actionSuccessToast: ['تم تحديث حالة المربع بنجاح.', 'Tile status updated successfully.'],
+  demoSuccessToast: ['تم تحديث حالة المربع محلياً (وضع العرض التوضيحي).', 'Tile status updated locally (Demo Mode).'],
 });
 
 let currentSprint = null;
@@ -66,13 +76,65 @@ let currentTiles = [];
 let selectedTileId = null;
 let currentRevMax = 0;
 let pollInterval = null;
+let mapInstance = null;
+let tileLayersGroup = null;
+let currentViewMode = 'map';
+let mapInitializedForSlug = null;
+
+const STATE_COLORS = {
+  ready: { stroke: '#00f2fe', fill: '#00f2fe', fillOpacity: 0.22 },
+  mapping: { stroke: '#f59e0b', fill: '#f59e0b', fillOpacity: 0.4 },
+  mapped: { stroke: '#a855f7', fill: '#a855f7', fillOpacity: 0.4 },
+  validating: { stroke: '#38bdf8', fill: '#38bdf8', fillOpacity: 0.45 },
+  validated: { stroke: '#10b981', fill: '#10b981', fillOpacity: 0.45 },
+  invalidated: { stroke: '#f43f5e', fill: '#f43f5e', fillOpacity: 0.4 },
+  skipped: { stroke: '#64748b', fill: '#64748b', fillOpacity: 0.15 },
+};
 
 // ==========================================
 // Initialization & Routing
 // ==========================================
+export function renderAuthWidget() {
+  const container = document.getElementById('user-auth-widget');
+  if (!container) return;
+  const isAr = currentLang === 'ar';
+  const token = OsmApi.token();
+  const userName = OsmApi.userName();
+
+  if (token && userName) {
+    container.innerHTML = `
+      <div class="auth-user-badge" title="${isAr ? 'مسجل الدخول كـ' : 'Signed in as'} ${userName}">
+        <span class="auth-user-name">👤 ${userName}</span>
+        <button type="button" id="btn-tasks-logout" class="auth-logout-btn" title="${isAr ? 'تسجيل الخروج' : 'Log out'}">
+          ${isAr ? 'خروج' : 'Logout'}
+        </button>
+      </div>
+    `;
+    document.getElementById('btn-tasks-logout')?.addEventListener('click', () => {
+      OsmApi.logout(true);
+    });
+  } else {
+    container.innerHTML = `
+      <button type="button" id="btn-tasks-login" class="auth-login-btn">
+        <span>${isAr ? 'دخول عبر OSM' : 'Sign in with OSM'}</span>
+      </button>
+    `;
+    document.getElementById('btn-tasks-login')?.addEventListener('click', () => {
+      OsmApi.startLogin();
+    });
+  }
+}
+
 export async function initTasksWorkspace() {
+  renderAuthWidget();
+  if (OsmApi.token() && !localStorage.getItem('osm_uid')) {
+    OsmApi.checkAuth().catch(() => {});
+  }
+
   const params = new URLSearchParams(window.location.search);
   const sprintSlug = params.get('sprint');
+
+  setupViewControls();
 
   if (sprintSlug) {
     await loadSprintBoard(sprintSlug);
@@ -84,6 +146,163 @@ export async function initTasksWorkspace() {
 }
 
 // ==========================================
+
+// ==========================================
+// Map Controls & Leaflet Rendering
+// ==========================================
+function setupViewControls() {
+  const btnMap = document.getElementById('btn-view-map');
+  const btnSplit = document.getElementById('btn-view-split');
+  const btnGrid = document.getElementById('btn-view-grid');
+  const layout = document.getElementById('board-layout-container');
+  const mapView = document.getElementById('board-map-view');
+  const gridView = document.getElementById('board-grid-view');
+
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    [btnMap, btnSplit, btnGrid].forEach(b => b?.classList.remove('active'));
+
+    if (mode === 'map') {
+      btnMap?.classList.add('active');
+      if (layout) {
+        layout.classList.remove('view-mode-split');
+        layout.classList.add('view-mode-map');
+      }
+      if (mapView) mapView.style.display = 'block';
+      if (gridView) gridView.style.display = 'none';
+    } else if (mode === 'split') {
+      btnSplit?.classList.add('active');
+      if (layout) {
+        layout.classList.remove('view-mode-map');
+        layout.classList.add('view-mode-split');
+      }
+      if (mapView) mapView.style.display = 'block';
+      if (gridView) gridView.style.display = 'block';
+    } else if (mode === 'grid') {
+      btnGrid?.classList.add('active');
+      if (layout) {
+        layout.classList.remove('view-mode-split');
+        layout.classList.remove('view-mode-map');
+      }
+      if (mapView) mapView.style.display = 'none';
+      if (gridView) gridView.style.display = 'block';
+    }
+
+    setTimeout(() => {
+      mapInstance?.invalidateSize();
+    }, 100);
+  }
+
+  btnMap?.addEventListener('click', () => setViewMode('map'));
+  btnSplit?.addEventListener('click', () => setViewMode('split'));
+  btnGrid?.addEventListener('click', () => setViewMode('grid'));
+}
+
+export function initOrUpdateSprintMap(tiles) {
+  const mapContainer = document.getElementById('sprint-leaflet-map');
+  if (!mapContainer || !tiles || !tiles.length) return;
+
+  if (!mapInstance) {
+    mapInstance = L.map('sprint-leaflet-map', {
+      zoomControl: true,
+      attributionControl: true
+    }).setView([24.0, 45.0], 12);
+
+    // High resolution satellite imagery
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Esri, Maxar'
+    }).addTo(mapInstance);
+
+    // Transparent labels & street overlay
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      opacity: 0.8
+    }).addTo(mapInstance);
+
+    tileLayersGroup = L.featureGroup().addTo(mapInstance);
+  }
+
+  tileLayersGroup.clearLayers();
+  const boundsList = [];
+
+  tiles.forEach(t => {
+    if (!t.bbox || t.bbox.length !== 4) return;
+    const [minLon, minLat, maxLon, maxLat] = t.bbox;
+    const bounds = [[minLat, minLon], [maxLat, maxLon]];
+    boundsList.push(bounds);
+
+    const isSelected = t.tile_id === selectedTileId;
+    const style = STATE_COLORS[t.state] || STATE_COLORS.ready;
+
+    const rect = L.rectangle(bounds, {
+      color: isSelected ? '#ffffff' : style.stroke,
+      weight: isSelected ? 3.5 : 1.5,
+      fillColor: style.fill,
+      fillOpacity: isSelected ? 0.65 : style.fillOpacity,
+      dashArray: t.state === 'skipped' ? '4, 4' : null
+    });
+
+    const isAr = currentLang === 'ar';
+    const stateLbl = isAr ? TILE_STATE_LABELS[t.state]?.ar : TILE_STATE_LABELS[t.state]?.en;
+    rect.bindTooltip(
+      `<strong>Tile: ${t.tile_id}</strong><br/>${isAr ? 'الحالة' : 'State'}: ${stateLbl}<br/>${isAr ? 'الأعمال' : 'Workload'}: ${t.workload || 0}`,
+      { className: 'sprint-tile-tooltip', sticky: true }
+    );
+
+    rect.on('click', () => {
+      selectedTileId = t.tile_id;
+      document.querySelectorAll('.tile-cell').forEach(c => {
+        c.classList.toggle('selected', c.dataset.tileId === t.tile_id);
+      });
+      renderInspector(t);
+      highlightMapTile(t.tile_id);
+    });
+
+    rect.tileId = t.tile_id;
+    tileLayersGroup.addLayer(rect);
+  });
+
+  // Fit bounds when loading a new sprint
+  if (boundsList.length > 0 && mapInitializedForSlug !== currentSprint?.slug) {
+    mapInitializedForSlug = currentSprint?.slug;
+    const groupBounds = L.latLngBounds(boundsList.map(b => b[0]).concat(boundsList.map(b => b[1])));
+    mapInstance.fitBounds(groupBounds, { padding: [30, 30], maxZoom: 15 });
+  }
+
+  setTimeout(() => {
+    mapInstance?.invalidateSize();
+  }, 120);
+}
+
+export function highlightMapTile(tileId) {
+  if (!tileLayersGroup) return;
+  tileLayersGroup.eachLayer(layer => {
+    const isSelected = layer.tileId === tileId;
+    const tile = currentTiles.find(t => t.tile_id === layer.tileId);
+    const style = STATE_COLORS[tile?.state] || STATE_COLORS.ready;
+
+    if (isSelected) {
+      layer.setStyle({
+        color: '#ffffff',
+        weight: 3.5,
+        fillOpacity: 0.65
+      });
+      layer.bringToFront();
+      if (mapInstance) {
+        mapInstance.panTo(layer.getBounds().getCenter(), { animate: true, duration: 0.5 });
+      }
+    } else {
+      layer.setStyle({
+        color: style.stroke,
+        weight: 1.5,
+        fillOpacity: style.fillOpacity
+      });
+    }
+  });
+}
+
 // 1. Sprints List View
 // ==========================================
 async function loadSprintsList() {
@@ -113,6 +332,7 @@ async function loadSprintsList() {
       {
         id: 1,
         slug: 'al-kharj-mosques-2026',
+        _isDemo: true,
         title: { ar: 'حملة استكمال مساجد الخرج', en: 'Al-Kharj Mosques Mapping Sprint' },
         instructions: {
           ar: 'إضافة وتدقيق جميع المساجد والمصليات في محافظة الخرج مع الأسماء الإنجليزية ورسم حدود المباني.',
@@ -208,6 +428,7 @@ async function loadSprintBoard(slug) {
     currentSprint = {
       id: 1,
       slug,
+      _isDemo: true,
       title: { ar: 'حملة استكمال مساجد الخرج', en: 'Al-Kharj Mosques Mapping Sprint' },
       hashtag: `#manara-${slug}`,
       status: 'active'
@@ -224,9 +445,21 @@ function renderBoardHeader() {
   const titleEl = document.getElementById('board-sprint-title');
   const tagEl = document.getElementById('board-sprint-hashtag');
   const exportBtn = document.getElementById('btn-export-maproulette');
+  const demoBanner = document.getElementById('demo-mode-banner');
 
   if (titleEl) titleEl.textContent = isAr ? (currentSprint.title?.ar || currentSprint.title?.en) : (currentSprint.title?.en || currentSprint.title?.ar);
   if (tagEl) tagEl.textContent = currentSprint.hashtag;
+
+  if (demoBanner) {
+    if (currentSprint?._isDemo) {
+      demoBanner.style.display = 'flex';
+      demoBanner.textContent = isAr
+        ? 'ℹ️ وضع العرض التوضيحي: هذه الحملة تجريبية لاستكشاف النظام. التعديلات والقفل تجري محلياً في المتصفح.'
+        : 'ℹ️ Demo Preview Mode: This sprint is for exploration. Locking and status transitions are simulated locally in your browser.';
+    } else {
+      demoBanner.style.display = 'none';
+    }
+  }
 
   if (exportBtn) {
     exportBtn.href = `/api/v1/sprints/${currentSprint.slug}/maproulette`;
@@ -234,6 +467,13 @@ function renderBoardHeader() {
 }
 
 async function fetchBoardTiles(slug) {
+  if (currentSprint?._isDemo) {
+    currentTiles = generateDemoTiles();
+    renderTileGrid(currentTiles);
+    updateBoardProgressStats(currentTiles);
+    initOrUpdateSprintMap(currentTiles);
+    return;
+  }
   try {
     const headers = {};
     if (currentRevMax) {
@@ -251,6 +491,7 @@ async function fetchBoardTiles(slug) {
       currentTiles = data.tiles || [];
       renderTileGrid(currentTiles);
       updateBoardProgressStats(currentTiles);
+      initOrUpdateSprintMap(currentTiles);
       if (selectedTileId) {
         const found = currentTiles.find(t => t.tile_id === selectedTileId);
         if (found) renderInspector(found);
@@ -265,6 +506,7 @@ async function fetchBoardTiles(slug) {
     currentTiles = generateDemoTiles();
     renderTileGrid(currentTiles);
     updateBoardProgressStats(currentTiles);
+    initOrUpdateSprintMap(currentTiles);
   }
 }
 
@@ -317,9 +559,14 @@ function renderTileGrid(tiles) {
 
   container.innerHTML = '';
   tiles.forEach(t => {
+    const isSelected = t.tile_id === selectedTileId;
     const cell = document.createElement('div');
-    cell.className = `tile-cell ${t.state} ${t.tile_id === selectedTileId ? 'selected' : ''}`;
+    cell.className = `tile-cell ${t.state} ${isSelected ? 'selected' : ''}`;
     cell.dataset.tileId = t.tile_id;
+    cell.setAttribute('role', 'button');
+    cell.setAttribute('tabindex', '0');
+    cell.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+    cell.setAttribute('aria-label', `Tile ${t.tile_id}, state ${t.state}, workload ${t.workload || 0}`);
     cell.title = `Tile: ${t.tile_id} (${t.state})`;
 
     cell.innerHTML = `
@@ -327,11 +574,24 @@ function renderTileGrid(tiles) {
       <span class="tile-workload-badge">${t.workload || 0}</span>
     `;
 
-    cell.addEventListener('click', () => {
-      document.querySelectorAll('.tile-cell').forEach(c => c.classList.remove('selected'));
+    const selectTile = () => {
+      document.querySelectorAll('.tile-cell').forEach(c => {
+        c.classList.remove('selected');
+        c.setAttribute('aria-pressed', 'false');
+      });
       cell.classList.add('selected');
+      cell.setAttribute('aria-pressed', 'true');
       selectedTileId = t.tile_id;
       renderInspector(t);
+      highlightMapTile(t.tile_id);
+    };
+
+    cell.addEventListener('click', selectTile);
+    cell.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        selectTile();
+      }
     });
 
     container.appendChild(cell);
@@ -344,7 +604,7 @@ function renderInspector(tile) {
 
   const isAr = currentLang === 'ar';
   const stateLabel = isAr ? TILE_STATE_LABELS[tile.state]?.ar : TILE_STATE_LABELS[tile.state]?.en;
-  const currentUserUid = localStorage.getItem('osm_access_token') ? (parseInt(localStorage.getItem('osm_uid') || '0', 10) || 0) : null;
+  const currentUserUid = OsmApi.uid();
   const isOwnMapped = Boolean(currentUserUid && tile.mapped_by && currentUserUid === tile.mapped_by);
 
   let lockText = isAr ? 'متاح للقفل والعمل' : 'Available to lock';
@@ -451,9 +711,13 @@ function renderInspector(tile) {
   document.getElementById('btn-josm-remote')?.addEventListener('click', async () => {
     try {
       await fetch(josmUrl, { mode: 'no-cors' });
+      showToast(isAr ? 'تم إرسال الأمر إلى JOSM بنجاح.' : 'Sent command to JOSM.', 'success');
     } catch (err) {
       console.warn('JOSM Remote Control call failed:', err);
-      alert(isAr ? 'تعذر الاتصال بـ JOSM عبر المنفذ 8111. تأكد من تشغيل البرنامج وتفعيل Remote Control.' : 'Could not reach JOSM on port 8111. Ensure JOSM is running with Remote Control enabled.');
+      showToast(
+        isAr ? 'تعذر الاتصال بـ JOSM عبر المنفذ 8111. تأكد من تشغيل البرنامج وتفعيل Remote Control.' : 'Could not reach JOSM on port 8111. Ensure JOSM is running with Remote Control enabled.',
+        'error'
+      );
     }
   });
 
@@ -472,11 +736,71 @@ function renderInspector(tile) {
 // ==========================================
 async function executeTileAction(tile, action, extraBody = {}) {
   const isAr = currentLang === 'ar';
+
+  // Demo simulation mode
+  if (currentSprint?._isDemo) {
+    const updated = { ...tile };
+    const myUid = OsmApi.uid() || 1001;
+    const myName = OsmApi.userName() || 'demo_mapper';
+
+    if (action === 'lock') {
+      const lockKind = extraBody.kind || (tile.state === 'ready' ? 'mapping' : 'validation');
+      updated.state = lockKind === 'mapping' ? 'mapping' : 'validating';
+      updated.lock = { osm_uid: myUid, display_name: myName, kind: lockKind, expires_at: new Date(Date.now() + 7200000).toISOString() };
+      updated.rev = (tile.rev || 1) + 1;
+    } else if (action === 'release') {
+      updated.state = tile.state === 'mapping' ? 'ready' : 'mapped';
+      updated.lock = null;
+      updated.rev = (tile.rev || 1) + 1;
+    } else if (action === 'done') {
+      updated.state = 'mapped';
+      updated.mapped_by = myUid;
+      updated.lock = null;
+      updated.rev = (tile.rev || 1) + 1;
+    } else if (action === 'approve') {
+      updated.state = 'validated';
+      updated.validated_by = myUid;
+      updated.lock = null;
+      updated.rev = (tile.rev || 1) + 1;
+    } else if (action === 'invalidate') {
+      updated.state = 'invalidated';
+      updated.skip_reason = extraBody.reason;
+      updated.lock = null;
+      updated.rev = (tile.rev || 1) + 1;
+    } else if (action === 'skip') {
+      updated.state = 'skipped';
+      updated.skip_reason = extraBody.reason || 'skipped';
+      updated.lock = null;
+      updated.rev = (tile.rev || 1) + 1;
+    }
+
+    const idx = currentTiles.findIndex(t => t.tile_id === updated.tile_id);
+    if (idx !== -1) {
+      currentTiles[idx] = updated;
+    }
+    renderTileGrid(currentTiles);
+    updateBoardProgressStats(currentTiles);
+    initOrUpdateSprintMap(currentTiles);
+    renderInspector(updated);
+    showToast(isAr ? 'تم تحديث حالة المربع محلياً (وضع العرض التوضيحي).' : 'Tile status updated locally (Demo Mode).', 'success');
+    return;
+  }
+
+  // Real sprint: Check auth first
+  if (!OsmApi.token()) {
+    showToast(
+      isAr ? 'يرجى تسجيل الدخول بحساب OpenStreetMap للقيام بهذا الإجراء.' : 'Please sign in with OpenStreetMap to perform this action.',
+      'warning'
+    );
+    return;
+  }
+
   try {
     const res = await fetch(`/api/v1/sprints/${currentSprint.slug}/tiles/${tile.tile_id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'X-Manara-CSRF': '1',
         'If-Match': `"${tile.rev}"`
       },
       body: JSON.stringify({
@@ -486,30 +810,59 @@ async function executeTileAction(tile, action, extraBody = {}) {
       })
     });
 
+    if (res.status === 401) {
+      showToast(
+        isAr ? 'انتهت جلستك، يرجى تسجيل الدخول مجدداً عبر OSM.' : 'Session expired. Please log in again via OpenStreetMap.',
+        'warning'
+      );
+      return;
+    }
+
+    if (res.status === 404) {
+      showToast(
+        isAr ? 'المربع أو الحملة غير موجودة على الخادم.' : 'Tile or sprint not found on server.',
+        'error'
+      );
+      return;
+    }
+
     if (res.status === 409) {
-      alert(isAr ? 'تم تعديل المربع من قبل مستخدم آخر، سيتم تحديث اللوحة.' : 'Conflict: Tile was modified by another user. Reloading...');
+      showToast(
+        isAr ? 'تم تعديل المربع من قبل مستخدم آخر، سيتم تحديث اللوحة.' : 'Conflict: Tile was modified by another user. Reloading...',
+        'warning'
+      );
       await fetchBoardTiles(currentSprint.slug);
       return;
     }
 
     if (res.status === 403) {
       const errData = await res.json().catch(() => ({}));
-      alert(errData.detail || (isAr ? 'غير مصرح بهذا الإجراء (مثال: لا يمكن التحقق من تعديلاتك الذاتية).' : 'Forbidden action (e.g. self-validation is not allowed).'));
+      showToast(
+        errData.detail || (isAr ? 'غير مصرح بهذا الإجراء (مثال: لا يمكن التحقق من تعديلاتك الذاتية).' : 'Forbidden action (e.g. self-validation is not allowed).'),
+        'error'
+      );
       return;
     }
 
-    if (res.ok) {
-      const updated = await res.json();
-      const idx = currentTiles.findIndex(t => t.tile_id === updated.tile_id);
-      if (idx !== -1) {
-        currentTiles[idx] = updated;
-      }
-      renderTileGrid(currentTiles);
-      updateBoardProgressStats(currentTiles);
-      renderInspector(updated);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      showToast(errData.detail || (isAr ? 'حدث خطأ أثناء تنفيذ الإجراء.' : 'Failed to execute action.'), 'error');
+      return;
     }
+
+    const updated = await res.json();
+    const idx = currentTiles.findIndex(t => t.tile_id === updated.tile_id);
+    if (idx !== -1) {
+      currentTiles[idx] = updated;
+    }
+    renderTileGrid(currentTiles);
+    updateBoardProgressStats(currentTiles);
+    initOrUpdateSprintMap(currentTiles);
+    renderInspector(updated);
+    showToast(isAr ? 'تم تحديث حالة المربع بنجاح.' : 'Tile status updated successfully.', 'success');
   } catch (err) {
     console.warn('Tile action API call error:', err);
+    showToast(isAr ? 'تعذر الاتصال بالخادم.' : 'Could not reach server.', 'error');
   }
 }
 
@@ -527,7 +880,7 @@ function openInvalidateModal(tile) {
   const handleConfirm = () => {
     const reason = textarea.value.trim();
     if (!reason) {
-      alert(currentLang === 'ar' ? 'يرجى ذكر سبب الرفض أو النواقص المطلوبة.' : 'Please provide a reason for invalidation.');
+      showToast(currentLang === 'ar' ? 'يرجى ذكر سبب الرفض أو النواقص المطلوبة.' : 'Please provide a reason for invalidation.', 'warning');
       return;
     }
     modal.style.display = 'none';
@@ -571,6 +924,7 @@ function setupGlobalShortcuts() {
         selectedTileId = nextTile.tile_id;
         renderTileGrid(currentTiles);
         renderInspector(nextTile);
+        highlightMapTile(nextTile.tile_id);
       }
     } else if (e.key === 'Escape') {
       const modal = document.getElementById('invalidate-modal');
@@ -599,10 +953,12 @@ function setupGlobalShortcuts() {
 // Language toggle hook
 document.getElementById('btn-toggle-lang')?.addEventListener('click', () => {
   setLanguage(currentLang === 'ar' ? 'en' : 'ar');
+  renderAuthWidget();
   if (currentSprint) {
     renderBoardHeader();
     renderTileGrid(currentTiles);
     updateBoardProgressStats(currentTiles);
+    initOrUpdateSprintMap(currentTiles);
     if (selectedTileId) {
       const tile = currentTiles.find(t => t.tile_id === selectedTileId);
       if (tile) renderInspector(tile);
