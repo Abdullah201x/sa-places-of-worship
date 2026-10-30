@@ -47,7 +47,7 @@ jobs:
   # sizes), and the map on both Leaflet and MapLibre. Uses the committed datasets.
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend

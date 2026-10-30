@@ -142,7 +142,7 @@ class GlMap {
     };
   }
 
-  setView([lat, lon], zoom, { animate = true } = {}) {
+  setView([lat, lon], zoom, { animate = false } = {}) {
     const opts = { center: [lon, lat], zoom: toGlZoom(zoom) };
     if (animate && this._ready) this.gl.easeTo(opts);
     else this.gl.jumpTo(opts);

@@ -24,8 +24,12 @@ export function watchPage(page) {
 // Loads a page and waits for DOM ready + settle time.
 // Avoid 'networkidle' because background proxy calls (/api) and tile streaming
 // cause networkidle to hang or delay 30s+ on every navigation.
-export async function open(page, path, { settle = 1500 } = {}) {
+export async function open(page, path, { settle = 1000 } = {}) {
   await page.goto(path, { waitUntil: 'domcontentloaded' });
+  const overlay = page.locator('#loading-overlay');
+  if (await overlay.count() > 0) {
+    await expect(overlay).toHaveClass(/hidden/, { timeout: 15_000 });
+  }
   await page.waitForTimeout(settle);
 }
 
