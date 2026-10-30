@@ -94,6 +94,7 @@ export default defineConfig({
         about: path.resolve(here, 'about.html'),
         privacy: path.resolve(here, 'privacy.html'),
         community: path.resolve(here, 'community.html'),
+        tags: path.resolve(here, 'tags.html'),
       },
     },
   },

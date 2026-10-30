@@ -1133,6 +1133,8 @@ export function setupAppShell() {
         document.getElementById('btn-edit-history')?.click();
       } else if (actionId === 'shortcuts') {
         document.getElementById('shortcuts-overlay')?.classList.remove('hidden');
+      } else if (actionId === 'tags') {
+        window.location.href = '/tags';
       } else if (actionId === 'community') {
         window.location.href = '/community';
       } else if (actionId === 'toggle_lang') {

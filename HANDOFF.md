@@ -619,3 +619,30 @@ Started Phase 3 from `REDESIGN.md` §3.2, §4.6 & §5:
    - Vitest: 67 passed across 8 test suites.
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean production build in 219 ms.
+
+### 18.2 Phase 3 Step 2: Searchable Tag Directory Workspace (`/tags`)
+1. **Interactive Tag Directory (`frontend/tags.html` & `frontend/src/tags.js`):**
+   - Built full Tag Directory workspace matching [`REDESIGN.md` §3.2 & §4.6](file:///c:/Users/abdul/Desktop/GCC20260707/REDESIGN.md#L671).
+   - Renders each tag entry with key/value pills, status badges (`approved` / `discouraged`), `applies_to` targets (`node`, `way`, `relation`), and bilingual labels.
+   - Saudi Mapping Guidelines callout (`saudi_notes`) highlighting local practices.
+   - Live Saudi usage statistics (counts, percentages, and top 5 co-occurring tags from `tags.json` and `tag_stats_sa.json`).
+   - Good vs bad examples with explanatory `why` callouts.
+   - Direct QA rule cards linking into the QA workspace (`/qa?rule=<id>`).
+   - Embedded UNGEGN/GASGI Arabic-to-English transliteration tool for `name:en` with instant copy-to-clipboard.
+   - External links for opening iD editor with preset preselected, Overpass Turbo scoped to Saudi Arabia (`area["ISO3166-1"="SA"]`), and official OSM Wiki pages.
+2. **Arabic-Normalized Instant Search & Filtering:**
+   - Powered by `ArabicText.normalize()` in `frontend/src/arabic.js`, seamlessly matching queries across key, value, Arabic/English labels, Saudi notes, and rule IDs (resilient to alef/hamza/taa marbuta variations).
+   - Filter chips: `All`, `Approved`, `Discouraged`, `Core Worship`.
+   - Global keyboard shortcuts: `/` focuses search bar; `Esc` clears search.
+   - URL hash deep linking: navigation to `#tag-slug` smoothly scrolls and highlights target card.
+3. **AppShell & Navigation Integration:**
+   - Added `Tags` navigation tab to TopBar in `frontend/index.html`.
+   - Added `Tags` link to footer and Command Palette (`frontend/src/palette.js` and `frontend/src/app.js`).
+   - Added quick links in `frontend/community.html`.
+   - Registered `tags.html` entrypoint in `frontend/vite.config.js`.
+4. **Testing & Verification:**
+   - Added `frontend/tests/tags.test.js` (6 unit tests).
+   - Vitest: 73 passed across 9 test suites (up from 67).
+   - Pytest: 120 passed.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build in 225 ms.
