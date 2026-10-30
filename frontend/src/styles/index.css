@@ -3906,3 +3906,113 @@ kbd {
   padding: 1px 5px;
   color: #fff;
 }
+
+
+/* Changes Feed Workspace */
+.changes-new-bar {
+  background: var(--color-primary);
+  color: #000;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  animation: pulse-glow 2s infinite ease-in-out;
+  transition: transform 0.15s ease;
+}
+
+.changes-new-bar:hover {
+  transform: scale(1.03);
+}
+
+.changes-new-bar.hidden {
+  display: none !important;
+}
+
+.changes-flags-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #ffb03a;
+  background: rgba(255, 176, 58, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.changes-cell-diff code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #94a3b8;
+  max-width: 250px;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kind-created {
+  background: rgba(0, 255, 135, 0.15);
+  color: #00ff87;
+  border: 1px solid rgba(0, 255, 135, 0.3);
+}
+
+.kind-deleted {
+  background: rgba(255, 69, 58, 0.15);
+  color: #ff6b64;
+  border: 1px solid rgba(255, 69, 58, 0.3);
+}
+
+.kind-upgraded {
+  background: rgba(0, 242, 254, 0.15);
+  color: #00f2fe;
+  border: 1px solid rgba(0, 242, 254, 0.3);
+}
+
+.kind-modified {
+  background: rgba(255, 176, 58, 0.15);
+  color: #ffb03a;
+  border: 1px solid rgba(255, 176, 58, 0.3);
+}
+
+.src-live {
+  background: rgba(255, 69, 58, 0.15);
+  color: #ff453a;
+  border: 1px solid rgba(255, 69, 58, 0.25);
+}
+
+.src-daily {
+  background: rgba(0, 242, 254, 0.12);
+  color: var(--color-primary);
+  border: 1px solid rgba(0, 242, 254, 0.25);
+}
+
+.src-confirmed {
+  background: rgba(0, 255, 135, 0.12);
+  color: #00ff87;
+  border: 1px solid rgba(0, 255, 135, 0.25);
+}
+
+.triage-reviewed {
+  background: rgba(0, 255, 135, 0.15);
+  color: #00ff87;
+  border: 1px solid rgba(0, 255, 135, 0.3);
+}
+
+.triage-flagged {
+  background: rgba(255, 69, 58, 0.15);
+  color: #ff453a;
+  border: 1px solid rgba(255, 69, 58, 0.3);
+}
+
+.triage-reverted {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.triage-unreviewed {
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}

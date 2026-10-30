@@ -537,3 +537,27 @@ Started Phase 2a from `REDESIGN.md` §3.3 & §5:
    - Vitest: 62 passed across 7 test suites.
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean production build.
+
+### 16.2 Changes Workspace, CSP Hardening & Community Positive Loop (2026-10-30)
+1. **Interactive `/changes` Workspace (`changes_view.js` & `index.html`):**
+   - Added `Changes` workspace tab and full-featured table view for daily and live events.
+   - Keyboard triage shortcuts:
+     - `J` / `K` for moving selection.
+     - `Enter` to inspect place on map.
+     - `A` to acknowledge / review change (`POST /api/v1/changes/{id}/triage`).
+     - `R` to flag change for revert.
+     - `H` to open OSM object history on openstreetmap.org.
+     - `C` to open OSMCha for the specific changeset (or bounding box).
+     - `M` to open Osmose issues nearby.
+     - `.` to flush and show incoming real-time changes without shifting cursor position.
+   - 60s background polling with ETag caching and incoming changes notification pill.
+2. **CSP Hardening (`deploy/Caddyfile.container` & `frontend/vite.config.js`):**
+   - Added `https://osmose.openstreetmap.fr https://overpass-api.de` to `connect-src` allowing on-click browser queries as specified in §3.3.5 without relaxing security boundaries.
+3. **Community Positive Loop (`community.html` & `community.js`):**
+   - Added `#fixed-issues-container` displaying verified issue fixes (`flag=issue-fixed`) to celebrate community progress.
+4. **Testing & Build Verification:**
+   - Added `frontend/tests/changes_view.test.js` (5 unit tests).
+   - Full Vitest suite: 67 passed across 8 test files.
+   - Full Pytest suite: 108 passed.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build in 353 ms.

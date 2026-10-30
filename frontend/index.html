@@ -26,6 +26,9 @@
           <button type="button" class="topbar-tab" data-workspace="qa" id="tab-workspace-qa">
             <span data-lang="ar">الجودة</span><span data-lang="en">QA</span>
           </button>
+          <button type="button" class="topbar-tab" data-workspace="changes" id="tab-workspace-changes">
+            <span data-lang="ar">التغييرات</span><span data-lang="en">Changes</span>
+          </button>
           <a href="/community" class="topbar-tab">
             <span data-lang="ar">المجتمع</span><span data-lang="en">Community</span>
           </a>
@@ -1209,6 +1212,137 @@
             <span><kbd>S</kbd> تخطي</span>
             <span>·</span>
             <span><kbd>L</kbd> أو <kbd>Esc</kbd> للعودة للخريطة</span>
+          </div>
+        </footer>
+      </div>
+    </section>
+
+    <!-- Changes Workspace (Live & daily edit monitor) -->
+    <section id="changes-workspace" class="qa-workspace hidden" aria-label="مساحة متابعة التغييرات والتحديثات">
+      <div class="qa-workspace-container">
+        <header class="qa-workspace-header">
+          <div class="qa-header-start">
+            <span class="qa-title-icon">📡</span>
+            <h2 class="qa-title" data-lang="ar">متابعة التغييرات والتحديثات</h2>
+            <h2 class="qa-title" data-lang="en">Changes &amp; Activity Monitor</h2>
+            <span id="changes-count" class="qa-count-badge">0</span>
+          </div>
+
+          <button type="button" id="changes-new-bar" class="changes-new-bar hidden" title="عرض التحديثات الجديدة (.)"></button>
+
+          <div class="qa-filters-toolbar">
+            <div class="qa-filter-group">
+              <label for="changes-filter-source" class="qa-filter-label"><span data-lang="ar">المصدر:</span><span data-lang="en">Source:</span></label>
+              <select id="changes-filter-source" class="qa-select">
+                <option value="all">الكل / All</option>
+                <option value="daily">يومي / Daily</option>
+                <option value="live">مباشر / Live</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="changes-filter-region" class="qa-filter-label"><span data-lang="ar">المنطقة:</span><span data-lang="en">Region:</span></label>
+              <select id="changes-filter-region" class="qa-select">
+                <option value="all">جميع المناطق / All Regions</option>
+                <option value="SA-01">الرياض (SA-01)</option>
+                <option value="SA-02">مكة المكرمة (SA-02)</option>
+                <option value="SA-03">المدينة المنورة (SA-03)</option>
+                <option value="SA-04">المنطقة الشرقية (SA-04)</option>
+                <option value="SA-05">عسير (SA-05)</option>
+                <option value="SA-06">القصيم (SA-06)</option>
+                <option value="SA-07">تبوك (SA-07)</option>
+                <option value="SA-08">حائل (SA-08)</option>
+                <option value="SA-09">الجوف (SA-09)</option>
+                <option value="SA-10">جازان (SA-10)</option>
+                <option value="SA-11">نجران (SA-11)</option>
+                <option value="SA-12">الباحة (SA-12)</option>
+                <option value="SA-13">الحدود الشمالية (SA-13)</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="changes-filter-kind" class="qa-filter-label"><span data-lang="ar">النوع:</span><span data-lang="en">Kind:</span></label>
+              <select id="changes-filter-kind" class="qa-select">
+                <option value="all">جميع الأنواع / All</option>
+                <option value="created">إضافة جديدة / Created</option>
+                <option value="modified">تعديل / Modified</option>
+                <option value="deleted">حذف / Deleted</option>
+                <option value="upgraded">ترقية لمبنى / Upgraded</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="changes-filter-flag" class="qa-filter-label"><span data-lang="ar">الإشارة:</span><span data-lang="en">Flag:</span></label>
+              <select id="changes-filter-flag" class="qa-select">
+                <option value="all">جميع الإشارات / All Flags</option>
+                <option value="deleted-named-mosque">deleted-named-mosque (حذف مسمى)</option>
+                <option value="name-removed">name-removed (إزالة اسم)</option>
+                <option value="religion-changed">religion-changed (تغيير مذهب/دين)</option>
+                <option value="amenity-removed">amenity-removed (إزالة وسم عبادة)</option>
+                <option value="building-downgraded">building-downgraded (تخفيض تصنيف)</option>
+                <option value="new-duplicate">new-duplicate (احتمال تكرار)</option>
+                <option value="name-ar-mismatch">name-ar-mismatch (تعارض الأسماء)</option>
+                <option value="left-boundary">left-boundary (خارج الحدود)</option>
+                <option value="issue-fixed">issue-fixed (تم الإصلاح)</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="changes-filter-status" class="qa-filter-label"><span data-lang="ar">المراجعة:</span><span data-lang="en">Triage:</span></label>
+              <select id="changes-filter-status" class="qa-select">
+                <option value="all">الكل / All</option>
+                <option value="unreviewed" selected>غير مراجع / Unreviewed</option>
+                <option value="reviewed">تمت المراجعة / Reviewed</option>
+                <option value="flagged">بحاجة لتراجع / Flagged</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="qa-header-actions">
+            <button type="button" id="changes-btn-close" class="qa-close-btn" title="العودة للخريطة (Esc)">
+              <span data-lang="ar">✕ إغلاق</span>
+              <span data-lang="en">✕ Close</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="qa-table-wrap">
+          <table class="qa-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;"><span data-lang="ar">الحدث</span><span data-lang="en">Event</span></th>
+                <th><span data-lang="ar">اسم المكان</span><span data-lang="en">Place Name</span></th>
+                <th style="width: 140px;"><span data-lang="ar">العنصر</span><span data-lang="en">Object</span></th>
+                <th><span data-lang="ar">فروقات الوسوم</span><span data-lang="en">Tag Diff</span></th>
+                <th style="width: 180px;"><span data-lang="ar">الإشارات</span><span data-lang="en">Flags</span></th>
+                <th style="width: 90px;"><span data-lang="ar">المنطقة</span><span data-lang="en">Region</span></th>
+                <th style="width: 110px;"><span data-lang="ar">المصدر</span><span data-lang="en">Source</span></th>
+                <th style="width: 110px;"><span data-lang="ar">الحالة</span><span data-lang="en">Triage</span></th>
+              </tr>
+            </thead>
+            <tbody id="changes-table-body">
+              <!-- Rendered dynamically by changes_view.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="qa-workspace-footer">
+          <div class="qa-footer-hints">
+            <span><kbd>J</kbd> / <kbd>K</kbd> للتنقل</span>
+            <span>·</span>
+            <span><kbd>Enter</kbd> للمعاينة على الخريطة</span>
+            <span>·</span>
+            <span><kbd>A</kbd> اعتماد (مراجعة)</span>
+            <span>·</span>
+            <span><kbd>R</kbd> تنبيه للتراجع</span>
+            <span>·</span>
+            <span><kbd>H</kbd> سجل OSM</span>
+            <span>·</span>
+            <span><kbd>C</kbd> OSMCha</span>
+            <span>·</span>
+            <span><kbd>M</kbd> Osmose القريب</span>
+            <span>·</span>
+            <span><kbd>Esc</kbd> إغلاق</span>
           </div>
         </footer>
       </div>

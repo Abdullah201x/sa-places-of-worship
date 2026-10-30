@@ -134,6 +134,7 @@ let activeHistoryMetric = 'places_count';
 let currentUser = null;
 let leaderboardList = [];
 let recentEditsList = [];
+let fixedIssuesList = [];
 
 async function fetchJson(url) {
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -943,6 +944,57 @@ function renderRecentEdits() {
   `;
 }
 
+function formatTagDiff(tagDiff) {
+  if (!tagDiff || typeof tagDiff !== 'object') return '–';
+  const parts = [];
+  for (const [k, v] of Object.entries(tagDiff.modified || {})) {
+    parts.push(`${k}: ${v?.before ?? ''} → ${v?.after ?? ''}`);
+  }
+  for (const [k, v] of Object.entries(tagDiff.added || {})) {
+    parts.push(`+${k}=${v}`);
+  }
+  return parts.length ? parts.slice(0, 3).join(' · ') : '–';
+}
+
+function renderFixedIssues() {
+  const container = document.getElementById('fixed-issues-container');
+  if (!container) return;
+
+  if (!fixedIssuesList.length) {
+    container.innerHTML = `<div class="empty-feed-box">${currentLang === 'ar' ? 'لا توجد إصلاحات مؤكدة مسجلة حديثاً' : 'No recently confirmed fixed issues yet'}</div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="recent-edits-list">
+      ${fixedIssuesList.map(ch => {
+        const pName = ch.name || (currentLang === 'ar' ? 'مكان عبادة' : 'Place of worship');
+        const objRef = `${ch.osm_type}/${ch.osm_id}`;
+        return `
+          <div class="recent-edit-row">
+            <div class="edit-row-top">
+              <span class="badge status-fixed" style="font-size: 11px;">✓ ${currentLang === 'ar' ? 'تم الإصلاح' : 'Fixed'}</span>
+              <div class="edit-mapper-name">
+                <strong dir="auto">${escapeHtml(pName)}</strong>
+                <a href="https://www.openstreetmap.org/${escapeHtml(objRef)}" target="_blank" rel="noopener" class="changeset-link" dir="ltr">${escapeHtml(objRef)} ↗</a>
+              </div>
+              <span class="edit-time">${escapeHtml(fmtDate(ch.observed_at || ch.osm_timestamp, true))}</span>
+            </div>
+            <div class="edit-comment">
+              <code dir="ltr" style="font-size: 11px; color: #94a3b8;">${escapeHtml(formatTagDiff(ch.tag_diff))}</code>
+            </div>
+            ${ch.region_code ? `
+              <div class="edit-tags-pill">
+                <span class="edit-badge">${escapeHtml(ch.region_code)}</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
 function renderAll() {
   if (!overallStats) return;
   renderMetaBar();
@@ -955,6 +1007,7 @@ function renderAll() {
   renderUserOptinBox();
   renderLeaderboard();
   renderRecentEdits();
+  renderFixedIssues();
 }
 
 function bindEvents() {
@@ -1026,7 +1079,7 @@ async function loadCommunityData() {
   if (errBox) errBox.style.display = 'none';
 
   try {
-    const [statsRes, regionsRes, historyRes, metaRes, meRes, lbRes, editsRes] = await Promise.all([
+    const [statsRes, regionsRes, historyRes, metaRes, meRes, lbRes, editsRes, changesRes] = await Promise.all([
       fetchJson('/api/v1/stats'),
       fetchJson('/api/v1/stats/regions'),
       fetchJson('/api/v1/stats/history?limit=200'),
@@ -1034,6 +1087,7 @@ async function loadCommunityData() {
       fetchJson('/api/v1/me').catch(() => null),
       fetchJson('/api/v1/leaderboard').catch(() => ({ leaderboard: [] })),
       fetchJson('/api/v1/edits/recent').catch(() => ({ edits: [] })),
+      fetchJson('/api/v1/changes?flag=issue-fixed&limit=20').catch(() => ({ changes: [] })),
     ]);
 
     overallStats = statsRes;
@@ -1043,6 +1097,7 @@ async function loadCommunityData() {
     currentUser = meRes;
     leaderboardList = lbRes.leaderboard || [];
     recentEditsList = editsRes.edits || [];
+    fixedIssuesList = changesRes.changes || [];
 
     renderAll();
   } catch (err) {

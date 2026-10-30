@@ -23,7 +23,7 @@ const DATA_FILES = new Set([
 ]);
 const dataDir = path.resolve(here, process.env.MANARA_DATA_DIR || '..');
 
-let CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self'; connect-src 'self' https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://server.arcgisonline.com http://127.0.0.1:8111; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'";
+let CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self'; connect-src 'self' https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://server.arcgisonline.com http://127.0.0.1:8111 https://osmose.openstreetmap.fr https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'";
 try {
   const caddyPath = path.resolve(here, '../deploy/Caddyfile.container');
   if (fs.existsSync(caddyPath)) {

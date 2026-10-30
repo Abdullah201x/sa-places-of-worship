@@ -1,5 +1,6 @@
 import { setupCommandPalette } from './palette.js';
 import { setupQAWorkspace, openQAWorkspace, closeQAWorkspace } from './qa_view.js';
+import { setupChangesWorkspace, openChangesWorkspace, closeChangesWorkspace } from './changes_view.js';
 import { setMode as storeSetMode, setSelection as storeSetSelection } from './store.js';
 import { currentLang, t, fmtNum, fmtDate, onLanguageChange, setLanguage } from './i18n.js';
 import { ArabicText } from './arabic.js';
@@ -917,18 +918,71 @@ export function setupAppShell() {
 
   const tabMap = document.getElementById('tab-workspace-map');
   const tabQa = document.getElementById('tab-workspace-qa');
+  const tabChanges = document.getElementById('tab-workspace-changes');
   if (tabMap) {
     tabMap.addEventListener('click', () => {
       closeQAWorkspace();
+      closeChangesWorkspace();
       tabMap.classList.add('active');
       tabQa?.classList.remove('active');
+      tabChanges?.classList.remove('active');
     });
   }
   if (tabQa) {
     tabQa.addEventListener('click', () => {
+      closeChangesWorkspace();
       openQAWorkspace();
     });
   }
+  if (tabChanges) {
+    tabChanges.addEventListener('click', () => {
+      closeQAWorkspace();
+      openChangesWorkspace();
+    });
+  }
+
+  setupChangesWorkspace({
+    fetchChanges: async (sinceId = null) => {
+      try {
+        const url = sinceId ? `/api/v1/changes?since_id=${sinceId}` : '/api/v1/changes?limit=100';
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          return data.changes || [];
+        }
+      } catch (_) {}
+      return [];
+    },
+    onInspectChange: (ch) => {
+      if (ch.coordinates && ch.coordinates.length === 2) {
+        const [lon, lat] = ch.coordinates;
+        if (map) map.flyTo([lat, lon], 17);
+        const matched = allPlaces.find(p => {
+          const props = p.properties || {};
+          return props.osm_id === ch.osm_id && (!ch.osm_type || osmTypeOf(props) === ch.osm_type);
+        });
+        if (matched) {
+          showDetails(matched.properties, lat, lon);
+        } else {
+          showDetails({
+            osm_id: ch.osm_id,
+            osm_type: ch.osm_type,
+            name: ch.name,
+            region_code: ch.region_code,
+          }, lat, lon);
+        }
+      }
+    },
+    onTriageChange: async (ch, status) => {
+      try {
+        await fetch(`/api/v1/changes/${ch.id}/triage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+      } catch (_) {}
+    },
+  });
 
   setupQAWorkspace({
     fetchIssues: async () => {
@@ -3591,4 +3645,29 @@ export async function submitPendingMosqueNode() {
   } finally {
     if (submitBtn) submitBtn.disabled = false;
   }
+}
+
+
+export async function fetchOsmoseNearby(lat, lon) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return [];
+  const delta = 0.005; // ~500m
+  const bbox = `${(lon - delta).toFixed(5)},${(lat - delta).toFixed(5)},${(lon + delta).toFixed(5)},${(lat + delta).toFixed(5)}`;
+  const cacheKey = `osmose_${bbox}`;
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached);
+  } catch (_) {}
+
+  try {
+    const res = await fetch(`https://osmose.openstreetmap.fr/api/0.3/issues?bbox=${bbox}&limit=50`);
+    if (res.ok) {
+      const data = await res.json();
+      const issues = data.issues || [];
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(issues));
+      } catch (_) {}
+      return issues;
+    }
+  } catch (_) {}
+  return [];
 }
