@@ -34,6 +34,7 @@ addTranslations({
   editSource: ['المصدر:', 'Source:'],
   sourceLocal: ['معرفة محلية', 'Local knowledge'],
   sourceSurvey: ['مسح ميداني', 'Survey'],
+  sourceTranslating: ['ترجمة', 'Translating'],
   sourceImagery: ['صور Esri الجوية', 'Esri World Imagery'],
   editUploadNow: ['رفع الآن', 'Upload now'],
   editAddToBatch: ['إضافة إلى الدفعة', 'Add to batch'],
@@ -99,7 +100,7 @@ export const QUICK_FIXES = {
   },
   missing_name_en: {
     target: 'poi',
-    source: 'local knowledge',
+    source: 'translating',
     field: 'name:en',
     edits: v => ({ set: { [FIELDS['name:en'].key]: v } })
   },
@@ -219,7 +220,7 @@ export function renderQuickFixes(props) {
 export function sourceSelect(selected) {
   const select = document.createElement('select');
   select.className = 'auth-input edit-source';
-  [['local knowledge', 'sourceLocal'], ['survey', 'sourceSurvey'], ['Esri World Imagery', 'sourceImagery']].forEach(([value, key]) => {
+  [['local knowledge', 'sourceLocal'], ['survey', 'sourceSurvey'], ['translating', 'sourceTranslating'], ['Esri World Imagery', 'sourceImagery']].forEach(([value, key]) => {
     const opt = document.createElement('option');
     opt.value = value;
     opt.textContent = t(key);
