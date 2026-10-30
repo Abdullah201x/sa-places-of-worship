@@ -51,7 +51,7 @@ function serveData(req, res, next) {
 }
 
 // Clean URLs for the content pages, as Caddy's try_files does in production.
-const PAGES = new Set(['/about', '/privacy', '/community']);
+const PAGES = new Set(['/about', '/privacy', '/community', '/tags', '/guides', '/start', '/tasks']);
 function cleanUrls(req, res, next) {
   const [pathname, query] = req.url.split('?');
   if (PAGES.has(pathname)) req.url = `${pathname}.html${query ? `?${query}` : ''}`;
@@ -97,6 +97,7 @@ export default defineConfig({
         tags: path.resolve(here, 'tags.html'),
         guides: path.resolve(here, 'guides.html'),
         start: path.resolve(here, 'start.html'),
+        tasks: path.resolve(here, 'tasks.html'),
       },
     },
   },

@@ -1137,6 +1137,8 @@ export function setupAppShell() {
         window.location.href = '/start';
       } else if (actionId === 'guides') {
         window.location.href = '/guides';
+      } else if (actionId === 'tasks') {
+        window.location.href = '/tasks';
       } else if (actionId === 'tags') {
         window.location.href = '/tags';
       } else if (actionId === 'community') {

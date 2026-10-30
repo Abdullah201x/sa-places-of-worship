@@ -703,3 +703,25 @@ Started Phase 4 from `REDESIGN.md` §3.1, §4.2, §4.7 & §5:
    - Vitest: 77 passed across 10 test files.
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean production build in 374 ms.
+
+### 19.2 Phase 4 Step 2: Task Tracker & Sprint Board UI, External Editors, ETag Polling & Testing
+1. **Sprint Board UI & Modals (`frontend/tasks.html`, `frontend/src/tasks.js`, `frontend/src/styles/tasks.css`):**
+   - Built list-first campaign overview and interactive grid board for sprint tiles.
+   - Designed responsive tile status styling across the 7 states (`ready`, `mapping`, `mapped`, `validating`, `validated`, `invalidated`, `skipped`).
+   - Inspector sidebar panel with tile state, locking user, mapper, validator, workload, and contextual action buttons.
+   - Rejection modal for `invalidated` state capturing specific feedback reasons into `tile_events`.
+   - Enforced client-side self-validation prevention: blocks peer validation actions if `currentUserUid === tile.mapped_by`.
+2. **External Editor Integration & Shortcuts:**
+   - Single-click launch into **iD editor** (`https://www.openstreetmap.org/edit?editor=id#map=16/lat/lon&comment=...&hashtags=...`).
+   - Remote control integration into **JOSM** (`http://127.0.0.1:8111/load_and_zoom?left=...&bottom=...&right=...&top=...`).
+   - Keyboard navigation shortcuts: `N` (next ready tile with highest workload), `L` (lock for mapping/validation), `D` (mark done), `A` (approve), `X` (invalidate), `S` (skip), `Esc` (deselect).
+3. **Background ETag Polling & Navigation Wiring:**
+   - Efficient 60s background tile polling with `If-None-Match: W/"<rev_max>"` receiving 304 Not Modified when idle.
+   - Added `/tasks` route in `frontend/vite.config.js` and topbar tab navigation in `frontend/index.html`.
+   - Wired Command Palette action `{ id: 'tasks', ... }` in `frontend/src/palette.js` and `frontend/src/app.js`.
+4. **Decoupled Architecture & Testing (`frontend/src/tasks_view.js`, `frontend/tests/tasks_view.test.js`):**
+   - Extracted pure helper functions into `tasks_view.js` (`generateIdEditorUrl`, `generateJosmRemoteUrl`, `findNextReadyTile`, `formatTileStateBadge`, `calculateSprintProgress`).
+   - 10 unit tests covering URL generation, bounding calculations, workload priority selection, and progress metrics.
+   - Vitest: 87 passed across 11 test suites.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean build in 263 ms.
