@@ -34,8 +34,8 @@ export async function viewCount(page) {
 }
 
 export const KITS = [
-  { name: 'leaflet', query: '' },
-  { name: 'maplibre', query: '?map=gl' },
+  { name: 'maplibre', query: '' },
+  { name: 'leaflet', query: '?map=leaflet' },
 ];
 
 // Centre of the map element, where a permalinked place sits.

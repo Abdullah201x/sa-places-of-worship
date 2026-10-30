@@ -259,9 +259,21 @@ def publish():
     shutil.rmtree(staging, ignore_errors=True)
     os.makedirs(staging)
     for name in PUBLISHED_FILES:
-        dest = os.path.join(staging, name)
-        shutil.copy2(os.path.join(WORK_DIR, name), dest)
-        precompress(dest)
+        src = os.path.join(WORK_DIR, name)
+        if os.path.exists(src):
+            dest = os.path.join(staging, name)
+            shutil.copy2(src, dest)
+            precompress(dest)
+
+    reg_src = os.path.join(WORK_DIR, "by-region")
+    if os.path.exists(reg_src):
+        reg_dest = os.path.join(staging, "by-region")
+        shutil.copytree(reg_src, reg_dest)
+        for root, _, files in os.walk(reg_dest):
+            for fname in files:
+                if not (fname.endswith(".br") or fname.endswith(".gz")):
+                    precompress(os.path.join(root, fname))
+
     os.replace(staging, target)
 
     # Atomic swap: a relative symlink, so it resolves inside any container

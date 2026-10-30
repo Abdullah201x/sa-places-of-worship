@@ -56,6 +56,8 @@ describe('Data Hub View Helpers', () => {
     const files = [
       { id: 'places-sa-geojson', scope: 'SA', layer: 'places', format: 'geojson', path: 'places_of_worship_sa.geojson' },
       { id: 'places-sa-csv', scope: 'SA', layer: 'places', format: 'csv', path: 'places_of_worship_sa.csv' },
+      { id: 'places-SA-01-geojson', scope: 'SA-01', layer: 'places', format: 'geojson', path: 'by-region/places_SA-01.geojson' },
+      { id: 'places-SA-01-csv', scope: 'SA-01', layer: 'places', format: 'csv', path: 'by-region/places_SA-01.csv' },
       { id: 'gaps-sa-json', scope: 'SA', layer: 'gaps', format: 'geojson', path: 'worship_gaps_sa.json' },
       { id: 'suggestions-sa-csv', scope: 'SA', layer: 'suggestions', format: 'csv', path: 'suggested_mosques_sa.csv' },
       { id: 'boundary-sa-geojson', scope: 'SA', layer: 'boundary', format: 'geojson', path: 'sa_boundary.geojson' },
@@ -63,26 +65,32 @@ describe('Data Hub View Helpers', () => {
 
     it('filters by layer', () => {
       const filtered = filterManifestFiles(files, { layer: 'places' });
-      expect(filtered.length).toBe(2);
+      expect(filtered.length).toBe(4);
       expect(filtered.every(f => f.layer === 'places')).toBe(true);
     });
 
     it('filters by format', () => {
       const filtered = filterManifestFiles(files, { format: 'csv' });
-      expect(filtered.length).toBe(2);
+      expect(filtered.length).toBe(3);
       expect(filtered.every(f => f.format === 'csv')).toBe(true);
     });
 
-    it('filters by search query', () => {
-      const filtered = filterManifestFiles(files, { query: 'gaps' });
-      expect(filtered.length).toBe(1);
-      expect(filtered[0].id).toBe('gaps-sa-json');
+    it('filters by scope', () => {
+      const filtered = filterManifestFiles(files, { scope: 'SA-01' });
+      expect(filtered.length).toBe(2);
+      expect(filtered.every(f => f.scope === 'SA-01')).toBe(true);
     });
 
-    it('combines multiple filter criteria', () => {
-      const filtered = filterManifestFiles(files, { layer: 'places', format: 'csv' });
+    it('filters by search query matching scope', () => {
+      const filtered = filterManifestFiles(files, { query: 'SA-01' });
+      expect(filtered.length).toBe(2);
+      expect(filtered[0].id).toBe('places-SA-01-geojson');
+    });
+
+    it('combines multiple filter criteria with scope', () => {
+      const filtered = filterManifestFiles(files, { scope: 'SA-01', format: 'csv' });
       expect(filtered.length).toBe(1);
-      expect(filtered[0].id).toBe('places-sa-csv');
+      expect(filtered[0].id).toBe('places-SA-01-csv');
     });
   });
 });

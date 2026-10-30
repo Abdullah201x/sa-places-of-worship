@@ -33,6 +33,7 @@ addTranslations({
   formatCsv: ['CSV (جداول)', 'CSV (Spreadsheet)'],
   formatPmtiles: ['PMTiles (متجهات)', 'PMTiles (Vector)'],
   colFilename: ['الملف والمعرف', 'File & ID'],
+  colScope: ['النطاق', 'Scope'],
   colLayer: ['الطبقة', 'Layer'],
   colFormat: ['الصيغة', 'Format'],
   colRecords: ['السجلات', 'Records'],
@@ -52,7 +53,7 @@ addTranslations({
 });
 
 let manifestData = null;
-let activeFilters = { layer: 'all', format: 'all', query: '' };
+let activeFilters = { scope: 'all', layer: 'all', format: 'all', query: '' };
 
 export async function loadManifest() {
   const tableBody = document.getElementById('data-table-body');
@@ -66,7 +67,7 @@ export async function loadManifest() {
     renderFilesTable();
     renderOverpassPresets(manifestData.overpass_presets || []);
   } catch (err) {
-    tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--color-danger); padding: 24px;">فشل في تحميل بيانات الفهرس (manifest.json)</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger); padding: 24px;">فشل في تحميل بيانات الفهرس (manifest.json)</td></tr>`;
   }
 }
 
@@ -84,7 +85,7 @@ function renderFilesTable() {
   const files = filterManifestFiles(manifestData.files || [], activeFilters);
 
   if (!files.length) {
-    tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--color-text-muted); padding: 32px;">لا توجد ملفات مطابقة للبحث</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-text-muted); padding: 32px;">لا توجد ملفات مطابقة للبحث</td></tr>`;
     return;
   }
 
@@ -93,6 +94,7 @@ function renderFilesTable() {
     const shaShort = formatShaBadge(f.sha256);
     const sizeStr = formatBytes(f.bytes);
     const countStr = f.features != null ? fmtNum(f.features) : '–';
+    const scopeStr = f.scope || 'SA';
 
     return `
       <tr>
@@ -100,6 +102,7 @@ function renderFilesTable() {
           <div style="font-weight: 600; color: var(--color-text);">${f.path}</div>
           <div style="font-size: 0.78rem; color: var(--color-text-muted); font-family: monospace;">${f.id}</div>
         </td>
+        <td><span style="font-family: monospace; font-size: 0.85rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06);">${scopeStr}</span></td>
         <td><span style="text-transform: capitalize;">${f.layer}</span></td>
         <td><span class="file-format-badge ${formatClass}">${f.format}</span></td>
         <td>${countStr}</td>
@@ -172,11 +175,17 @@ function showToast(msg) {
 // Wire Filter Controls
 function setupFilters() {
   const searchInput = document.getElementById('data-search-input');
+  const regionSelect = document.getElementById('filter-region');
   const layerSelect = document.getElementById('filter-layer');
   const formatSelect = document.getElementById('filter-format');
 
   searchInput?.addEventListener('input', (e) => {
     activeFilters.query = e.target.value;
+    renderFilesTable();
+  });
+
+  regionSelect?.addEventListener('change', (e) => {
+    activeFilters.scope = e.target.value;
     renderFilesTable();
   });
 

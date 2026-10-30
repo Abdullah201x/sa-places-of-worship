@@ -32,7 +32,8 @@ export function filterManifestFiles(files, filters = {}) {
       const idMatch = (f.id || '').toLowerCase().includes(q);
       const pathMatch = (f.path || '').toLowerCase().includes(q);
       const layerMatch = (f.layer || '').toLowerCase().includes(q);
-      if (!idMatch && !pathMatch && !layerMatch) return false;
+      const scopeMatch = (f.scope || '').toLowerCase().includes(q);
+      if (!idMatch && !pathMatch && !layerMatch && !scopeMatch) return false;
     }
     return true;
   });

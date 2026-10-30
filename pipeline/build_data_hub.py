@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Generates the Data Hub manifest (manifest.json) and tabular CSV exports
-for Saudi places of worship, coverage gaps, and Wikidata suggestions.
+for Saudi places of worship, coverage gaps, and Wikidata suggestions,
+both at the national level and sliced for all 13 administrative provinces.
 
 Conforms to REDESIGN.md §4.6 DataManifest specifications.
 Licence: ODbL-1.0
@@ -30,17 +31,10 @@ def sha256_file(filepath):
     return h.hexdigest()
 
 
-def generate_places_csv(geojson_path, csv_path):
-    """Converts places_of_worship_sa.geojson to a clean CSV export."""
-    if not os.path.exists(geojson_path):
-        return 0
-
-    with open(geojson_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    features = data.get("features", [])
+def write_places_csv_features(features, csv_path):
+    """Writes list of GeoJSON features to CSV with UTF-8 BOM."""
+    os.makedirs(os.path.dirname(os.path.abspath(csv_path)), exist_ok=True)
     count = 0
-
     with open(csv_path, "w", encoding="utf-8-sig", newline="") as out:
         writer = csv.writer(out)
         writer.writerow([
@@ -71,17 +65,21 @@ def generate_places_csv(geojson_path, csv_path):
     return count
 
 
-def generate_gaps_csv(gaps_json_path, csv_path):
-    """Converts worship_gaps_sa.json to a clean CSV export."""
-    if not os.path.exists(gaps_json_path):
+def generate_places_csv(geojson_path, csv_path):
+    """Converts places_of_worship_sa.geojson to a clean CSV export."""
+    if not os.path.exists(geojson_path):
         return 0
 
-    with open(gaps_json_path, "r", encoding="utf-8") as f:
+    with open(geojson_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    cells = data.get("cells", []) if isinstance(data, dict) else data
-    grid_size = float(data.get("grid_size", 0.004)) if isinstance(data, dict) else 0.004
+    features = data.get("features", [])
+    return write_places_csv_features(features, csv_path)
 
+
+def write_gaps_csv_cells(cells, grid_size, csv_path):
+    """Writes list of grid gap cells to CSV with UTF-8 BOM."""
+    os.makedirs(os.path.dirname(os.path.abspath(csv_path)), exist_ok=True)
     count = 0
     with open(csv_path, "w", encoding="utf-8-sig", newline="") as out:
         writer = csv.writer(out)
@@ -97,17 +95,23 @@ def generate_gaps_csv(gaps_json_path, csv_path):
     return count
 
 
-def generate_suggestions_csv(geojson_path, csv_path):
-    """Converts suggested_mosques_sa.geojson to a clean CSV export."""
-    if not os.path.exists(geojson_path):
+def generate_gaps_csv(gaps_json_path, csv_path):
+    """Converts worship_gaps_sa.json to a clean CSV export."""
+    if not os.path.exists(gaps_json_path):
         return 0
 
-    with open(geojson_path, "r", encoding="utf-8") as f:
+    with open(gaps_json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    features = data.get("features", [])
-    count = 0
+    cells = data.get("cells", []) if isinstance(data, dict) else data
+    grid_size = float(data.get("grid_size", 0.004)) if isinstance(data, dict) else 0.004
+    return write_gaps_csv_cells(cells, grid_size, csv_path)
 
+
+def write_suggestions_csv_features(features, csv_path):
+    """Writes list of Wikidata suggestion features to CSV with UTF-8 BOM."""
+    os.makedirs(os.path.dirname(os.path.abspath(csv_path)), exist_ok=True)
+    count = 0
     with open(csv_path, "w", encoding="utf-8-sig", newline="") as out:
         writer = csv.writer(out)
         writer.writerow(["wikidata_id", "name_ar", "name_en", "nearest_osm_m", "is_unnamed", "lon", "lat"])
@@ -126,6 +130,226 @@ def generate_suggestions_csv(geojson_path, csv_path):
             ])
             count += 1
     return count
+
+
+def generate_suggestions_csv(geojson_path, csv_path):
+    """Converts suggested_mosques_sa.geojson to a clean CSV export."""
+    if not os.path.exists(geojson_path):
+        return 0
+
+    with open(geojson_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    features = data.get("features", [])
+    return write_suggestions_csv_features(features, csv_path)
+
+
+def generate_regional_exports(data_dir=DATA_DIR):
+    """
+    Slices places, gaps, and suggestions into per-region datasets
+    for Saudi Arabia's 13 administrative provinces (SA-01 to SA-14).
+    Writes them into {data_dir}/by-region/
+    Returns a list of file metadata dicts for manifest.json.
+    """
+    regions_path = os.path.join(data_dir, "sa_regions.geojson")
+    if not os.path.exists(regions_path):
+        return []
+
+    try:
+        from shapely.geometry import shape, Point
+        from shapely.prepared import prep
+    except ImportError:
+        print("[WARN] shapely not available; skipping regional export cuts")
+        return []
+
+    with open(regions_path, "r", encoding="utf-8") as f:
+        reg_data = json.load(f)
+
+    prepared_regions = []
+    for feat in reg_data.get("features", []):
+        props = feat.get("properties", {})
+        code = props.get("code") or feat.get("id")
+        if not code:
+            continue
+        geom = shape(feat.get("geometry"))
+        prepared_regions.append({
+            "code": code,
+            "name": props.get("name", ""),
+            "name_en": props.get("name_en", ""),
+            "prep": prep(geom),
+            "bounds": geom.bounds,
+        })
+
+    if not prepared_regions:
+        return []
+
+    def classify_point(lon, lat):
+        pt = Point(lon, lat)
+        for r in prepared_regions:
+            minx, miny, maxx, maxy = r["bounds"]
+            if minx <= lon <= maxx and miny <= lat <= maxy:
+                if r["prep"].contains(pt):
+                    return r["code"]
+        return None
+
+    by_region_dir = os.path.join(data_dir, "by-region")
+    os.makedirs(by_region_dir, exist_ok=True)
+
+    files_list = []
+
+    # 1. Places per region
+    places_path = os.path.join(data_dir, "places_of_worship_sa.geojson")
+    if os.path.exists(places_path):
+        with open(places_path, "r", encoding="utf-8") as f:
+            places_data = json.load(f)
+        places_by_reg = {r["code"]: [] for r in prepared_regions}
+        for feat in places_data.get("features", []):
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            if len(coords) >= 2:
+                reg_code = feat.get("properties", {}).get("region_code") or classify_point(coords[0], coords[1])
+                if reg_code and reg_code in places_by_reg:
+                    feat["properties"]["region_code"] = reg_code
+                    places_by_reg[reg_code].append(feat)
+
+        for code, feats in places_by_reg.items():
+            if not feats:
+                continue
+            geo_fn = f"places_{code}.geojson"
+            csv_fn = f"places_{code}.csv"
+            geo_rel = f"by-region/{geo_fn}"
+            csv_rel = f"by-region/{csv_fn}"
+            geo_full = os.path.join(by_region_dir, geo_fn)
+            csv_full = os.path.join(by_region_dir, csv_fn)
+
+            with open(geo_full, "w", encoding="utf-8") as out:
+                json.dump({"type": "FeatureCollection", "features": feats}, out, ensure_ascii=False)
+            write_places_csv_features(feats, csv_full)
+
+            files_list.append({
+                "id": f"places-{code}-geojson",
+                "scope": code,
+                "layer": "places",
+                "format": "geojson",
+                "path": geo_rel,
+                "bytes": os.path.getsize(geo_full),
+                "sha256": sha256_file(geo_full),
+                "features": len(feats),
+            })
+            files_list.append({
+                "id": f"places-{code}-csv",
+                "scope": code,
+                "layer": "places",
+                "format": "csv",
+                "path": csv_rel,
+                "bytes": os.path.getsize(csv_full),
+                "sha256": sha256_file(csv_full),
+                "features": len(feats),
+            })
+
+    # 2. Gaps per region
+    gaps_path = os.path.join(data_dir, "worship_gaps_sa.json")
+    if os.path.exists(gaps_path):
+        with open(gaps_path, "r", encoding="utf-8") as f:
+            gaps_data = json.load(f)
+        cells = gaps_data.get("cells", []) if isinstance(gaps_data, dict) else gaps_data
+        grid_size = float(gaps_data.get("grid_size", 0.004)) if isinstance(gaps_data, dict) else 0.004
+        gaps_by_reg = {r["code"]: [] for r in prepared_regions}
+        for cell in cells:
+            if len(cell) >= 2:
+                lon = (float(cell[0]) + 0.5) * grid_size
+                lat = (float(cell[1]) + 0.5) * grid_size
+                reg_code = classify_point(lon, lat)
+                if reg_code and reg_code in gaps_by_reg:
+                    gaps_by_reg[reg_code].append(cell)
+
+        for code, reg_cells in gaps_by_reg.items():
+            if not reg_cells:
+                continue
+            json_fn = f"worship_gaps_{code}.json"
+            csv_fn = f"worship_gaps_{code}.csv"
+            json_rel = f"by-region/{json_fn}"
+            csv_rel = f"by-region/{csv_fn}"
+            json_full = os.path.join(by_region_dir, json_fn)
+            csv_full = os.path.join(by_region_dir, csv_fn)
+
+            with open(json_full, "w", encoding="utf-8") as out:
+                json.dump({
+                    "grid_size": grid_size,
+                    "fields": ["grid_x", "grid_y", "road_length_m", "gap_score", "urgency_score"],
+                    "cells": reg_cells
+                }, out)
+            write_gaps_csv_cells(reg_cells, grid_size, csv_full)
+
+            files_list.append({
+                "id": f"gaps-{code}-json",
+                "scope": code,
+                "layer": "gaps",
+                "format": "geojson",
+                "path": json_rel,
+                "bytes": os.path.getsize(json_full),
+                "sha256": sha256_file(json_full),
+                "features": len(reg_cells),
+            })
+            files_list.append({
+                "id": f"gaps-{code}-csv",
+                "scope": code,
+                "layer": "gaps",
+                "format": "csv",
+                "path": csv_rel,
+                "bytes": os.path.getsize(csv_full),
+                "sha256": sha256_file(csv_full),
+                "features": len(reg_cells),
+            })
+
+    # 3. Suggestions per region
+    sugs_path = os.path.join(data_dir, "suggested_mosques_sa.geojson")
+    if os.path.exists(sugs_path):
+        with open(sugs_path, "r", encoding="utf-8") as f:
+            sugs_data = json.load(f)
+        sugs_by_reg = {r["code"]: [] for r in prepared_regions}
+        for feat in sugs_data.get("features", []):
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            if len(coords) >= 2:
+                reg_code = classify_point(coords[0], coords[1])
+                if reg_code and reg_code in sugs_by_reg:
+                    sugs_by_reg[reg_code].append(feat)
+
+        for code, feats in sugs_by_reg.items():
+            if not feats:
+                continue
+            geo_fn = f"suggested_mosques_{code}.geojson"
+            csv_fn = f"suggested_mosques_{code}.csv"
+            geo_rel = f"by-region/{geo_fn}"
+            csv_rel = f"by-region/{csv_fn}"
+            geo_full = os.path.join(by_region_dir, geo_fn)
+            csv_full = os.path.join(by_region_dir, csv_fn)
+
+            with open(geo_full, "w", encoding="utf-8") as out:
+                json.dump({"type": "FeatureCollection", "features": feats}, out, ensure_ascii=False)
+            write_suggestions_csv_features(feats, csv_full)
+
+            files_list.append({
+                "id": f"suggestions-{code}-geojson",
+                "scope": code,
+                "layer": "suggestions",
+                "format": "geojson",
+                "path": geo_rel,
+                "bytes": os.path.getsize(geo_full),
+                "sha256": sha256_file(geo_full),
+                "features": len(feats),
+            })
+            files_list.append({
+                "id": f"suggestions-{code}-csv",
+                "scope": code,
+                "layer": "suggestions",
+                "format": "csv",
+                "path": csv_rel,
+                "bytes": os.path.getsize(csv_full),
+                "sha256": sha256_file(csv_full),
+                "features": len(feats),
+            })
+
+    return files_list
 
 
 OVERPASS_PRESETS = [
@@ -187,7 +411,7 @@ def build_manifest(data_dir=DATA_DIR):
     pbf_date = summary.get("pbf_date") or "2026-10-27"
     dataset_version = "v" + updated_at.replace("-", "").replace(":", "")
 
-    # 1. Generate tabular CSV files alongside GeoJSON
+    # 1. Generate tabular CSV files alongside GeoJSON (National)
     places_geojson = os.path.join(data_dir, "places_of_worship_sa.geojson")
     places_csv = os.path.join(data_dir, "places_of_worship_sa.csv")
     places_count = generate_places_csv(places_geojson, places_csv)
@@ -200,10 +424,7 @@ def build_manifest(data_dir=DATA_DIR):
     sug_csv = os.path.join(data_dir, "suggested_mosques_sa.csv")
     sug_count = generate_suggestions_csv(sug_geojson, sug_csv)
 
-    boundary_geojson = os.path.join(data_dir, "sa_boundary.geojson")
-    regions_geojson = os.path.join(data_dir, "sa_regions.geojson")
-
-    # 2. Build files catalog
+    # 2. Build files catalog for National datasets
     file_configs = [
         {
             "id": "places-sa-geojson",
@@ -309,6 +530,10 @@ def build_manifest(data_dir=DATA_DIR):
                 "sha256": sha256_file(filepath),
                 "features": cfg["features"],
             })
+
+    # 3. Generate Per-Region Slices (13 Provinces)
+    regional_files = generate_regional_exports(data_dir=data_dir)
+    files_list.extend(regional_files)
 
     manifest = {
         "dataset_version": dataset_version,

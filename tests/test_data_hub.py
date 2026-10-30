@@ -11,6 +11,7 @@ from build_data_hub import (
     generate_places_csv,
     generate_gaps_csv,
     generate_suggestions_csv,
+    generate_regional_exports,
     build_manifest,
     OVERPASS_PRESETS,
 )
@@ -125,6 +126,51 @@ def test_generate_suggestions_csv(tmp_path):
     assert len(lines) == 2
     assert "Q123456" in lines[1]
     assert "Quba Mosque" in lines[1]
+
+
+def test_generate_regional_exports(tmp_path):
+    # Setup dummy region polygon
+    regions_path = tmp_path / "sa_regions.geojson"
+    sample_regions = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "properties": {"code": "SA-01", "name": "منطقة الرياض", "name_en": "Riyadh Region"},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[46.0, 24.0], [47.0, 24.0], [47.0, 25.0], [46.0, 25.0], [46.0, 24.0]]]
+                }
+            }
+        ]
+    }
+    regions_path.write_text(json.dumps(sample_regions), encoding="utf-8")
+
+    places_path = tmp_path / "places_of_worship_sa.geojson"
+    places_path.write_text(json.dumps({
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "id": "node/1",
+                "properties": {"osm_type": "node", "osm_id": 1, "name": "جامع الراجحي"},
+                "geometry": {"type": "Point", "coordinates": [46.5, 24.5]}
+            }
+        ]
+    }), encoding="utf-8")
+
+    gaps_path = tmp_path / "worship_gaps_sa.json"
+    # (46.5 / 0.004) - 0.5 = 11624.5 -> gx=11624; (24.5 / 0.004) - 0.5 = 6124.5 -> gy=6124
+    gaps_path.write_text(json.dumps({
+        "grid_size": 0.004,
+        "cells": [[11624, 6124, 1000, 10.0, 50.0]]
+    }), encoding="utf-8")
+
+    files = generate_regional_exports(data_dir=str(tmp_path))
+    assert len(files) >= 4  # places geojson/csv + gaps json/csv
+    scopes = {f["scope"] for f in files}
+    assert "SA-01" in scopes
+    assert (tmp_path / "by-region" / "places_SA-01.geojson").exists()
+    assert (tmp_path / "by-region" / "places_SA-01.csv").exists()
+    assert (tmp_path / "by-region" / "worship_gaps_SA-01.json").exists()
 
 
 def test_build_manifest(tmp_path):

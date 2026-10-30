@@ -30,6 +30,7 @@ COPY summary.json \
      places_of_worship_sa.geojson \
      worship_gaps_sa.json \
      sa_boundary.geojson \
+     sa_regions.geojson \
      mosque_sizes.json \
      mosque_anomalies.json \
      suggested_mosques_sa.geojson \

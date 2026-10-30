@@ -46,7 +46,11 @@ function serveData(req, res, next) {
   const url = new URL(req.url, 'http://localhost');
   if (!url.pathname.startsWith('/data/')) return next();
   const name = url.pathname.slice('/data/'.length);
-  if (!DATA_FILES.has(name)) {
+  if (name.includes('..')) {
+    res.statusCode = 400;
+    return res.end('Invalid path');
+  }
+  if (!DATA_FILES.has(name) && !name.startsWith('by-region/')) {
     res.statusCode = 404;
     return res.end('Not found');
   }

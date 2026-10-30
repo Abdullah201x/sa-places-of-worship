@@ -260,3 +260,31 @@
 .copy-toast.show {
   opacity: 1;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .data-container {
+    padding: 16px 12px 48px;
+    overflow-x: hidden;
+  }
+  .data-filter-bar {
+    padding: 12px;
+  }
+  .data-filter-group {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .data-search-input,
+  .data-filter-select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .data-license-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

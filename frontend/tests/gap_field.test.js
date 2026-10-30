@@ -82,10 +82,11 @@ describe('invertedMask', () => {
 });
 
 describe('wantsGl', () => {
-  it('opts in only with ?map=gl', () => {
+  it('defaults to MapLibre and opts out with ?map=leaflet', () => {
+    expect(wantsGl('')).toBe(true);
     expect(wantsGl('?map=gl')).toBe(true);
     expect(wantsGl('?foo=1&map=gl')).toBe(true);
     expect(wantsGl('?map=leaflet')).toBe(false);
-    expect(wantsGl('')).toBe(false);
+    expect(wantsGl('?foo=1&map=leaflet')).toBe(false);
   });
 });

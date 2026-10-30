@@ -55,6 +55,23 @@
           <option value="suggestions">اقتراحات ويكي بيانات (Suggestions)</option>
           <option value="boundary">الحدود والمناطق (Boundaries)</option>
         </select>
+        <select id="filter-region" class="data-filter-select" aria-label="تصفية حسب المنطقة">
+          <option value="all">كل النطاقات (All Scopes)</option>
+          <option value="SA">المملكة كاملة (National - SA)</option>
+          <option value="SA-01">منطقة الرياض (Riyadh - SA-01)</option>
+          <option value="SA-02">منطقة مكة المكرمة (Makkah - SA-02)</option>
+          <option value="SA-03">منطقة المدينة المنورة (Medina - SA-03)</option>
+          <option value="SA-04">المنطقة الشرقية (Eastern Province - SA-04)</option>
+          <option value="SA-05">منطقة القصيم (Al-Qassim - SA-05)</option>
+          <option value="SA-06">منطقة حائل (Ha'il - SA-06)</option>
+          <option value="SA-07">منطقة تبوك (Tabuk - SA-07)</option>
+          <option value="SA-08">منطقة الحدود الشمالية (Northern Borders - SA-08)</option>
+          <option value="SA-09">منطقة جازان (Jazan - SA-09)</option>
+          <option value="SA-10">منطقة نجران (Najran - SA-10)</option>
+          <option value="SA-11">منطقة الباحة (Al-Bahah - SA-11)</option>
+          <option value="SA-12">منطقة الجوف (Al-Jawf - SA-12)</option>
+          <option value="SA-14">منطقة عسير ('Asir - SA-14)</option>
+        </select>
         <select id="filter-format" class="data-filter-select" aria-label="تصفية حسب الصيغة">
           <option value="all">جميع الصيغ (All Formats)</option>
           <option value="geojson">GeoJSON</option>
@@ -69,6 +86,7 @@
         <thead>
           <tr>
             <th data-lang="ar">الملف والمعرف</th><th data-lang="en">File & ID</th>
+            <th data-lang="ar">النطاق</th><th data-lang="en">Scope</th>
             <th data-lang="ar">الطبقة</th><th data-lang="en">Layer</th>
             <th data-lang="ar">الصيغة</th><th data-lang="en">Format</th>
             <th data-lang="ar">السجلات</th><th data-lang="en">Records</th>
@@ -79,7 +97,7 @@
         </thead>
         <tbody id="data-table-body">
           <tr>
-            <td colspan="7" style="text-align: center; color: var(--color-text-muted); padding: 32px;">
+            <td colspan="8" style="text-align: center; color: var(--color-text-muted); padding: 32px;">
               جارٍ تحميل فهرس البيانات...
             </td>
           </tr>
