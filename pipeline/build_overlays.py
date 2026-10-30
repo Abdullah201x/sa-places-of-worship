@@ -120,6 +120,14 @@ def write_fallback_pmtiles(output_path, layer_name, min_zoom=5, max_zoom=14, ext
     print(f"  [FALLBACK] Wrote {n} tiles to '{layer_name}' ({os.path.getsize(output_path)} bytes)")
 
 
+def osm_type_of(props):
+    """OSM element type from extract_places.py's geom_type (same rule as osmTypeOf in app.js)."""
+    geom_type = props.get("geom_type")
+    if geom_type == "Point":
+        return "node"
+    return "relation" if geom_type == "Relation" else "way"
+
+
 def _load_places(data_dir):
     path = os.path.join(data_dir, "places_of_worship_sa.geojson")
     if not os.path.exists(path):
@@ -133,7 +141,9 @@ def _load_places(data_dir):
             continue
         p = ft.get("properties") or {}
         lon, lat = geom["coordinates"][:2]
-        pts.append((lon, lat, {k: p[k] for k in PLACE_PROPS if k in p}, 0))
+        props = {k: p[k] for k in PLACE_PROPS if k in p}
+        props["osm_type"] = osm_type_of(p)
+        pts.append((lon, lat, props, 0))
     return pts
 
 

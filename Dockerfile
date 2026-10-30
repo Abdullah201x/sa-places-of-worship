@@ -37,7 +37,7 @@ COPY summary.json \
      tags.json \
      /srv/manara/data/
 
-RUN find /srv/manara -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.json' \
+RUN find /srv/manara -type f \( -name '*.html' -o -name '*.js' -o -name '*.mjs' -o -name '*.css' -o -name '*.json' \
        -o -name '*.geojson' -o -name '*.svg' -o -name '*.txt' \) \
        -exec gzip -9 -k {} \; -exec brotli -q 11 -k {} \;
 

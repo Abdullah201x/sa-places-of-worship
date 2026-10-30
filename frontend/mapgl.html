@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الخريطة (MapLibre، تجريبية) | منارة: خريطة بيوت الله</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🗺️%3C/text%3E%3C/svg%3E">
+  <link rel="canonical" href="https://manara.saudiosm.org/mapgl">
+  <meta name="robots" content="noindex">
+</head>
+<body class="mapgl-body" data-title-key="glTitle">
+  <header class="mapgl-bar">
+    <nav>
+      <a href="/"><span data-lang="ar">← الخريطة الكاملة (Leaflet)</span><span data-lang="en">← Full map (Leaflet)</span></a>
+      <a href="/qa"><span data-lang="ar">الجودة</span><span data-lang="en">QA</span></a>
+      <a href="/data"><span data-lang="ar">البيانات</span><span data-lang="en">Data Hub</span></a>
+    </nav>
+    <span class="mapgl-badge"><span data-lang="ar">تجريبية: طبقات PMTiles فقط</span><span data-lang="en">Preview: PMTiles overlays only</span></span>
+    <button type="button" id="btn-toggle-lang" lang="en">English</button>
+  </header>
+
+  <div id="map" class="mapgl-map" role="application" aria-label="Map"></div>
+
+  <aside class="mapgl-panel" aria-label="Layers">
+    <fieldset>
+      <legend><span data-lang="ar">الطبقات</span><span data-lang="en">Layers</span></legend>
+      <label><input type="checkbox" data-layer="places" checked> <i class="dot dot-places"></i> <span data-lang="ar">بيوت العبادة</span><span data-lang="en">Places of worship</span> <kbd>1</kbd></label>
+      <label><input type="checkbox" data-layer="suggestions"> <i class="dot dot-suggestions"></i> <span data-lang="ar">اقتراحات ويكي بيانات</span><span data-lang="en">Wikidata suggestions</span> <kbd>2</kbd></label>
+      <label><input type="checkbox" data-layer="gaps" checked> <i class="dot dot-gaps"></i> <span data-lang="ar">فجوات التغطية</span><span data-lang="en">Coverage gaps</span> <kbd>3</kbd></label>
+    </fieldset>
+    <label class="mapgl-select">
+      <span data-lang="ar">الخريطة الأساسية</span><span data-lang="en">Basemap</span>
+      <select id="basemap-select">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="satellite">Satellite</option>
+        <option value="streets">Streets</option>
+      </select>
+    </label>
+    <div class="mapgl-legend" aria-hidden="true">
+      <span data-lang="ar">أولوية الفجوة</span><span data-lang="en">Gap urgency</span>
+      <i class="mapgl-ramp"></i>
+      <span class="mapgl-ramp-labels"><span>0</span><span>100</span></span>
+    </div>
+    <p id="mapgl-status" class="mapgl-status" role="status"></p>
+  </aside>
+
+  <script type="module" src="/src/map_gl.js"></script>
+</body>
+</html>

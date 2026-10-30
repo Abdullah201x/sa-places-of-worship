@@ -202,7 +202,7 @@ def test_large_archives_use_leaf_directories(tmp_path, monkeypatch):
 
 def test_build_all_overlays_with_fallback(tmp_path):
     (tmp_path / "places_of_worship_sa.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": [{
-        "type": "Feature", "properties": {"osm_id": 1, "name": "X", "secret": "dropped"},
+        "type": "Feature", "properties": {"osm_id": 1, "name": "X", "geom_type": "Polygon", "secret": "dropped"},
         "geometry": {"type": "Point", "coordinates": [46.7, 24.7]}}]}), encoding="utf-8")
     (tmp_path / "worship_gaps_sa.json").write_text(
         json.dumps({"grid_size": 0.004, "cells": [[11675, 6175, 300, 12.5, 40.0]]}), encoding="utf-8")
@@ -218,7 +218,7 @@ def test_build_all_overlays_with_fallback(tmp_path):
 
     _h, _m, tiles = read_archive(tmp_path / "places.pmtiles")
     props = [p[2] for d in tiles.values() for p in decode_points(d)]
-    assert props and all(p == {"osm_id": 1, "name": "X"} for p in props)  # untrimmed keys never reach the tiles
+    assert props and all(p == {"osm_id": 1, "name": "X", "osm_type": "way"} for p in props)  # untrimmed keys never reach the tiles
 
     _h, _m, tiles = read_archive(tmp_path / "gaps.pmtiles")
     assert any(p[2]["urgency"] == 40.0 for d in tiles.values() for p in decode_points(d))

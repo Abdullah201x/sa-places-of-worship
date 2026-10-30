@@ -28,7 +28,7 @@
 		# tiles, the OSM API and OAuth token endpoint (prod + dev), and JOSM
 		# Remote Control on the mapper's own machine. frontend/vite.config.js
 		# reads this line so `npm run preview` enforces the same policy.
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self'; connect-src 'self' https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://server.arcgisonline.com http://127.0.0.1:8111 https://osmose.openstreetmap.fr https://overpass-api.de; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self'; connect-src 'self' https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://server.arcgisonline.com http://127.0.0.1:8111 https://osmose.openstreetmap.fr https://overpass-api.de; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
 		-Server
 	}
 
@@ -77,6 +77,10 @@
 		header @geojson Content-Type "application/geo+json; charset=utf-8"
 		@versioned query v=*
 		header @versioned Cache-Control "public, max-age=31536000, immutable"
+		# PMTiles are fetched with Range requests and their tiles are already gzipped: the
+		# catch-all encode below must not recompress them (it would corrupt the byte ranges).
+		@pmtiles path *.pmtiles
+		header @pmtiles Content-Encoding identity
 		@unversioned not query v=*
 		header @unversioned Cache-Control "no-cache"
 		file_server {

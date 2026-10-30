@@ -800,3 +800,24 @@ Started Phase 5 from `REDESIGN.md` §3.6, §4.6 & §5:
 5. **Tests (`tests/test_build_overlays.py`, 7 tests):** Hilbert IDs, empty archive, full round trip through an in-test PMTiles and MVT decoder, thinning vs top zoom, leaf directories (forced with a tiny root budget), and an end-to-end check that untrimmed property keys never reach the tiles. Pytest: 146 passed (up from 142).
 
 **Next (Phase 5 step 3): MapLibre.** Install `maplibre-gl` (CSP build + worker) and `pmtiles`; add an opt-in `?map=gl` view that reads the three overlays through the `pmtiles://` protocol, keeping Leaflet as the default until it reaches parity (REDESIGN.md §5 Phase 5 items 3–4). Needs the CSP additions in `deploy/Caddyfile.container` (`worker-src 'self' blob:`; `'wasm-unsafe-eval'` only if the RTL text plugin requires it). Still open: per-region exports and optional `.osm.pbf` cuts (§5 Phase 5 item 1).
+
+### 20.4 Phase 5 Step 3a: MapLibre preview at `/mapgl`, and browser-found fixes (2026-10-30)
+
+**First real-browser run of the redesign.** Earlier phases were verified with lint, Vitest, pytest and `vite build` only. Driving the production build in headless Chrome (puppeteer-core, `vite preview`) found three defects in the existing pages, all fixed here:
+1. **Default map page crashed with `L is not defined`.** `app.js` uses the global `L` at module top level but never imported Leaflet; it only worked while `main.js` happened to evaluate `leaflet-setup.js` first. The production build split `app.js` into its own chunk that ran before `main`. `src/leaflet-bundle.js` now holds the Leaflet imports and `app.js` imports it first.
+2. **Map collapsed to 0 px wide** (Phase 1 top bar): `#app-container` was a flex row, so the 1288 px top bar squeezed `#map` to 0 and the heatmap threw `getImageData` on a 0-width canvas, leaving the loading overlay up forever. Now a column; the top bar's stray 24 px margin is gone; the sidebar and its toggle sit below the bar.
+3. **Top bar showed both languages** (`[data-lang]` hide rule existed only in `page.css`); added to `index.css`.
+4. **`/start`:** called `OsmApi.getAccessToken()` / `getUserDisplayName()` (do not exist; real names are `token()` / `userName()`), and `osm_api.js` imported `showToast` from `app.js`, which booted the whole Leaflet app on a page with no map ("Map container not found"). `safeUrl`, `showToast`, `showLoadingText` moved to `src/ui.js` (re-exported from `app.js`).
+
+**MapLibre preview (`/mapgl`, also `/?map=gl`, keeps the hash):**
+- `maplibre-gl` 6.16 + `pmtiles` 4.5. `src/map_gl.js` (page), `src/map_gl_view.js` (pure helpers: style, hash, popup rows and links), `src/styles/mapgl.css`, `mapgl.html`, `src/map_switch.js`.
+- Reads `places`, `gaps`, `suggestions` through `pmtiles://<origin>/data/<name>.pmtiles` (HTTP range requests). Esri basemaps only (CARTO is not in `connect-src`). Layer toggles (`1` places, `2` suggestions, `3` gaps; Arabic layout works via `shortcutKey`), basemap switch, click popup built with `textContent` (OSM/Wikidata values never reach `innerHTML`), links to the OSM object and iD, attribution always visible, RTL-aware legend and scale.
+- **No text layers on purpose:** they would need a glyph server and the Arabic RTL text plugin (`'wasm-unsafe-eval'`). Names show in the popup. Revisit when the map replaces Leaflet.
+- **Worker:** v6 derives the worker URL from `import.meta.url`, which is wrong after bundling, so `setWorkerUrl()` is given the Vite `?url` asset. CSP gets `worker-src 'self' blob:`.
+- **Bug fixed on the way:** the overlay tiles had no `osm_type` (the extract only has `geom_type`), so popup links could not tell nodes from ways. `build_overlays.py` now derives it with the same rule as `osmTypeOf`.
+- **Deploy config:** `Caddyfile.container` sets `Content-Encoding identity` on `*.pmtiles` so the catch-all `encode` cannot recompress range responses; `Dockerfile` precompresses `*.mjs` (the 519 kB worker).
+- **Verified in headless Chrome:** 53 range requests, no CSP violations, correct popup in Arabic, key toggles, `?map=gl` redirect, all ten routes load with no page errors. Vitest 110 passed (13 files), pytest 146, lint clean.
+
+**After the next push, check on the VPS:** `curl -sI -H 'Range: bytes=0-126' https://manara.saudiosm.org/data/places.pmtiles` must return `206`, `Content-Range`, and no `Content-Encoding: gzip/zstd`. Also check that `places.pmtiles` is in the published folder (it is not baked into the web image).
+
+**Still open in Phase 5:** MapLibre parity with the Leaflet map (browse/select/add/review modes, markers and clusters, heatmap, sprint tiles, boundary clip), then make it the default behind `?map=leaflet`; text labels; per-region exports and optional `.osm.pbf` cuts; first-load transfer and 60 fps measurements for the exit criteria. There are still no Playwright smoke tests (REDESIGN.md §7): the puppeteer sweep used here (load each route, collect page errors and CSP violations) is a good seed.
