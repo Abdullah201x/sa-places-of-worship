@@ -270,63 +270,64 @@ def create_sprint(
     starts_at = payload.starts_at or datetime.now(timezone.utc)
     now = datetime.now(timezone.utc)
 
-    with conn.cursor() as cur:
-        # Check slug uniqueness
-        cur.execute("SELECT id FROM sprints WHERE slug = %s;", (payload.slug,))
-        if cur.fetchone():
-            raise HTTPException(status_code=409, detail=f"Sprint slug '{payload.slug}' already exists.")
+    # Autocommit is on, so FOR UPDATE only holds its row lock inside a transaction block
+    with conn.transaction():
+        with conn.cursor() as cur:
+            # Check slug uniqueness
+            cur.execute("SELECT id FROM sprints WHERE slug = %s;", (payload.slug,))
+            if cur.fetchone():
+                raise HTTPException(status_code=409, detail=f"Sprint slug '{payload.slug}' already exists.")
 
-        cur.execute("""
-            INSERT INTO sprints (
-                slug, title, instructions, theme, area, rule_ids, gap_min_urgency,
-                hashtag, starts_at, ends_at, status, created_by, created_at, updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING *;
-        """, (
-            payload.slug,
-            json.dumps(payload.title),
-            json.dumps(payload.instructions),
-            payload.theme,
-            json.dumps(payload.area),
-            payload.rule_ids,
-            payload.gap_min_urgency,
-            payload.hashtag,
-            starts_at,
-            payload.ends_at,
-            payload.status,
-            admin["osm_uid"],
-            now,
-            now
-        ))
-        sprint_row = dict(cur.fetchone())
-        sprint_id = sprint_row["id"]
-
-        # Insert tiles in bulk
-        tile_rows = []
-        for t in tiles:
-            tile_rows.append((
-                sprint_id,
-                t["tile_id"],
-                t["bbox"],
-                "ready",
-                1,
-                0,
-                False,
+            cur.execute("""
+                INSERT INTO sprints (
+                    slug, title, instructions, theme, area, rule_ids, gap_min_urgency,
+                    hashtag, starts_at, ends_at, status, created_by, created_at, updated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *;
+            """, (
+                payload.slug,
+                json.dumps(payload.title),
+                json.dumps(payload.instructions),
+                payload.theme,
+                json.dumps(payload.area),
+                payload.rule_ids,
+                payload.gap_min_urgency,
+                payload.hashtag,
+                starts_at,
+                payload.ends_at,
+                payload.status,
+                admin["osm_uid"],
+                now,
                 now
             ))
+            sprint_row = dict(cur.fetchone())
+            sprint_id = sprint_row["id"]
 
-        cur.executemany(
-            """
-            INSERT INTO sprint_tiles (
-                sprint_id, tile_id, bbox, state, rev, workload, pending_refresh, updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-            """,
-            tile_rows
-        )
-        conn.commit()
+            # Insert tiles in bulk
+            tile_rows = []
+            for t in tiles:
+                tile_rows.append((
+                    sprint_id,
+                    t["tile_id"],
+                    t["bbox"],
+                    "ready",
+                    1,
+                    0,
+                    False,
+                    now
+                ))
 
-        sprint_row["progress"] = compute_sprint_progress(cur, sprint_id)
-        return sprint_row
+            cur.executemany(
+                """
+                INSERT INTO sprint_tiles (
+                    sprint_id, tile_id, bbox, state, rev, workload, pending_refresh, updated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+                """,
+                tile_rows
+            )
+
+            sprint_row["progress"] = compute_sprint_progress(cur, sprint_id)
+            return sprint_row
 
 
 @router.get("/{slug}")
@@ -480,243 +481,244 @@ def update_tile_state(
     user_uid = user["osm_uid"]
     is_admin = bool(user.get("is_admin", False))
 
-    with conn.cursor() as cur:
-        cur.execute("SELECT id FROM sprints WHERE slug = %s;", (slug,))
-        sprint_row = cur.fetchone()
-        if not sprint_row:
-            raise HTTPException(status_code=404, detail="Sprint not found.")
-        sprint_id = sprint_row["id"] if isinstance(sprint_row, dict) else sprint_row[0]
+    # Autocommit is on, so FOR UPDATE only holds its row lock inside a transaction block
+    with conn.transaction():
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM sprints WHERE slug = %s;", (slug,))
+            sprint_row = cur.fetchone()
+            if not sprint_row:
+                raise HTTPException(status_code=404, detail="Sprint not found.")
+            sprint_id = sprint_row["id"] if isinstance(sprint_row, dict) else sprint_row[0]
 
-        expire_stale_locks(conn, sprint_id)
+            expire_stale_locks(conn, sprint_id)
 
-        cur.execute("""
-            SELECT * FROM sprint_tiles
-            WHERE sprint_id = %s AND tile_id = %s
-            FOR UPDATE;
-        """, (sprint_id, tile_id))
-        t_row = cur.fetchone()
-        if not t_row:
-            raise HTTPException(status_code=404, detail="Tile not found.")
-
-        tile = dict(t_row)
-        current_rev = tile["rev"]
-        current_state = tile["state"]
-        from_state = current_state
-
-        # Optimistic concurrency check
-        expected_rev = payload.rev
-        if if_match:
-            try:
-                expected_rev = int(if_match.strip('"').strip('W/').strip('"'))
-            except ValueError:
-                pass
-
-        if expected_rev is not None and expected_rev != current_rev:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Conflict: Tile revision has changed (expected {expected_rev}, current {current_rev}). Please reload.",
-            )
-
-        action = payload.action
-
-        if action == "lock":
-            # Check maximum active locks per user
             cur.execute("""
-                SELECT COUNT(*) as active_locks FROM sprint_tiles
-                WHERE lock_uid = %s AND lock_expires_at > %s;
-            """, (user_uid, now))
-            c_row = cur.fetchone()
-            active_cnt = (c_row["active_locks"] if isinstance(c_row, dict) else c_row[0]) or 0
-            if active_cnt >= MAX_ACTIVE_LOCKS_PER_USER:
+                SELECT * FROM sprint_tiles
+                WHERE sprint_id = %s AND tile_id = %s
+                FOR UPDATE;
+            """, (sprint_id, tile_id))
+            t_row = cur.fetchone()
+            if not t_row:
+                raise HTTPException(status_code=404, detail="Tile not found.")
+
+            tile = dict(t_row)
+            current_rev = tile["rev"]
+            current_state = tile["state"]
+            from_state = current_state
+
+            # Optimistic concurrency check
+            expected_rev = payload.rev
+            if if_match:
+                try:
+                    expected_rev = int(if_match.strip('"').strip('W/').strip('"'))
+                except ValueError:
+                    pass
+
+            if expected_rev is not None and expected_rev != current_rev:
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Maximum {MAX_ACTIVE_LOCKS_PER_USER} simultaneous locks permitted per user.",
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Conflict: Tile revision has changed (expected {expected_rev}, current {current_rev}). Please reload.",
                 )
 
-            lock_kind = payload.kind or ("mapping" if current_state == "ready" else "validation")
+            action = payload.action
 
-            if current_state == "ready":
-                new_state = "mapping"
-            elif current_state == "mapped":
-                # Self-validation rejection check
+            if action == "lock":
+                # Check maximum active locks per user
+                cur.execute("""
+                    SELECT COUNT(*) as active_locks FROM sprint_tiles
+                    WHERE lock_uid = %s AND lock_expires_at > %s;
+                """, (user_uid, now))
+                c_row = cur.fetchone()
+                active_cnt = (c_row["active_locks"] if isinstance(c_row, dict) else c_row[0]) or 0
+                if active_cnt >= MAX_ACTIVE_LOCKS_PER_USER:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Maximum {MAX_ACTIVE_LOCKS_PER_USER} simultaneous locks permitted per user.",
+                    )
+
+                lock_kind = payload.kind or ("mapping" if current_state == "ready" else "validation")
+
+                if current_state == "ready":
+                    new_state = "mapping"
+                elif current_state == "mapped":
+                    # Self-validation rejection check
+                    if tile.get("mapped_by") and tile["mapped_by"] == user_uid and not is_admin:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Self-validation is not allowed. A different mapper must validate this tile.",
+                        )
+                    new_state = "validating"
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Cannot lock tile in state '{current_state}'. Only 'ready' or 'mapped' tiles can be locked."
+                    )
+
+                expires_at = now + timedelta(hours=LOCK_TTL_HOURS)
+                cur.execute("""
+                    UPDATE sprint_tiles
+                    SET state = %s,
+                        lock_uid = %s,
+                        lock_display_name = %s,
+                        lock_kind = %s,
+                        lock_expires_at = %s,
+                        rev = rev + 1,
+                        updated_at = %s
+                    WHERE sprint_id = %s AND tile_id = %s
+                    RETURNING *;
+                """, (new_state, user_uid, user.get("display_name", "mapper"), lock_kind, expires_at, now, sprint_id, tile_id))
+
+            elif action == "release":
+                if tile.get("lock_uid") != user_uid and not is_admin:
+                    raise HTTPException(status_code=403, detail="Only the lock holder or an admin can release this lock.")
+
+                new_state = "ready" if current_state == "mapping" else "mapped"
+                cur.execute("""
+                    UPDATE sprint_tiles
+                    SET state = %s,
+                        lock_uid = NULL,
+                        lock_display_name = NULL,
+                        lock_kind = NULL,
+                        lock_expires_at = NULL,
+                        rev = rev + 1,
+                        updated_at = %s
+                    WHERE sprint_id = %s AND tile_id = %s
+                    RETURNING *;
+                """, (new_state, now, sprint_id, tile_id))
+
+            elif action == "done":
+                if current_state != "mapping":
+                    raise HTTPException(status_code=400, detail=f"Cannot mark tile done from state '{current_state}'.")
+                if tile.get("lock_uid") != user_uid and not is_admin:
+                    raise HTTPException(status_code=403, detail="Only the mapper who locked the tile can submit it.")
+
+                new_state = "mapped"
+                cur.execute("""
+                    UPDATE sprint_tiles
+                    SET state = %s,
+                        mapped_by = %s,
+                        note = %s,
+                        lock_uid = NULL,
+                        lock_display_name = NULL,
+                        lock_kind = NULL,
+                        lock_expires_at = NULL,
+                        rev = rev + 1,
+                        updated_at = %s
+                    WHERE sprint_id = %s AND tile_id = %s
+                    RETURNING *;
+                """, (new_state, user_uid, payload.note, now, sprint_id, tile_id))
+
+            elif action == "approve":
+                if current_state not in ("validating", "mapped"):
+                    raise HTTPException(status_code=400, detail=f"Cannot approve tile in state '{current_state}'.")
                 if tile.get("mapped_by") and tile["mapped_by"] == user_uid and not is_admin:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail="Self-validation is not allowed. A different mapper must validate this tile.",
                     )
-                new_state = "validating"
+
+                new_state = "validated"
+                cur.execute("""
+                    UPDATE sprint_tiles
+                    SET state = %s,
+                        validated_by = %s,
+                        note = %s,
+                        lock_uid = NULL,
+                        lock_display_name = NULL,
+                        lock_kind = NULL,
+                        lock_expires_at = NULL,
+                        rev = rev + 1,
+                        updated_at = %s
+                    WHERE sprint_id = %s AND tile_id = %s
+                    RETURNING *;
+                """, (new_state, user_uid, payload.note, now, sprint_id, tile_id))
+
+            elif action == "invalidate":
+                if current_state not in ("validating", "mapped"):
+                    raise HTTPException(status_code=400, detail=f"Cannot invalidate tile in state '{current_state}'.")
+                if not payload.reason:
+                    raise HTTPException(status_code=400, detail="A reason is required when invalidating a tile.")
+
+                new_state = "invalidated"
+                cur.execute("""
+                    UPDATE sprint_tiles
+                    SET state = %s,
+                        skip_reason = %s,
+                        lock_uid = NULL,
+                        lock_display_name = NULL,
+                        lock_kind = NULL,
+                        lock_expires_at = NULL,
+                        rev = rev + 1,
+                        updated_at = %s
+                    WHERE sprint_id = %s AND tile_id = %s
+                    RETURNING *;
+                """, (new_state, payload.reason, now, sprint_id, tile_id))
+
+            elif action == "skip":
+                if current_state not in ("ready", "mapping"):
+                    raise HTTPException(status_code=400, detail=f"Cannot skip tile in state '{current_state}'.")
+
+                new_state = "skipped"
+                skip_reason = payload.reason or "out of scope"
+                cur.execute("""
+                    UPDATE sprint_tiles
+                    SET state = %s,
+                        skip_reason = %s,
+                        lock_uid = NULL,
+                        lock_display_name = NULL,
+                        lock_kind = NULL,
+                        lock_expires_at = NULL,
+                        rev = rev + 1,
+                        updated_at = %s
+                    WHERE sprint_id = %s AND tile_id = %s
+                    RETURNING *;
+                """, (new_state, skip_reason, now, sprint_id, tile_id))
+
+            elif action == "reopen":
+                if not is_admin:
+                    raise HTTPException(status_code=403, detail="Only admins can reopen finished or skipped tiles.")
+
+                new_state = "ready"
+                cur.execute("""
+                    UPDATE sprint_tiles
+                    SET state = %s,
+                        mapped_by = NULL,
+                        validated_by = NULL,
+                        skip_reason = NULL,
+                        note = NULL,
+                        auto = FALSE,
+                        lock_uid = NULL,
+                        lock_display_name = NULL,
+                        lock_kind = NULL,
+                        lock_expires_at = NULL,
+                        rev = rev + 1,
+                        updated_at = %s
+                    WHERE sprint_id = %s AND tile_id = %s
+                    RETURNING *;
+                """, (new_state, now, sprint_id, tile_id))
+
             else:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Cannot lock tile in state '{current_state}'. Only 'ready' or 'mapped' tiles can be locked."
-                )
+                raise HTTPException(status_code=400, detail=f"Unknown action '{action}'")
 
-            expires_at = now + timedelta(hours=LOCK_TTL_HOURS)
+            updated_row = dict(cur.fetchone())
+
+            # Log transition event in tile_events
             cur.execute("""
-                UPDATE sprint_tiles
-                SET state = %s,
-                    lock_uid = %s,
-                    lock_display_name = %s,
-                    lock_kind = %s,
-                    lock_expires_at = %s,
-                    rev = rev + 1,
-                    updated_at = %s
-                WHERE sprint_id = %s AND tile_id = %s
-                RETURNING *;
-            """, (new_state, user_uid, user.get("display_name", "mapper"), lock_kind, expires_at, now, sprint_id, tile_id))
+                INSERT INTO tile_events (
+                    sprint_id, tile_id, osm_uid, from_state, to_state, reason, note, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+            """, (
+                sprint_id,
+                tile_id,
+                user_uid,
+                from_state,
+                updated_row["state"],
+                payload.reason,
+                payload.note,
+                now
+            ))
 
-        elif action == "release":
-            if tile.get("lock_uid") != user_uid and not is_admin:
-                raise HTTPException(status_code=403, detail="Only the lock holder or an admin can release this lock.")
-
-            new_state = "ready" if current_state == "mapping" else "mapped"
-            cur.execute("""
-                UPDATE sprint_tiles
-                SET state = %s,
-                    lock_uid = NULL,
-                    lock_display_name = NULL,
-                    lock_kind = NULL,
-                    lock_expires_at = NULL,
-                    rev = rev + 1,
-                    updated_at = %s
-                WHERE sprint_id = %s AND tile_id = %s
-                RETURNING *;
-            """, (new_state, now, sprint_id, tile_id))
-
-        elif action == "done":
-            if current_state != "mapping":
-                raise HTTPException(status_code=400, detail=f"Cannot mark tile done from state '{current_state}'.")
-            if tile.get("lock_uid") != user_uid and not is_admin:
-                raise HTTPException(status_code=403, detail="Only the mapper who locked the tile can submit it.")
-
-            new_state = "mapped"
-            cur.execute("""
-                UPDATE sprint_tiles
-                SET state = %s,
-                    mapped_by = %s,
-                    note = %s,
-                    lock_uid = NULL,
-                    lock_display_name = NULL,
-                    lock_kind = NULL,
-                    lock_expires_at = NULL,
-                    rev = rev + 1,
-                    updated_at = %s
-                WHERE sprint_id = %s AND tile_id = %s
-                RETURNING *;
-            """, (new_state, user_uid, payload.note, now, sprint_id, tile_id))
-
-        elif action == "approve":
-            if current_state not in ("validating", "mapped"):
-                raise HTTPException(status_code=400, detail=f"Cannot approve tile in state '{current_state}'.")
-            if tile.get("mapped_by") and tile["mapped_by"] == user_uid and not is_admin:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Self-validation is not allowed. A different mapper must validate this tile.",
-                )
-
-            new_state = "validated"
-            cur.execute("""
-                UPDATE sprint_tiles
-                SET state = %s,
-                    validated_by = %s,
-                    note = %s,
-                    lock_uid = NULL,
-                    lock_display_name = NULL,
-                    lock_kind = NULL,
-                    lock_expires_at = NULL,
-                    rev = rev + 1,
-                    updated_at = %s
-                WHERE sprint_id = %s AND tile_id = %s
-                RETURNING *;
-            """, (new_state, user_uid, payload.note, now, sprint_id, tile_id))
-
-        elif action == "invalidate":
-            if current_state not in ("validating", "mapped"):
-                raise HTTPException(status_code=400, detail=f"Cannot invalidate tile in state '{current_state}'.")
-            if not payload.reason:
-                raise HTTPException(status_code=400, detail="A reason is required when invalidating a tile.")
-
-            new_state = "invalidated"
-            cur.execute("""
-                UPDATE sprint_tiles
-                SET state = %s,
-                    skip_reason = %s,
-                    lock_uid = NULL,
-                    lock_display_name = NULL,
-                    lock_kind = NULL,
-                    lock_expires_at = NULL,
-                    rev = rev + 1,
-                    updated_at = %s
-                WHERE sprint_id = %s AND tile_id = %s
-                RETURNING *;
-            """, (new_state, payload.reason, now, sprint_id, tile_id))
-
-        elif action == "skip":
-            if current_state not in ("ready", "mapping"):
-                raise HTTPException(status_code=400, detail=f"Cannot skip tile in state '{current_state}'.")
-
-            new_state = "skipped"
-            skip_reason = payload.reason or "out of scope"
-            cur.execute("""
-                UPDATE sprint_tiles
-                SET state = %s,
-                    skip_reason = %s,
-                    lock_uid = NULL,
-                    lock_display_name = NULL,
-                    lock_kind = NULL,
-                    lock_expires_at = NULL,
-                    rev = rev + 1,
-                    updated_at = %s
-                WHERE sprint_id = %s AND tile_id = %s
-                RETURNING *;
-            """, (new_state, skip_reason, now, sprint_id, tile_id))
-
-        elif action == "reopen":
-            if not is_admin:
-                raise HTTPException(status_code=403, detail="Only admins can reopen finished or skipped tiles.")
-
-            new_state = "ready"
-            cur.execute("""
-                UPDATE sprint_tiles
-                SET state = %s,
-                    mapped_by = NULL,
-                    validated_by = NULL,
-                    skip_reason = NULL,
-                    note = NULL,
-                    auto = FALSE,
-                    lock_uid = NULL,
-                    lock_display_name = NULL,
-                    lock_kind = NULL,
-                    lock_expires_at = NULL,
-                    rev = rev + 1,
-                    updated_at = %s
-                WHERE sprint_id = %s AND tile_id = %s
-                RETURNING *;
-            """, (new_state, now, sprint_id, tile_id))
-
-        else:
-            raise HTTPException(status_code=400, detail=f"Unknown action '{action}'")
-
-        updated_row = dict(cur.fetchone())
-
-        # Log transition event in tile_events
-        cur.execute("""
-            INSERT INTO tile_events (
-                sprint_id, tile_id, osm_uid, from_state, to_state, reason, note, created_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-        """, (
-            sprint_id,
-            tile_id,
-            user_uid,
-            from_state,
-            updated_row["state"],
-            payload.reason,
-            payload.note,
-            now
-        ))
-
-        conn.commit()
-        return row_to_tile_dict(updated_row)
+            return row_to_tile_dict(updated_row)
 
 
 @router.get("/{slug}/maproulette")

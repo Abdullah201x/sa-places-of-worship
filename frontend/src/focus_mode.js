@@ -9,7 +9,7 @@ import { calculateDistanceKm } from './qa_view.js';
 import { ReviewMarks, refreshAfterReviewChange } from './review.js';
 import { EditBatch, createBatchEditItem, openBatchDialog, refreshAfterEdits } from './editing.js';
 import { OsmApi } from './osm_api.js';
-import { evaluateRules } from './validator.js';
+import { getIssues } from './app.js';
 import { showToast } from './ui.js';
 
 export function placeName(props) {
@@ -79,10 +79,11 @@ export function getFeatureCoordinates(f) {
 export function doesPlaceMatchRule(props, ruleId) {
   if (!props || !ruleId) return false;
   if (ruleId === 'building_yes') {
-    return props.religion === 'muslim' && props.building === 'yes';
+    // Same exclusion as QUICK_FIXES.building_yes.applies in editing.js
+    return props.religion === 'muslim' && props.building === 'yes' && props.geom_type !== 'Point';
   }
-  const rules = evaluateRules(props);
-  return rules.some(r => r.id === ruleId);
+  // getIssues() applies the user's current size/Qibla thresholds, matching the QA list
+  return getIssues(props).some(r => r.id === ruleId);
 }
 
 export function getChangesetSizeReminder(count, lang = 'ar') {
@@ -230,11 +231,19 @@ export const FocusMode = {
     if (!keydownListener) {
       keydownListener = (e) => {
         if (!focusActive) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
 
         const tag = (e.target.tagName || '').toLowerCase();
         if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
+        const anyModalOpen = [...document.querySelectorAll('.auth-overlay')].some(o => !o.classList.contains('hidden'));
+        if (anyModalOpen) return;
 
         const key = shortcutKey(e);
+        const handled = key === 'Escape' || key === ']' || key === 'n' || key === '[' || key === 'p' ||
+          key === 's' || key === 'f' || key === ' ' || key === 'b' || key === 'u' ||
+          e.key === 'ArrowRight' || e.key === 'ArrowLeft';
+        // Keep the review/QA shortcuts (n/p/f/s) from also firing on the same key
+        if (handled) e.stopPropagation();
 
         if (key === 'Escape') {
           e.preventDefault();
@@ -256,7 +265,8 @@ export const FocusMode = {
           openBatchDialog();
         }
       };
-      document.addEventListener('keydown', keydownListener);
+      // Capture phase, so this runs before the bubble-phase review/QA handlers
+      document.addEventListener('keydown', keydownListener, true);
     }
   },
 
@@ -381,7 +391,6 @@ export const FocusMode = {
         ReviewMarks.set(props, 'fixed');
         if (focusRuleId === 'building_yes') {
           props.building = 'mosque';
-          if (props._editedVersion) props._editedVersion++;
         }
         refreshAfterEdits();
 

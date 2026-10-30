@@ -78,8 +78,17 @@ let currentRevMax = 0;
 let pollInterval = null;
 let mapInstance = null;
 let tileLayersGroup = null;
-let currentViewMode = 'map';
 let mapInitializedForSlug = null;
+
+// Names and sprint text come from OSM / the API, so escape them before innerHTML.
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 const STATE_COLORS = {
   ready: { stroke: '#00f2fe', fill: '#00f2fe', fillOpacity: 0.22 },
@@ -99,7 +108,7 @@ export function renderAuthWidget() {
   if (!container) return;
   const isAr = currentLang === 'ar';
   const token = OsmApi.token();
-  const userName = OsmApi.userName();
+  const userName = escapeHtml(OsmApi.userName());
 
   if (token && userName) {
     container.innerHTML = `
@@ -159,7 +168,6 @@ function setupViewControls() {
   const gridView = document.getElementById('board-grid-view');
 
   function setViewMode(mode) {
-    currentViewMode = mode;
     [btnMap, btnSplit, btnGrid].forEach(b => b?.classList.remove('active'));
 
     if (mode === 'map') {
@@ -376,11 +384,11 @@ function renderSprintsGrid(sprints, grid) {
       <div>
         <div class="sprint-card-header">
           <span class="sprint-status-pill ${s.status}">${s.status}</span>
-          <span class="sprint-hashtag">${s.hashtag}</span>
+          <span class="sprint-hashtag">${escapeHtml(s.hashtag)}</span>
         </div>
-        <h3 class="sprint-card-title">${title}</h3>
+        <h3 class="sprint-card-title">${escapeHtml(title)}</h3>
         <p style="color: var(--color-text-muted); font-size: 0.88rem; margin: 6px 0 14px;">
-          ${isAr ? (s.instructions?.ar || s.instructions?.en || '') : (s.instructions?.en || s.instructions?.ar || '')}
+          ${escapeHtml(isAr ? (s.instructions?.ar || s.instructions?.en || '') : (s.instructions?.en || s.instructions?.ar || ''))}
         </p>
 
         <div class="sprint-progress-bar-wrap" title="${valPct}% validated">
@@ -609,7 +617,7 @@ function renderInspector(tile) {
 
   let lockText = isAr ? 'متاح للقفل والعمل' : 'Available to lock';
   if (tile.lock) {
-    lockText = `@${tile.lock.display_name || 'user'}`;
+    lockText = `@${escapeHtml(tile.lock.display_name || 'user')}`;
   }
 
   let actionButtonsHtml = '';

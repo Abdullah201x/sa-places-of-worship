@@ -84,9 +84,12 @@ async def create_session(
             detail=f"OpenStreetMap API error: {osm_res.status_code}",
         )
 
-    data = osm_res.json()
-    osm_user = data.get("user")
-    if not osm_user or "id" not in osm_user:
+    try:
+        data = osm_res.json()
+    except ValueError:
+        data = None
+    osm_user = data.get("user") if isinstance(data, dict) else None
+    if not isinstance(osm_user, dict) or "id" not in osm_user:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Unexpected response structure from OpenStreetMap API.",

@@ -118,8 +118,15 @@ async def report_and_verify_edit(
                 download_url,
                 headers={"User-Agent": OSM_USER_AGENT},
             )
+            if dl_res.status_code != 200:
+                # Don't store the edit with no objects: it would count as already
+                # verified and its marks would never be bound on a retry.
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Could not download changeset contents (HTTP {dl_res.status_code}). Please try again.",
+                )
             objects = []
-            if dl_res.status_code == 200 and len(dl_res.content) <= MAX_CHANGESET_XML_BYTES:
+            if len(dl_res.content) <= MAX_CHANGESET_XML_BYTES:
                 objects = parse_osmchange_objects(dl_res.text)
 
     except HTTPException:
