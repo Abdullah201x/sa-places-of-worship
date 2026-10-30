@@ -3851,6 +3851,25 @@ html[lang="en"] [data-lang="ar"] {
   font-size: 14px;
 }
 
+.qa-more-cell {
+  text-align: center;
+  padding: 16px;
+}
+
+.qa-more-btn {
+  padding: 8px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.qa-more-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .qa-rule-tag {
   display: inline-block;
   font-family: var(--font-mono);

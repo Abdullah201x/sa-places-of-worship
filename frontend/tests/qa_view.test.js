@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import { fmtNum } from '../src/i18n.js';
 import {
+  QA_PAGE_SIZE,
+  setQAIssues,
   formatSeverityBadge,
   formatStatusBadge,
   calculateDistanceKm,
@@ -96,5 +99,77 @@ describe('QA Workspace formatting and triage helpers', () => {
     ];
     const sorted = sortIssues(sample, 'name');
     expect(sorted[0].name).toBe('جامع الراجحي');
+  });
+});
+
+
+// Just enough DOM for renderQATable(): a tbody that records appended rows.
+function makeFakeDom() {
+  const makeEl = (tag) => {
+    let children = [];
+    const el = {
+      tag,
+      className: '',
+      innerHTML: '',
+      textContent: '',
+      value: undefined,
+      parent: null,
+      attrs: {},
+      get children() { return children; },
+      setAttribute(k, v) { el.attrs[k] = String(v); },
+      getAttribute(k) { return el.attrs[k] ?? null; },
+      appendChild(c) {
+        const incoming = c.isFragment ? [...c.children] : [c];
+        incoming.forEach(x => { x.parent = el; });
+        children.push(...incoming);
+        return c;
+      },
+      querySelector(sel) {
+        const cls = sel.replace(/^\./, '');
+        return children.find(c => c.className.split(' ').includes(cls)) || null;
+      },
+      remove() {
+        if (el.parent) el.parent.setChildren(el.parent.children.filter(c => c !== el));
+      },
+      setChildren(c) { children = c; },
+    };
+    Object.defineProperty(el, 'innerHTML', {
+      get: () => '',
+      set: (v) => { if (v === '') children = []; },
+    });
+    return el;
+  };
+  const tbody = makeEl('tbody');
+  const count = makeEl('span');
+  const byId = { 'qa-table-body': tbody, 'qa-count': count };
+  globalThis.document = {
+    getElementById: (id) => byId[id] || null,
+    createElement: makeEl,
+    createDocumentFragment: () => { const f = makeEl('frag'); f.isFragment = true; return f; },
+    querySelectorAll: () => tbody.children.filter(c => c.className.includes('qa-row')),
+    addEventListener: () => {},
+  };
+  return { tbody, count };
+}
+
+describe('QA table rendering', () => {
+  it('renders only one page of a very large issue list', () => {
+    const { tbody, count } = makeFakeDom();
+    const issues = Array.from({ length: 20000 }, (_, i) => ({
+      osm_id: i, osm_type: 'way', rule_id: 'missing_amenity', severity: 'high', name: `m${i}`,
+    }));
+    setQAIssues(issues);
+
+    const rows = tbody.children.filter(c => c.className.includes('qa-row'));
+    expect(rows).toHaveLength(QA_PAGE_SIZE);
+    expect(tbody.children.some(c => c.className === 'qa-more-row')).toBe(true);
+    expect(count.textContent).toContain(fmtNum(20000));
+  });
+
+  it('shows no more-row when everything fits in one page', () => {
+    const { tbody } = makeFakeDom();
+    setQAIssues([{ osm_id: 1, osm_type: 'node', rule_id: 'missing_name', severity: 'low' }]);
+    expect(tbody.children.filter(c => c.className.includes('qa-row'))).toHaveLength(1);
+    expect(tbody.children.some(c => c.className === 'qa-more-row')).toBe(false);
   });
 });

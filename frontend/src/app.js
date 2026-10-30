@@ -962,7 +962,7 @@ export function setupAppShell() {
         };
         for (const p of allPlaces) {
           const props = p.properties || {};
-          const ruleIssues = getQualityIssues(props);
+          const ruleIssues = getIssues(props);
           for (const r of ruleIssues) {
             const revMark = ReviewMarks.get(props);
             issues.push({
@@ -1521,7 +1521,7 @@ export function loadData() {
 
 export function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData) {
   allPlaces = poiData.features;
-  if (typeof isQAWorkspaceOpen === 'function' && isQAWorkspaceOpen()) {
+  if (isQAWorkspaceOpen()) {
     loadQAIssues();
   }
   // Merge in weekly-computed building footprint areas (calculate_mosque_sizes.py),

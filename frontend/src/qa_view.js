@@ -69,7 +69,10 @@ let qaActive = false;
 let qaIssues = [];
 let qaFiltered = [];
 let qaSelectedIdx = 0;
+let qaRenderedCount = 0;
 let qaCallbacks = {};
+
+export const QA_PAGE_SIZE = 200;
 
 export function isQAWorkspaceOpen() {
   return qaActive;
@@ -144,6 +147,19 @@ export function setupQAWorkspace(callbacks = {}) {
   selRegion?.addEventListener('change', onFilterChange);
   selStatus?.addEventListener('change', onFilterChange);
   selSort?.addEventListener('change', onFilterChange);
+
+  // One delegated listener instead of one per row
+  document.getElementById('qa-table-body')?.addEventListener('click', (e) => {
+    if (e.target.closest('.qa-more-btn')) {
+      appendQARows(QA_PAGE_SIZE);
+      return;
+    }
+    const tr = e.target.closest('.qa-row');
+    if (!tr) return;
+    qaSelectedIdx = Number(tr.getAttribute('data-idx'));
+    updateRowSelection();
+    inspectSelectedQAIssue();
+  });
 
   // Global keyboard shortcuts for QA workspace
   document.addEventListener('keydown', (e) => {
@@ -227,6 +243,7 @@ function renderQATable() {
   }
 
   tbody.innerHTML = '';
+  qaRenderedCount = 0;
   if (!qaFiltered.length) {
     const emptyTr = document.createElement('tr');
     emptyTr.className = 'qa-empty-row';
@@ -239,15 +256,33 @@ function renderQATable() {
     return;
   }
 
-  const mapCenter = qaCallbacks.getMapCenter ? qaCallbacks.getMapCenter() : null;
+  appendQARows(QA_PAGE_SIZE);
+}
 
-  qaFiltered.forEach((issue, idx) => {
+function buildStatusCell(issue) {
+  const stat = formatStatusBadge(issue.review_status, currentLang);
+  return `<span class="badge ${stat.className}">${stat.glyph} ${stat.label}</span>`;
+}
+
+// The full issue list can be tens of thousands of rows, so only a window of
+// it is in the DOM; "show more" (or moving the selection past the end) grows it.
+function appendQARows(count) {
+  const tbody = document.getElementById('qa-table-body');
+  if (!tbody) return;
+
+  tbody.querySelector('.qa-more-row')?.remove();
+
+  const mapCenter = qaCallbacks.getMapCenter ? qaCallbacks.getMapCenter() : null;
+  const end = Math.min(qaRenderedCount + count, qaFiltered.length);
+  const frag = document.createDocumentFragment();
+
+  for (let idx = qaRenderedCount; idx < end; idx++) {
+    const issue = qaFiltered[idx];
     const tr = document.createElement('tr');
     tr.className = `qa-row ${idx === qaSelectedIdx ? 'selected' : ''}`;
     tr.setAttribute('data-idx', idx);
 
     const sev = formatSeverityBadge(issue.severity, currentLang);
-    const stat = formatStatusBadge(issue.review_status, currentLang);
     const pName = issue.name || issue.name_en || (currentLang === 'ar' ? 'مكان بدون اسم' : 'Unnamed place');
     const objRef = `${issue.osm_type}/${issue.osm_id}`;
 
@@ -266,17 +301,25 @@ function renderQATable() {
       <td class="qa-cell-rule"><span class="qa-rule-tag">${issue.rule_id}</span></td>
       <td class="qa-cell-region">${issue.region_code || '–'}</td>
       <td class="qa-cell-dist">${distText}</td>
-      <td class="qa-cell-status"><span class="badge ${stat.className}">${stat.glyph} ${stat.label}</span></td>
+      <td class="qa-cell-status">${buildStatusCell(issue)}</td>
     `;
+    frag.appendChild(tr);
+  }
+  qaRenderedCount = end;
 
-    tr.addEventListener('click', () => {
-      qaSelectedIdx = idx;
-      updateRowSelection();
-      inspectSelectedQAIssue();
-    });
-
-    tbody.appendChild(tr);
-  });
+  const remaining = qaFiltered.length - qaRenderedCount;
+  if (remaining > 0) {
+    const isAr = currentLang === 'ar';
+    const moreTr = document.createElement('tr');
+    moreTr.className = 'qa-more-row';
+    moreTr.innerHTML = `
+      <td colspan="7" class="qa-more-cell">
+        <button type="button" class="qa-more-btn">${isAr ? 'عرض المزيد' : 'Show more'} (${fmtNum(remaining)})</button>
+      </td>
+    `;
+    frag.appendChild(moreTr);
+  }
+  tbody.appendChild(frag);
 }
 
 function updateRowSelection() {
@@ -294,6 +337,9 @@ function updateRowSelection() {
 function moveQASelection(delta) {
   if (!qaFiltered.length) return;
   qaSelectedIdx = Math.max(0, Math.min(qaSelectedIdx + delta, qaFiltered.length - 1));
+  if (qaSelectedIdx >= qaRenderedCount) {
+    appendQARows(qaSelectedIdx - qaRenderedCount + 1 + QA_PAGE_SIZE);
+  }
   updateRowSelection();
 }
 
@@ -314,19 +360,25 @@ function markSelectedQAIssue(status) {
     qaCallbacks.onMarkIssue(issue, status);
   }
   updateRowSelection();
-  renderQATable();
+  // Only the marked row changes; rebuilding the table here would redo every row.
+  const statusCell = document.querySelector(`#qa-table-body .qa-row[data-idx="${qaSelectedIdx}"] .qa-cell-status`);
+  if (statusCell) statusCell.innerHTML = buildStatusCell(issue);
 }
 
+let qaLoading = false;
+
 export function loadQAIssues() {
-  if (qaCallbacks.fetchIssues) {
-    qaCallbacks.fetchIssues().then(issues => {
-      if (issues) {
-        setQAIssues(issues);
-      }
-    }).catch(err => {
-      console.error('Failed to load QA issues:', err);
-    });
-  }
+  if (!qaCallbacks.fetchIssues || qaLoading) return;
+  qaLoading = true;
+  qaCallbacks.fetchIssues().then(issues => {
+    if (issues) {
+      setQAIssues(issues);
+    }
+  }).catch(err => {
+    console.error('Failed to load QA issues:', err);
+  }).finally(() => {
+    qaLoading = false;
+  });
 }
 
 function escapeHtml(str) {
