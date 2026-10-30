@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy pipeline scripts
 COPY pipeline/ /app/
+COPY content/ /app/content/
 
 VOLUME ["/state", "/published"]
 

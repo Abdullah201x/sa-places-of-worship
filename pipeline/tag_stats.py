@@ -23,10 +23,10 @@ except ImportError:
     yaml = None
 
 try:
-    from common import (BASE_DIR, configure_utf8_output, find_pbf, is_worship_tagged,
+    from common import (BASE_DIR, CODE_DIR, configure_utf8_output, find_pbf, is_worship_tagged,
                         load_boundary, write_json)
 except ImportError:
-    from pipeline.common import (BASE_DIR, configure_utf8_output, find_pbf, is_worship_tagged,
+    from pipeline.common import (BASE_DIR, CODE_DIR, configure_utf8_output, find_pbf, is_worship_tagged,
                                  load_boundary, write_json)
 
 configure_utf8_output()
@@ -153,7 +153,8 @@ def compute_tag_stats(places_tags_iter, total_places=None, as_of=None, dataset_v
 def compile_tags_json(tags_dir, stats, out_path):
     """Compiles content/tags/*.yaml merged with usage_sa into /data/tags.json."""
     if not yaml:
-        print("yaml module not available; skipping tags.json compilation")
+        print("yaml module not available; writing empty tags.json")
+        write_json(out_path, [])
         return []
 
     tag_files = glob.glob(os.path.join(tags_dir, "*.yaml"))
@@ -267,7 +268,16 @@ def main():
 
     geojson_path = args.geojson or os.path.join(BASE_DIR, "places_of_worship_sa.geojson")
     out_path = args.out or os.path.join(BASE_DIR, "tag_stats_sa.json")
-    tags_dir = args.tags_dir or os.path.join(BASE_DIR, "content", "tags")
+    tags_dir = args.tags_dir or os.environ.get("MANARA_TAGS_DIR")
+    if not tags_dir:
+        for candidate in [
+            os.path.join(CODE_DIR, "content", "tags"),
+            os.path.join(CODE_DIR, "..", "content", "tags"),
+            os.path.join(BASE_DIR, "content", "tags"),
+        ]:
+            if os.path.isdir(candidate):
+                tags_dir = candidate
+                break
     tags_out = args.tags_out or os.path.join(BASE_DIR, "tags.json")
 
     if not os.path.exists(geojson_path):
@@ -281,9 +291,12 @@ def main():
     write_json(out_path, stats)
     print(f"Wrote {out_path} ({stats['total_places']} places of worship processed)")
 
-    if os.path.exists(tags_dir):
+    if tags_dir and os.path.exists(tags_dir):
         docs = compile_tags_json(tags_dir, stats, tags_out)
         print(f"Wrote {tags_out} ({len(docs)} tag documents compiled with live usage stats)")
+    else:
+        write_json(tags_out, [])
+        print(f"Wrote empty {tags_out} (tags_dir not found)")
 
     if not args.no_db:
         record_stats_to_db(stats)
