@@ -121,6 +121,15 @@ export function setupQAWorkspace(callbacks = {}) {
     btnClose.addEventListener('click', () => closeQAWorkspace());
   }
 
+  const btnFocus = document.getElementById('qa-btn-focus');
+  if (btnFocus) {
+    btnFocus.addEventListener('click', () => {
+      if (qaFiltered.length > 0) {
+        inspectSelectedQAIssue();
+      }
+    });
+  }
+
   // Filter dropdowns
   const selRule = document.getElementById('qa-filter-rule');
   const selRegion = document.getElementById('qa-filter-region');
@@ -308,12 +317,14 @@ function markSelectedQAIssue(status) {
   renderQATable();
 }
 
-function loadQAIssues() {
+export function loadQAIssues() {
   if (qaCallbacks.fetchIssues) {
     qaCallbacks.fetchIssues().then(issues => {
-      if (issues && issues.length) {
+      if (issues) {
         setQAIssues(issues);
       }
+    }).catch(err => {
+      console.error('Failed to load QA issues:', err);
     });
   }
 }

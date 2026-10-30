@@ -142,11 +142,20 @@ export const RULES = [
 export const RULE_IDS = RULES.map(r => r.id);
 
 // All issues for a place: [{ id, title_ar, title_en }, ...] in rule order.
-export function evaluateRules(props, ctx) {
+export function evaluateRules(props, ctx = {}) {
+  const safeCtx = {
+    now: Date.now(),
+    sizeMinM2: 50,
+    sizeMaxM2: 10000,
+    qiblaDevThreshold: 20.0,
+    ...(ctx || {}),
+  };
   const issues = [];
   for (const rule of RULES) {
-    const issue = rule.check(props, ctx);
-    if (issue) issues.push({ id: rule.id, ...issue });
+    try {
+      const issue = rule.check(props, safeCtx);
+      if (issue) issues.push({ id: rule.id, ...issue });
+    } catch (_) {}
   }
   return issues;
 }

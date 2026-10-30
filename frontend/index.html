@@ -1125,6 +1125,8 @@
     <div id="batch-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
     <div id="history-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
     <button type="button" id="batch-dock" class="batch-dock" style="display: none;"></button>
+    <!-- Focus Mode Floating HUD -->
+    <div id="focus-mode-hud" class="focus-mode-hud hidden" role="region" aria-label="وضع التركيز والتعديل السريع"></div>
     <!-- QA Workspace (List-first issue triage view) -->
     <section id="qa-workspace" class="qa-workspace hidden" aria-label="مساحة عمل فحص الجودة">
       <div class="qa-workspace-container">
@@ -1197,6 +1199,10 @@
           </div>
 
           <div class="qa-header-actions">
+            <button type="button" id="qa-btn-focus" class="qa-focus-btn" title="بدء وضع التركيز (Fast Triage)">
+              <span data-lang="ar">🎯 وضع التركيز</span>
+              <span data-lang="en">🎯 Focus Mode</span>
+            </button>
             <button type="button" id="qa-btn-close" class="qa-close-btn" title="العودة للخريطة (L أو Esc)">
               <span data-lang="ar">✕ إغلاق</span>
               <span data-lang="en">✕ Close</span>

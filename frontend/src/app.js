@@ -4,7 +4,7 @@ import { safeUrl, showToast, showLoadingText } from './ui.js';
 // The other map modules (editing, review, exporters) still import these from app.js.
 export { safeUrl, showToast, showLoadingText };
 import { setupCommandPalette } from './palette.js';
-import { setupQAWorkspace, openQAWorkspace, closeQAWorkspace } from './qa_view.js';
+import { setupQAWorkspace, openQAWorkspace, closeQAWorkspace, isQAWorkspaceOpen, loadQAIssues } from './qa_view.js';
 import { setupChangesWorkspace, openChangesWorkspace, closeChangesWorkspace } from './changes_view.js';
 import { setMode as storeSetMode, setSelection as storeSetSelection } from './store.js';
 import { currentLang, t, fmtNum, fmtDate, onLanguageChange, setLanguage } from './i18n.js';
@@ -12,7 +12,8 @@ import { ArabicText } from './arabic.js';
 import { ReviewMarks, hideReviewedPlaces, setHideReviewedPlaces, isHiddenByReview, markCurrentPlace, clearCurrentMark, renderReviewActions, rebuildReviewQueue, navigateReview, updateReviewNavUI, Permalink, updatePermalinkSoon, setupKeyboardShortcuts } from './review.js';
 import { Exporters } from './exporters.js';
 import { OsmApi, EditHistory } from './osm_api.js';
-import { renderQuickFixes, setupEditing, createFieldRow, readFieldValues, showFieldErrors } from './editing.js';
+import { renderQuickFixes, setupEditing, createFieldRow, readFieldValues, showFieldErrors, openEditDialog } from './editing.js';
+import { FocusMode } from './focus_mode.js';
 import { MOSQUE_PRESET, tagsFromValues, validateValues } from './presets.js';
 import { evaluateRules } from './validator.js';
 import { DATA_AGE_OK_MS, DATA_AGE_WARN_MS, ageLevel, clockOffset, formatAge } from './timeago.js';
@@ -663,23 +664,25 @@ export function buildSuggestionPopup(props, lat, lon) {
 
 // Popup buttons carry data-sug-action/data-qid instead of inline onclick
 // strings, so popup HTML never has to embed values inside JavaScript.
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-sug-action]');
-  if (!btn) return;
-  e.preventDefault();
-  const qid = btn.getAttribute('data-qid');
-  const action = btn.getAttribute('data-sug-action');
-  if (action === 'copy') {
-    copySuggestionTags(qid);
-  } else if (action === 'josm') {
-    addSuggestionInJOSM(qid);
-  } else if (action === 'direct') {
-    openAddMosqueFromSuggestion(qid);
-  } else if (action === 'satellite') {
-    const s = suggestionsByQid[qid];
-    if (s) previewSuggestionSatellite(s.lat, s.lon);
-  }
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-sug-action]');
+    if (!btn) return;
+    e.preventDefault();
+    const qid = btn.getAttribute('data-qid');
+    const action = btn.getAttribute('data-sug-action');
+    if (action === 'copy') {
+      copySuggestionTags(qid);
+    } else if (action === 'josm') {
+      addSuggestionInJOSM(qid);
+    } else if (action === 'direct') {
+      openAddMosqueFromSuggestion(qid);
+    } else if (action === 'satellite') {
+      const s = suggestionsByQid[qid];
+      if (s) previewSuggestionSatellite(s.lat, s.lon);
+    }
+  });
+}
 
 export function previewSuggestionSatellite(lat, lon) {
   if (!map) return;
@@ -931,6 +934,55 @@ export function setupAppShell() {
 
   setupQAWorkspace({
     fetchIssues: async () => {
+      // If places are still loading, await them
+      if (!allPlaces || !allPlaces.length) {
+        if (dataLoadedPromise) {
+          try {
+            await dataLoadedPromise;
+          } catch (_) {}
+        }
+      }
+
+      if (allPlaces && allPlaces.length) {
+        const issues = [];
+        const ruleSeverities = {
+          missing_amenity: 'high',
+          missing_name: 'medium',
+          missing_name_en: 'medium',
+          missing_denom: 'medium',
+          size_too_small: 'low',
+          size_too_large: 'low',
+          stale_data: 'low',
+          building_yes: 'medium',
+          mapped_as_node: 'low',
+          ml_geometry_anomaly: 'high',
+          duplicate_poi: 'high',
+          outdated_tags: 'low',
+          qibla_deviation: 'high',
+        };
+        for (const p of allPlaces) {
+          const props = p.properties || {};
+          const ruleIssues = getQualityIssues(props);
+          for (const r of ruleIssues) {
+            const revMark = ReviewMarks.get(props);
+            issues.push({
+              rule_id: r.id,
+              severity: ruleSeverities[r.id] || 'medium',
+              osm_type: osmTypeOf(props),
+              osm_id: props.osm_id || p.id,
+              name: props.name || '',
+              name_en: props.name_en || '',
+              religion: props.religion || '',
+              denomination: props.denomination || '',
+              region_code: props.region_code || '',
+              coordinates: p.geometry ? p.geometry.coordinates : null,
+              review_status: revMark ? revMark.status : null,
+            });
+          }
+        }
+        return issues;
+      }
+
       try {
         const res = await fetch('/api/v1/issues?limit=200');
         if (res.ok) {
@@ -941,43 +993,7 @@ export function setupAppShell() {
         }
       } catch (_) {}
 
-      const issues = [];
-      const ruleSeverities = {
-        missing_amenity: 'high',
-        missing_name: 'medium',
-        missing_name_en: 'medium',
-        missing_denom: 'medium',
-        size_too_small: 'low',
-        size_too_large: 'low',
-        stale_data: 'low',
-        building_yes: 'medium',
-        mapped_as_node: 'low',
-        ml_geometry_anomaly: 'high',
-        duplicate_poi: 'high',
-        outdated_tags: 'low',
-        qibla_deviation: 'high',
-      };
-      for (const p of allPlaces) {
-        const props = p.properties || {};
-        const ruleIssues = evaluateRules(props);
-        for (const r of ruleIssues) {
-          const revMark = ReviewMarks.get(props);
-          issues.push({
-            rule_id: r.id,
-            severity: ruleSeverities[r.id] || 'medium',
-            osm_type: osmTypeOf(props),
-            osm_id: props.osm_id || p.id,
-            name: props.name || '',
-            name_en: props.name_en || '',
-            religion: props.religion || '',
-            denomination: props.denomination || '',
-            region_code: props.region_code || '',
-            coordinates: p.geometry ? p.geometry.coordinates : null,
-            review_status: revMark ? revMark.status : null,
-          });
-        }
-      }
-      return issues;
+      return [];
     },
     onInspectIssue: (issue) => {
       const matched = allPlaces.find(p => {
@@ -986,6 +1002,7 @@ export function setupAppShell() {
                (!issue.osm_type || osmTypeOf(props) === issue.osm_type);
       });
 
+      let inspectedPlace = matched;
       if (matched) {
         const lat = matched.geometry.coordinates[1];
         const lon = matched.geometry.coordinates[0];
@@ -994,15 +1011,30 @@ export function setupAppShell() {
       } else if (issue.coordinates) {
         const [lon, lat] = issue.coordinates;
         if (map) map.flyTo([lat, lon], 17);
-        showDetails({
-          osm_id: issue.osm_id,
-          osm_type: issue.osm_type,
-          name: issue.name,
-          name_en: issue.name_en,
-          religion: issue.religion,
-          denomination: issue.denomination,
-          region_code: issue.region_code,
-        }, lat, lon);
+        inspectedPlace = {
+          properties: {
+            osm_id: issue.osm_id,
+            osm_type: issue.osm_type,
+            name: issue.name,
+            name_en: issue.name_en,
+            religion: issue.religion,
+            denomination: issue.denomination,
+            region_code: issue.region_code,
+          },
+          geometry: {
+            type: 'Point',
+            coordinates: [lon, lat],
+          }
+        };
+        showDetails(inspectedPlace.properties, lat, lon);
+      }
+
+      if (issue.rule_id && inspectedPlace) {
+        FocusMode.enter({
+          ruleId: issue.rule_id,
+          place: inspectedPlace,
+          placesList: allPlaces,
+        });
       }
     },
     onMarkIssue: (issue, status) => {
@@ -1019,6 +1051,17 @@ export function setupAppShell() {
         return [c.lat, c.lng];
       }
       return [24.7136, 46.6753];
+    },
+  });
+
+  FocusMode.setup({
+    getPlaces: () => allPlaces,
+    onNavigateToPlace: (place, lat, lon) => {
+      if (map) map.flyTo([lat, lon], 18, { duration: 0.8 });
+      showDetails(place.properties, lat, lon);
+    },
+    onOpenEditDialog: (props, fixId) => {
+      openEditDialog(props, fixId);
     },
   });
 
@@ -1117,8 +1160,10 @@ function boot() {
     loadData();
   });
 }
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-else boot();
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+}
 
 // Build basemap layers according to whether a CARTO API key is provided
 export function createBasemapLayers() {
@@ -1426,8 +1471,10 @@ export function renderDataUpdatedLabel() {
   el.hidden = false;
 }
 
+export let dataLoadedPromise = null;
+
 export function loadData() {
-  fetch(`${DATA_BASE}summary.json`, { cache: 'no-store' })
+  dataLoadedPromise = fetch(`${DATA_BASE}summary.json`, { cache: 'no-store' })
     .then(r => {
       clockSkewMs = clockOffset(r.headers.get('Date'), Date.now());
       return r.ok ? r.json() : {};
@@ -1458,19 +1505,25 @@ export function loadData() {
     pendingAnomalyData = anomalyData;
 
     // Check if user is logged in via OSM OAuth; default directly to guest mode if not
-    OsmApi.checkAuth().then(isAuthenticated => {
+    return OsmApi.checkAuth().then(isAuthenticated => {
       isOsmAnonymized = !isAuthenticated;
       initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData);
+      return allPlaces;
     });
   })
   .catch(error => {
     console.error('Error loading GeoJSON datasets:', error);
     showLoadingError(t('loadError'));
+    throw error;
   });
+  return dataLoadedPromise;
 }
 
 export function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData) {
   allPlaces = poiData.features;
+  if (typeof isQAWorkspaceOpen === 'function' && isQAWorkspaceOpen()) {
+    loadQAIssues();
+  }
   // Merge in weekly-computed building footprint areas (calculate_mosque_sizes.py),
   // keyed by osm_id; features with no entry simply have no size data. The
   // too_small/too_large classification itself is computed dynamically in
@@ -1789,6 +1842,9 @@ export function showDetails(props, lat, lon) {
   panel.style.display = 'block';
   renderReviewActions();
   renderQuickFixes(props);
+  if (FocusMode.isActive()) {
+    FocusMode.setCurrentPlace({ properties: props, geometry: { type: 'Point', coordinates: [lon, lat] } });
+  }
   updatePermalinkSoon();
 
   // Ensure sidebar is expanded so user sees the details immediately

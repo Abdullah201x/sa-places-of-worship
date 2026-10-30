@@ -9,6 +9,7 @@ import { Exporters } from './exporters.js';
 import { OsmApi, EditHistory } from './osm_api.js';
 import { FIELDS, MOSQUE_PRESET, BUILDING_YES_RULE, fieldLabel, fieldPlaceholder, fieldOptions, optionLabel, normalizeValue, validateValue, outdatedRules, upgradeChanges, tagsFromProps } from './presets.js';
 import { allPlaces, selectedPlace, denomLabel, osmTypeOf, getIssues, invalidateIssues, updateImprovementIssueCounts, showToast, placeName, showDetails } from './app.js';
+import { FocusMode, CHANGESET_LIMITS, getChangesetSizeReminder } from './focus_mode.js';
 
 addTranslations({
   quickFixesTitle: ['⚡ إصلاح سريع (OSM API)', '⚡ Quick fix (OSM API)'],
@@ -193,6 +194,21 @@ export function renderQuickFixes(props) {
     btn.addEventListener('click', () => openEditDialog(props, id));
     buttons.appendChild(btn);
   });
+
+  const focusBtn = document.createElement('button');
+  focusBtn.type = 'button';
+  focusBtn.className = 'quick-fix-focus-btn';
+  focusBtn.textContent = t('focusEnterBtn');
+  focusBtn.addEventListener('click', () => {
+    const coords = selectedPlace ? [selectedPlace.lat, selectedPlace.lon] : null;
+    FocusMode.enter({
+      ruleId: fixes[0],
+      place: { properties: props, geometry: coords ? { coordinates: [coords[1], coords[0]] } : null },
+      placesList: allPlaces
+    });
+  });
+  buttons.appendChild(focusBtn);
+
   box.appendChild(buttons);
   box.style.display = 'block';
 }
@@ -335,6 +351,23 @@ export function showFieldErrors(root, errors) {
   return t(`fieldErr_${code}`, { field: fieldLabel(fieldId, currentLang) });
 }
 
+export function createBatchEditItem(props, fixId, value = null, customSource = null) {
+  const fix = QUICK_FIXES[fixId];
+  if (!fix) return null;
+  const target = fixTarget(props, fix);
+  const label = placeName(props);
+  const source = customSource || fix.source || 'Esri World Imagery';
+  return {
+    ...target,
+    edits: fix.edits(value, props),
+    label,
+    fixId,
+    summary: FIX_COMMENT_SUMMARY[fixId] + (value ? ` (${value})` : ''),
+    placeKey: ReviewMarks.keyOf(props),
+    source
+  };
+}
+
 export function openOverlay(id, build) {
   const overlay = document.getElementById(id);
   const card = overlay.querySelector('.auth-card');
@@ -429,15 +462,7 @@ export function openEditDialog(props, fixId) {
         showToast(error, 'error');
         return null;
       }
-      return {
-        ...target,
-        edits: fix.edits(value, props),
-        label,
-        fixId,
-        summary: FIX_COMMENT_SUMMARY[fixId] + (value ? ` (${value})` : ''),
-        placeKey: ReviewMarks.keyOf(props),
-        source: source.value
-      };
+      return createBatchEditItem(props, fixId, value, source.value);
     };
 
     const uploadBtn = document.createElement('button');
@@ -450,7 +475,12 @@ export function openEditDialog(props, fixId) {
       uploadBtn.disabled = true;
       uploadBtn.textContent = t('editUploading');
       const ok = await uploadSingle(item, comment.area.value, source.value);
-      if (ok) close();
+      if (ok) {
+        close();
+        if (FocusMode.isActive()) {
+          FocusMode.goToNearestSimilarIssue();
+        }
+      }
       uploadBtn.disabled = false;
       uploadBtn.textContent = t('editUploadNow');
     });
@@ -465,6 +495,9 @@ export function openEditDialog(props, fixId) {
       if (EditBatch.add(item)) {
         showToast(t('batchAdded', { n: fmtNum(EditBatch.items().length) }));
         close();
+        if (FocusMode.isActive()) {
+          FocusMode.goToNearestSimilarIssue();
+        }
       } else {
         showToast(t('batchAlready'), 'error');
       }
@@ -524,6 +557,12 @@ export async function uploadSingle(item, comment, source) {
 // ---------------------------------------------------------------------------
 export const EditBatch = {
   KEY: 'gcc_edit_batch',
+  _listeners: new Set(),
+
+  subscribe(fn) {
+    this._listeners.add(fn);
+    return () => this._listeners.delete(fn);
+  },
 
   items() {
     try {
@@ -540,6 +579,20 @@ export const EditBatch = {
       // Ignore storage errors in private browsing
     }
     renderBatchDock();
+    this._listeners.forEach(fn => {
+      try { fn(items); } catch (_) {}
+    });
+  },
+
+  isQueued(placeKeyOrProps, fixId = null) {
+    const key = typeof placeKeyOrProps === 'string'
+      ? placeKeyOrProps
+      : ReviewMarks.keyOf(placeKeyOrProps);
+    const items = this.items();
+    if (fixId) {
+      return items.some(i => i.placeKey === key && i.fixId === fixId);
+    }
+    return items.some(i => i.placeKey === key);
   },
 
   add(item) {
@@ -547,6 +600,19 @@ export const EditBatch = {
     if (items.some(i => i.type === item.type && i.id === item.id && i.fixId === item.fixId)) return false;
     items.push(item);
     this._save(items);
+
+    // Changeset size reminder check
+    const count = items.length;
+    if (
+      count === CHANGESET_LIMITS.WARN_THRESHOLD ||
+      count === CHANGESET_LIMITS.MAX_RECOMMENDED ||
+      (count > CHANGESET_LIMITS.MAX_RECOMMENDED && count % 10 === 0)
+    ) {
+      const reminder = getChangesetSizeReminder(count, currentLang);
+      if (reminder && reminder.shouldWarn) {
+        showToast(reminder.text, reminder.level === 'alert' ? 'error' : 'warning');
+      }
+    }
     return true;
   },
 
@@ -565,7 +631,10 @@ export function renderBatchDock() {
   const dock = document.getElementById('batch-dock');
   if (!dock) return;
   const n = EditBatch.items().length;
-  dock.textContent = t('batchDock', { n: fmtNum(n) });
+  const rem = getChangesetSizeReminder(n, currentLang);
+  dock.textContent = t('batchDock', { n: fmtNum(n) }) + (rem.shouldWarn ? ` ${rem.shortText}` : '');
+  dock.className = `batch-dock ${rem.level !== 'ok' ? rem.level : ''}`;
+  dock.title = rem.text;
   dock.style.display = n ? '' : 'none';
 }
 
@@ -587,6 +656,27 @@ export function openBatchDialog() {
       empty.className = 'input-help';
       empty.textContent = t('batchEmpty');
       body.appendChild(empty);
+    }
+
+    if (items.length) {
+      const guideBox = document.createElement('div');
+      const rem = getChangesetSizeReminder(items.length, currentLang);
+      guideBox.className = `changeset-size-guide ${items.length >= CHANGESET_LIMITS.MAX_RECOMMENDED ? 'alert' : items.length >= CHANGESET_LIMITS.WARN_THRESHOLD ? 'warn' : 'ok'}`;
+      guideBox.innerHTML = `
+        <div class="size-guide-header">
+          <span class="size-guide-icon">${items.length >= CHANGESET_LIMITS.MAX_RECOMMENDED ? '🛑' : items.length >= CHANGESET_LIMITS.WARN_THRESHOLD ? '⚠️' : '💡'}</span>
+          <strong class="size-guide-title">${t('changesetGuideTitle')}</strong>
+        </div>
+        <p class="size-guide-body">${t('changesetGuideBody')}</p>
+        <div class="size-guide-meter">
+          <div class="meter-track">
+            <div class="meter-fill ${items.length >= CHANGESET_LIMITS.MAX_RECOMMENDED ? 'alert' : items.length >= CHANGESET_LIMITS.WARN_THRESHOLD ? 'warn' : 'ok'}" style="width: ${Math.min(100, Math.round(items.length / CHANGESET_LIMITS.MAX_RECOMMENDED * 100))}%"></div>
+          </div>
+          <span class="meter-label">${t('changesetMeterLabel', { n: fmtNum(items.length) })}</span>
+        </div>
+        ${rem.shouldWarn ? `<div class="size-guide-alert">${rem.text}</div>` : ''}
+      `;
+      body.appendChild(guideBox);
     }
 
     const list = document.createElement('ul');

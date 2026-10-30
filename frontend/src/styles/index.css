@@ -4199,3 +4199,458 @@ html[lang="en"] [data-lang="ar"] {
     gap: 6px;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Focus Mode & Rapid QA Triage HUD
+   --------------------------------------------------------------------------- */
+.focus-mode-hud {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1600;
+  width: 92%;
+  max-width: 880px;
+  background: rgba(13, 17, 25, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 0 28px rgba(0, 242, 254, 0.12);
+  padding: 12px 18px;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.focus-mode-hud.hidden {
+  display: none !important;
+}
+
+.focus-hud-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.focus-hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+}
+
+.focus-hud-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.focus-hud-badge {
+  background: rgba(0, 242, 254, 0.18);
+  color: var(--color-primary);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+
+.focus-hud-rule {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.focus-hud-count {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.focus-hud-current-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #cbd5e1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-current-name {
+  color: #ffffff;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-divider {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.focus-next-name {
+  color: var(--color-accent);
+  font-weight: 600;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-btn-exit {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.focus-btn-exit:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.focus-hud-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.focus-hud-actions-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.focus-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.focus-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.focus-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.focus-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.focus-action-btn.primary {
+  background: linear-gradient(135deg, rgba(0, 255, 135, 0.22), rgba(0, 242, 254, 0.22));
+  border-color: rgba(0, 255, 135, 0.6);
+  color: #00ff87;
+  box-shadow: 0 4px 14px rgba(0, 255, 135, 0.15);
+}
+
+.focus-action-btn.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 255, 135, 0.35), rgba(0, 242, 254, 0.35));
+  border-color: rgba(0, 255, 135, 0.9);
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(0, 255, 135, 0.28);
+}
+
+.focus-action-btn.subtle {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.focus-action-btn.subtle:hover:not(:disabled) {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.focus-kbd {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.focus-hud-batch-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.focus-batch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 135, 0.5);
+  background: rgba(0, 255, 135, 0.1);
+  color: var(--color-accent);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.focus-batch-btn:hover {
+  background: rgba(0, 255, 135, 0.2);
+  transform: translateY(-1px);
+}
+
+.focus-batch-btn.tip {
+  border-color: rgba(0, 242, 254, 0.6);
+  background: rgba(0, 242, 254, 0.12);
+  color: var(--color-primary);
+}
+
+.focus-batch-btn.warn {
+  border-color: rgba(255, 176, 58, 0.7);
+  background: rgba(255, 176, 58, 0.15);
+  color: var(--color-warn);
+}
+
+.focus-batch-btn.alert {
+  border-color: rgba(255, 69, 58, 0.8);
+  background: rgba(255, 69, 58, 0.2);
+  color: var(--color-danger);
+  animation: pulse-alert 2s infinite;
+}
+
+@keyframes pulse-alert {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 69, 58, 0);
+  }
+}
+
+.reminder-tag {
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  font-weight: 700;
+}
+
+.focus-changeset-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.focus-changeset-warning.warn {
+  background: rgba(255, 176, 58, 0.12);
+  border: 1px solid rgba(255, 176, 58, 0.4);
+  color: #ffdda1;
+}
+
+.focus-changeset-warning.alert {
+  background: rgba(255, 69, 58, 0.15);
+  border: 1px solid rgba(255, 69, 58, 0.5);
+  color: #ffb8b4;
+}
+
+.focus-warn-action {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.focus-warn-action:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Quick Fix & QA header buttons */
+.quick-fix-focus-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  background: rgba(0, 242, 254, 0.1);
+  color: var(--color-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.quick-fix-focus-btn:hover {
+  background: rgba(0, 242, 254, 0.2);
+  border-color: rgba(0, 242, 254, 0.7);
+}
+
+.qa-focus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  background: rgba(0, 242, 254, 0.12);
+  color: var(--color-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.qa-focus-btn:hover {
+  background: rgba(0, 242, 254, 0.25);
+  border-color: rgba(0, 242, 254, 0.8);
+}
+
+/* Changeset Size Guideline Box in Batch Dialog */
+.changeset-size-guide {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+
+.changeset-size-guide.warn {
+  border-color: rgba(255, 176, 58, 0.5);
+  background: rgba(255, 176, 58, 0.06);
+}
+
+.changeset-size-guide.alert {
+  border-color: rgba(255, 69, 58, 0.6);
+  background: rgba(255, 69, 58, 0.08);
+}
+
+.size-guide-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 12.5px;
+}
+
+.size-guide-title {
+  color: #ffffff;
+}
+
+.size-guide-body {
+  color: var(--color-text-muted);
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+
+.size-guide-meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meter-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.meter-fill.ok {
+  background: var(--color-accent);
+}
+
+.meter-fill.warn {
+  background: var(--color-warn);
+}
+
+.meter-fill.alert {
+  background: var(--color-danger);
+}
+
+.meter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.size-guide-alert {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .focus-mode-hud {
+    width: 96%;
+    bottom: 12px;
+    padding: 10px 12px;
+  }
+
+  .focus-action-btn span:not(.btn-icon) {
+    font-size: 11px;
+  }
+
+  .focus-kbd {
+    display: none;
+  }
+
+  .focus-hud-current-info {
+    max-width: 100%;
+  }
+}
+
