@@ -2,9 +2,21 @@
 
 This document summarises the architecture, live infrastructure, completed phases (Phases 1–3 and Phase 6a), and upcoming roadmap (Phases 5, 4 and 6b) for **Manara** (`https://manara.saudiosm.org`), so another AI coding assistant can seamlessly continue the work.
 
-**Where things stand:** Phases 1–3, Phase 4 (accounts & shared review), Phase 5a (`/community` page), Phase 5b (leaderboard, verified edits feed, and SEO pages), Phase 6a (operations), and Phase 6b (security review & hardening) are done. The utility-first redesign (`REDESIGN.md`) has started: **Redesign Phase 0 is done and live** (2026-10-30, see §12); Redesign Phase 1 is next. Nothing is half-finished in the code; `main` is clean.
+**Where things stand (updated 2026-10-30, end of session):** Phases 1–3, 4, 5a/5b, 6a and 6b of the original roadmap are live. The utility-first redesign (`REDESIGN.md`) has **Phases 0–4 complete and Phase 5 mostly complete**, but **work up to Phase 5 step 2 (`81d4aa6`) is on `origin/main`; the six newer commits are local only and not deployed** (the user wants to approve each push, then `curl` the live endpoints; see §11). The local-only commits are `865b969`, `ee6faff`, `a045ef0`, `f4082ea`, `1f5c841`, `e91cf2c` (§20.3 to §20.6); check with `git log origin/main..HEAD`.
 
-- **Last updated:** 2026-10-30 (Phase 6b security hardening complete; next is Redesign Phase 1)
+## START HERE (next agent)
+
+1. **Read §20.3 to §20.6 at the end of this file first**: they are the latest work (real tiles from the PMTiles fallback, the first-ever browser run and the bugs it found, the MapLibre "map kit" with full parity behind `?map=gl`, and the Playwright smoke tests).
+2. **Uncommitted files you must not lose or commit blindly:** `pipeline/run.py` has a small intentional change (it deletes leftover `*.staging` publish dirs after publishing; it is unrelated to the redesign work and safe to commit on its own). `design prompt.md` and `handover.md` (11k-line chat transcript) are untracked scratch files; leave them out of commits.
+3. **Verify before you trust anything** (all green at the end of this session): `python -m pytest tests -q` (146), then in `frontend/`: `npm run lint`, `npm test` (121 Vitest), `npm run smoke` (61 Playwright tests, about 7 minutes; builds first). Earlier phases were verified without a browser and the first real browser run found four bugs, so **always run the smoke tests after UI changes**.
+4. **Suggested next steps, in order:**
+   - Ask the user to approve a push, push, let the new CI `smoke` job run once on GitHub (Linux, bundled Chromium; untested there; if flaky raise timeouts before loosening assertions), then do the post-deploy checks in §20.4 (`curl -I -H 'Range: bytes=0-126' .../data/places.pmtiles` must give `206` and no `Content-Encoding`; confirm the pipeline publishes `*.pmtiles`; the web image does not bake them in).
+   - **Flip MapLibre to the default** (`wantsGl()` in `frontend/src/map_kit.js`, keep `?map=leaflet` as the fallback for one release) **only after checking on a real mid-range Android phone**: 60 fps pan and first-load transfer cannot be measured in headless Chrome. The touch long-press context menu, the OSM-notes layer with real notes, the add-note flow and the Qibla compass while panning are untested in a browser.
+   - **First-load size (the ">80% smaller" exit criterion):** the main app still downloads the full GeoJSON, because stats, search and filters run on `filteredPlaces`. The PMTiles overlays are used only by the `/mapgl` preview. Rethinking that is a separate, deliberate piece of work (§20.5 "Not done").
+   - Remaining Phase 5 items: per-region exports and optional `.osm.pbf` cuts (`REDESIGN.md` §5 Phase 5 item 1); map text labels (need a glyph server and the Arabic RTL text plugin, possibly `'wasm-unsafe-eval'`).
+   - Then Phase 6 (field PWA, optional integrations) per `REDESIGN.md`.
+5. **Do not** use OSMF tile servers, bulk-read the OSM API, or call Overpass/Osmose on page load (§2 and the memory notes on OSM compliance). The smoke tests enforce this for the map page.
+
 - **Repository:** `github.com/Abdullah201x/sa-places-of-worship` (branch `main` auto-deploys via Coolify)
 - **Local checkout:** `C:\Users\abdul\Desktop\GCC20260707`
 - **VPS SSH:** `root@159.195.192.148`
@@ -13,7 +25,7 @@ This document summarises the architecture, live infrastructure, completed phases
 
 ## 1. What the Project Is
 
-Manara is an interactive Leaflet map of places of worship in Saudi Arabia, built from OpenStreetMap data. The UI is Arabic (RTL) by default, with an English toggle. It has three modes:
+Manara is an interactive map (Leaflet by default; MapLibre GL with `?map=gl`) of places of worship in Saudi Arabia, built from OpenStreetMap data. The UI is Arabic (RTL) by default, with an English toggle. It has three modes:
 - **POI density** (clustering + heatmap);
 - **Coverage gaps** (road-network grid cells lacking nearby mosques);
 - **Data-improvement mode for mappers**: issue detection, a review queue, Wikidata suggestions (~54.5k missing mosques), exports (GeoJSON, CSV, KML, OSM XML, MapRoulette), and in-app tag fixes through the OSM API with OAuth2 PKCE.

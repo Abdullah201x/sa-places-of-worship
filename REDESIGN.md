@@ -739,7 +739,7 @@ Each phase can ship on its own. Every phase follows your workflow: commit locall
 | Pages | **Astro, static output** | Builds on Vite, so the two `vite.config.js` gotchas carry over through Astro's `vite` key. Content collections and i18n routing fit `/tags`, `/guides`, `/data` and `/en/*`. It produces static files, so Caddy serves it as today. *Rejected:* Next.js and SvelteKit SSR, which need a Node server container (RAM) and duplicate what FastAPI already does for SEO. |
 | Interactive UI | **Svelte 5 islands** | Small runtime, compiled, easy for one maintainer. Islands keep the content pages near zero JS. *Rejected:* React, which has a bigger runtime and gives no benefit here. |
 | Styling | **CSS custom-property tokens + logical properties**, no Tailwind | 3.1k lines of existing CSS migrate token by token. Logical properties give RTL for free. Tailwind v4's logical utilities would also work, but would mean a full rewrite of markup for little gain. Revisit only if a contributor team grows. |
-| Map | **MapLibre GL JS** in Phase 5. **Leaflet** until then. | Vector overlays (PMTiles), GPU rendering for 60k gap cells, and data-driven styling. It needs the self-hosted RTL text plugin for Arabic labels, the CSP build (`maplibre-gl-csp` + its worker file), and `worker-src 'self' blob:`. Check whether the plugin version needs `'wasm-unsafe-eval'`. |
+| Map | **MapLibre GL JS 6.x** behind `?map=gl` (built in Phase 5). **Leaflet** is still the default until MapLibre is measured on a phone. | Vector overlays (PMTiles), GPU rendering for 60k gap cells, and data-driven styling. It needs the self-hosted RTL text plugin for Arabic labels, the CSP build (`maplibre-gl-csp` + its worker file), and `worker-src 'self' blob:`. Check whether the plugin version needs `'wasm-unsafe-eval'`. |
 | Basemap | Esri and CARTO raster (as today), then an **optional** Shortbread `.pmtiles` for the GCC built by Planetiler in **GitHub Actions** (too heavy for the VPS) | Never OSMF tiles (`OSM_IDEAS.md` §5). |
 | Backend | **FastAPI + PostGIS** (existing) | New routers: `issues`, `sprints`, `changes`. Stays inside the 256 MiB cap: tile lists are compact arrays, and lists are paginated. |
 | Pipeline | Existing `run.py` + new steps `detect_changes.py` (daily diff + reconciliation), `tag_stats.py`, `build_overlays.py` (tippecanoe), `extract_regions_data.py` | Each runs as a subprocess, sequentially. Peak memory stays around today's 970 MiB. |
@@ -811,7 +811,12 @@ Each phase can ship on its own. Every phase follows your workflow: commit locall
    - the board stays usable at 2,000 tiles.
 6. *RAM:* small tables. Polling hits our own API with `ETag` (304 most of the time). *Compliance:* no OSM calls.
 
-### Phase 5: Data hub, vector overlays and MapLibre (3–4 weeks)
+### Phase 5: Data hub, vector overlays and MapLibre (3–4 weeks). **Mostly done 2026-10-30** (local commits, not pushed; details in `HANDOFF.md` §20)
+
+**Status:** item 1 is half done (manifest, CSV/GeoJSON exports, `/data` page; per-region exports and `.osm.pbf` cuts remain). Item 2 is done (and `pipeline/pmtiles_writer.py` makes real tiles when tippecanoe is missing). Item 3 is done as an opt-in: the whole map runs on MapLibre with `?map=gl` through a "map kit" (`src/map_kit.js`, `kit_leaflet.js`, `kit_gl.js`), verified against Leaflet by Playwright. Item 4's fallback is inverted: Leaflet stays the default and MapLibre is opt-in, until it is measured on a real phone. **The exit criteria are not yet met** (first-load transfer, 60 fps on Android, both need a device or a rethink of how stats/search/filters get their data; the main app still loads the full GeoJSON and does not read the PMTiles).
+
+**Deviations from the text below:** no text layers on the map (cluster counts are DOM markers, popups are DOM; so no glyph server, no RTL text plugin, no `'wasm-unsafe-eval'`); worker via `maplibregl.setWorkerUrl()` with the Vite `?url` asset, CSP gets `worker-src 'self' blob:` (the `maplibre-gl-csp` package no longer exists in v6); CARTO tile hosts were added to `connect-src` because MapLibre fetches tiles; zoom numbers stay Leaflet's (the facade converts), so permalinks are unchanged.
+
 1. `/data` page from `manifest.json`: whole-country and per-region GeoJSON and CSV for places, gaps and suggestions, each with sha256 and ODbL attribution. Optionally per-region `.osm.pbf` cut with `osmium extract` (streaming, low memory).
 2. `build_overlays.py`: tippecanoe → versioned `places.pmtiles`, `gaps.pmtiles` and `suggestions.pmtiles`.
 3. Migrate `MapView` to MapLibre:
@@ -846,6 +851,8 @@ Each phase can ship on its own. Every phase follows your workflow: commit locall
 A sprint is a mapping campaign over one area (for example "add the missing mosques in Al-Kharj during November"). Everyone can work on sprints; only admins create and manage them. To let someone else run sprints later, add their OSM user ID to `MANARA_ADMIN_UIDS` in Coolify. Note that this also gives them the other admin powers, such as revoking review marks.
 
 ## 7. Verification for every phase
+
+- **Run `npm run smoke` in `frontend/` after any UI change** (61 Playwright tests: every route in ar/en at desktop and phone size, the map on both backends with a parity check, and the OSM no-request rules; `HANDOFF.md` §20.6). Lint, Vitest and `vite build` alone missed four bugs in the live pages.
 
 - `python -m pytest tests/ -q`, then `cd frontend && npm run lint && npm run test && npm run build`.
 - Playwright smoke tests in ar and en, desktop and mobile:
