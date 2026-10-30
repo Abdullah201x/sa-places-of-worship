@@ -144,22 +144,17 @@ def generate_suggestions_csv(geojson_path, csv_path):
     return write_suggestions_csv_features(features, csv_path)
 
 
-def generate_regional_exports(data_dir=DATA_DIR):
-    """
-    Slices places, gaps, and suggestions into per-region datasets
-    for Saudi Arabia's 13 administrative provinces (SA-01 to SA-14).
-    Writes them into {data_dir}/by-region/
-    Returns a list of file metadata dicts for manifest.json.
-    """
+def load_prepared_regions(data_dir=DATA_DIR):
+    """Loads sa_regions.geojson as prepared shapely polygons, or [] if unavailable."""
     regions_path = os.path.join(data_dir, "sa_regions.geojson")
     if not os.path.exists(regions_path):
         return []
 
     try:
-        from shapely.geometry import shape, Point
+        from shapely.geometry import shape
         from shapely.prepared import prep
     except ImportError:
-        print("[WARN] shapely not available; skipping regional export cuts")
+        print("[WARN] shapely not available; skipping region assignment")
         return []
 
     with open(regions_path, "r", encoding="utf-8") as f:
@@ -179,9 +174,12 @@ def generate_regional_exports(data_dir=DATA_DIR):
             "prep": prep(geom),
             "bounds": geom.bounds,
         })
+    return prepared_regions
 
-    if not prepared_regions:
-        return []
+
+def make_point_classifier(prepared_regions):
+    """Returns classify(lon, lat) -> region code, or None outside every region."""
+    from shapely.geometry import Point
 
     def classify_point(lon, lat):
         pt = Point(lon, lat)
@@ -191,6 +189,58 @@ def generate_regional_exports(data_dir=DATA_DIR):
                 if r["prep"].contains(pt):
                     return r["code"]
         return None
+
+    return classify_point
+
+
+def stamp_region_codes(data_dir=DATA_DIR):
+    """
+    Writes properties.region_code onto every feature of places_of_worship_sa.geojson.
+    The frontend's QA view filters by region client-side, and the raw extract
+    carries no region. Returns the number of features that got a region.
+    """
+    places_path = os.path.join(data_dir, "places_of_worship_sa.geojson")
+    if not os.path.exists(places_path):
+        return 0
+
+    prepared_regions = load_prepared_regions(data_dir)
+    if not prepared_regions:
+        return 0
+    classify_point = make_point_classifier(prepared_regions)
+
+    with open(places_path, "r", encoding="utf-8") as f:
+        places_data = json.load(f)
+
+    stamped = 0
+    for feat in places_data.get("features", []):
+        coords = (feat.get("geometry") or {}).get("coordinates", [])
+        if len(coords) < 2:
+            continue
+        props = feat.setdefault("properties", {})
+        code = classify_point(coords[0], coords[1])
+        if code:
+            props["region_code"] = code
+            stamped += 1
+        else:
+            props.pop("region_code", None)
+
+    with open(places_path, "w", encoding="utf-8") as f:
+        json.dump(places_data, f, ensure_ascii=False, separators=(",", ":"))
+    return stamped
+
+
+def generate_regional_exports(data_dir=DATA_DIR):
+    """
+    Slices places, gaps, and suggestions into per-region datasets
+    for Saudi Arabia's 13 administrative provinces (SA-01 to SA-14).
+    Writes them into {data_dir}/by-region/
+    Returns a list of file metadata dicts for manifest.json.
+    """
+    prepared_regions = load_prepared_regions(data_dir)
+    if not prepared_regions:
+        return []
+
+    classify_point = make_point_classifier(prepared_regions)
 
     by_region_dir = os.path.join(data_dir, "by-region")
     os.makedirs(by_region_dir, exist_ok=True)
@@ -410,6 +460,9 @@ def build_manifest(data_dir=DATA_DIR):
     updated_at = summary.get("updated_at") or "2026-10-30T00:00:00Z"
     pbf_date = summary.get("pbf_date") or "2026-10-27"
     dataset_version = "v" + updated_at.replace("-", "").replace(":", "")
+
+    # 0. Region codes must be on the places file before it is exported or catalogued
+    stamp_region_codes(data_dir)
 
     # 1. Generate tabular CSV files alongside GeoJSON (National)
     places_geojson = os.path.join(data_dir, "places_of_worship_sa.geojson")

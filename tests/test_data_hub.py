@@ -12,6 +12,7 @@ from build_data_hub import (
     generate_gaps_csv,
     generate_suggestions_csv,
     generate_regional_exports,
+    stamp_region_codes,
     build_manifest,
     OVERPASS_PRESETS,
 )
@@ -171,6 +172,35 @@ def test_generate_regional_exports(tmp_path):
     assert (tmp_path / "by-region" / "places_SA-01.geojson").exists()
     assert (tmp_path / "by-region" / "places_SA-01.csv").exists()
     assert (tmp_path / "by-region" / "worship_gaps_SA-01.json").exists()
+
+
+def test_stamp_region_codes(tmp_path):
+    (tmp_path / "sa_regions.geojson").write_text(json.dumps({
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "properties": {"code": "SA-01"},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[46.0, 24.0], [47.0, 24.0], [47.0, 25.0], [46.0, 25.0], [46.0, 24.0]]]
+                }
+            }
+        ]
+    }), encoding="utf-8")
+    places_path = tmp_path / "places_of_worship_sa.geojson"
+    places_path.write_text(json.dumps({
+        "type": "FeatureCollection",
+        "features": [
+            {"properties": {"osm_id": 1}, "geometry": {"type": "Point", "coordinates": [46.5, 24.5]}},
+            {"properties": {"osm_id": 2, "region_code": "SA-99"}, "geometry": {"type": "Point", "coordinates": [10.0, 10.0]}},
+        ]
+    }), encoding="utf-8")
+
+    assert stamp_region_codes(data_dir=str(tmp_path)) == 1
+
+    feats = json.loads(places_path.read_text(encoding="utf-8"))["features"]
+    assert feats[0]["properties"]["region_code"] == "SA-01"
+    assert "region_code" not in feats[1]["properties"]
 
 
 def test_build_manifest(tmp_path):
