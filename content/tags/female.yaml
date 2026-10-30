@@ -1,0 +1,26 @@
+key: female
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: مصلى النساء
+  en: Women's prayer space
+saudi_notes:
+  ar: 'يوضح توفر قسم مخصص لصلاة النساء في المسجد. القيم الشائعة: yes (يوجد مصلى نساء)،
+    dedicated (مبنى أو قسم مستقل تماماً)، no (لا يوجد مصلى نساء).'
+  en: 'Indicates availability of a women''s prayer area. Common values: yes (section
+    available), dedicated (fully separate facility), no (no women''s prayer section).'
+examples:
+  good:
+  - tags:
+      female: 'yes'
+  bad:
+  - tags:
+      female: women
+    why:
+      ar: القيمة المعيارية هي yes أو no أو dedicated
+      en: Standard OSM values are yes, no, or dedicated
+rules: []
+wiki: https://wiki.openstreetmap.org/wiki/Key:female

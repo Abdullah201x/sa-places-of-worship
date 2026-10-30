@@ -1,0 +1,25 @@
+key: capacity
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: سعة المصلين
+  en: Worshipper capacity
+saudi_notes:
+  ar: عدد المصلين الذين يتسع لهم المسجد تقريباً. يكتب كرقم صحيح مجرد (مثل 500 أو 10000).
+  en: Estimated total worshipper capacity. Must be an integer number (e.g. 500 or
+    10000).
+examples:
+  good:
+  - tags:
+      capacity: '1500'
+  bad:
+  - tags:
+      capacity: 1500 worshippers
+    why:
+      ar: يجب أن تكون القيمة رقماً مجرداً فقط
+      en: Must be a pure number without text
+rules: []
+wiki: https://wiki.openstreetmap.org/wiki/Key:capacity

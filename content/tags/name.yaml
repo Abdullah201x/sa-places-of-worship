@@ -1,0 +1,29 @@
+key: name
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: الاسم الافتراضي (بالعربية)
+  en: Default name (Arabic)
+saudi_notes:
+  ar: في المملكة العربية السعودية، الاسم الافتراضي name يجب أن يكون باللغة العربية
+    مطابقاً تماماً لـ name:ar. تجنب كتابة اسم مترجم باللاتينية في وسم name.
+  en: In Saudi Arabia, the default name tag must contain the official Arabic name
+    matching name:ar. Latin transliterations belong in name:en.
+examples:
+  good:
+  - tags:
+      name: جامع الراجحي
+      name:ar: جامع الراجحي
+      name:en: Al Rajhi Grand Mosque
+  bad:
+  - tags:
+      name: Al Rajhi Mosque
+    why:
+      ar: الاسم الافتراضي في السعودية يجب أن يكون باللغة العربية
+      en: Default name in Saudi Arabia must be in Arabic
+rules:
+- missing_name
+wiki: https://wiki.openstreetmap.org/wiki/Key:name

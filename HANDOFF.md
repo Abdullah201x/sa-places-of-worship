@@ -589,3 +589,33 @@ Started Phase 2b from `REDESIGN.md` §3.3 & §5:
    - Vitest: 67 passed across 8 test files.
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean production build in 395 ms.
+
+---
+
+## 18. Redesign Phase 3: Tag Directory Collections & Live Tag Stats (2026-10-30)
+
+Started Phase 3 from `REDESIGN.md` §3.2, §4.6 & §5:
+
+### 18.1 Completed Items
+1. **Saudi Tagging Directory Schema (`content/tags/*.yaml`):**
+   - Created 13 canonical YAML tag documents covering Saudi places of worship (`amenity=place_of_worship`, `building=mosque`, `building=yes`, `religion=muslim`, `denomination=sunni`, `denomination=shia`, `denomination`, `name`, `name:ar`, `name:en`, `female`, `wheelchair`, `capacity`).
+   - Each entry follows the `TagDoc` schema: localized Arabic/English labels, Saudi-specific mapping notes, good and bad examples with explanations, rule linkages, and OSM wiki links.
+   - Cross-platform file naming avoided Windows NTFS alternate stream reserved characters (colons).
+2. **Tag Usage Pipeline & Statistics Engine (`pipeline/tag_stats.py`):**
+   - Counts tag and key usage, percentages, and `with_key` co-occurrence matrices for places of worship.
+   - Outputs atomic `tag_stats_sa.json` and precompiled `tags.json` merged with live `usage_sa` metrics.
+   - Supports upserting historical trends into the `tag_usage_history` table in PostgreSQL.
+   - Integrated into `pipeline/run.py` (`STEPS` and `PUBLISHED_FILES`), root `Dockerfile`, and `frontend/vite.config.js`.
+3. **Database Schema Expansion (`backend/app/schema.py`):**
+   - Added `tag_usage_history` table with unique constraint on `(dataset_version, tag_key, tag_value)` and indexing for fast tag trend queries.
+4. **CI Rule Linkage Check (`tests/test_tags.py`):**
+   - Enforced bidirectional integrity: every single validation rule in `RULE_IDS` (`missing_amenity`, `missing_name`, `missing_name_en`, `missing_denom`, `size_too_small`, `size_too_large`, `stale_data`, `building_yes`, `mapped_as_node`, `ml_geometry_anomaly`, `duplicate_poi`, `outdated_tags`, `qibla_deviation`) is covered by at least one tag page, and all referenced rules exist.
+   - Schema validation ensures valid statuses, OSM types, and localized labels.
+5. **Astro Integration:**
+   - Installed Astro (`astro v7.4.4`) in `frontend/`.
+6. **Testing & Verification:**
+   - Added `tests/test_tags.py` (4 tests) and `tests/test_tag_stats.py` (2 tests).
+   - Pytest: 120 passed (up from 114).
+   - Vitest: 67 passed across 8 test suites.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build in 219 ms.

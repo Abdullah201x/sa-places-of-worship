@@ -144,5 +144,19 @@ def init_app_tables(conn):
             seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             PRIMARY KEY (osm_type, osm_id)
         );
+
+        CREATE TABLE IF NOT EXISTS tag_usage_history (
+            id SERIAL PRIMARY KEY,
+            recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            dataset_version TEXT NOT NULL,
+            tag_key TEXT NOT NULL,
+            tag_value TEXT,
+            count INT NOT NULL,
+            total_places INT NOT NULL,
+            with_keys JSONB DEFAULT '{}'::jsonb,
+            UNIQUE (dataset_version, tag_key, tag_value)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_tag_usage_key ON tag_usage_history (tag_key, tag_value);
         """)
 

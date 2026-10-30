@@ -20,6 +20,8 @@ const DATA_FILES = new Set([
   'mosque_sizes.json',
   'mosque_anomalies.json',
   'suggested_mosques_sa.geojson',
+  'tag_stats_sa.json',
+  'tags.json',
 ]);
 const dataDir = path.resolve(here, process.env.MANARA_DATA_DIR || '..');
 

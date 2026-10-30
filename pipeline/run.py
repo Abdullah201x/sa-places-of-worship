@@ -73,6 +73,7 @@ STEPS = [
     ["calculate_mosque_sizes.py"],
     ["detect_geometry_anomalies.py"],
     ["import_wikidata_suggestions.py"],
+    ["tag_stats.py"],
     ["validate_data.py"],
     ["load_db.py"],
 ]
@@ -88,6 +89,8 @@ PUBLISHED_FILES = [
     "mosque_sizes.json",
     "mosque_anomalies.json",
     "suggested_mosques_sa.geojson",
+    "tag_stats_sa.json",
+    "tags.json",
 ]
 
 

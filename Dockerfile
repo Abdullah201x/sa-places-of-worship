@@ -33,6 +33,8 @@ COPY summary.json \
      mosque_sizes.json \
      mosque_anomalies.json \
      suggested_mosques_sa.geojson \
+     tag_stats_sa.json \
+     tags.json \
      /srv/manara/data/
 
 RUN find /srv/manara -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.json' \

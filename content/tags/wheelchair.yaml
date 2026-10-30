@@ -1,0 +1,26 @@
+key: wheelchair
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: إمكانية الوصول للكراسي المتحركة
+  en: Wheelchair accessibility
+saudi_notes:
+  ar: 'يوضح ما إذا كان مدخل ومصلى المسجد مهيأين لذوي الإعاقة ومستخدمي الكراسي المتحركة
+    (منحدرات، أبواب عريضة، عدم وجود عتبات مرتفعة). القيم: yes، limited، no.'
+  en: 'Indicates whether the mosque entrance and prayer hall are accessible for wheelchair
+    users (ramps, wide doors, no steps). Values: yes, limited, no.'
+examples:
+  good:
+  - tags:
+      wheelchair: 'yes'
+  bad:
+  - tags:
+      wheelchair: accessible
+    why:
+      ar: القيمة المعيارية هي yes أو limited أو no
+      en: Standard OSM value is yes, limited, or no
+rules: []
+wiki: https://wiki.openstreetmap.org/wiki/Key:wheelchair
