@@ -124,5 +124,25 @@ def init_app_tables(conn):
             last_gap_to BIGINT,
             last_gap_at TIMESTAMPTZ
         );
+
+        CREATE TABLE IF NOT EXISTS live_places (
+            osm_type TEXT NOT NULL,
+            osm_id BIGINT NOT NULL,
+            version INT,
+            geom GEOMETRY(Point, 4326),
+            tags JSONB DEFAULT '{}'::jsonb,
+            seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (osm_type, osm_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS live_pending (
+            osm_type TEXT NOT NULL,
+            osm_id BIGINT NOT NULL,
+            version INT,
+            tags JSONB DEFAULT '{}'::jsonb,
+            node_refs BIGINT[] DEFAULT '{}'::bigint[],
+            seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (osm_type, osm_id)
+        );
         """)
 

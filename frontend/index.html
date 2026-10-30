@@ -45,9 +45,17 @@
       </div>
 
       <div class="topbar-end">
-        <div id="topbar-freshness" class="topbar-freshness" title="تحديثات بيانات OpenStreetMap">
-          <span class="freshness-dot">●</span>
-          <span id="topbar-data-age" class="freshness-text">بيانات OSM</span>
+        <div id="topbar-freshness" class="topbar-freshness" role="group" aria-label="حالة حداثة البيانات">
+          <div id="freshness-live-tag" class="freshness-tag" title="حداثة البث المباشر (OSM Live)">
+            <span class="freshness-dot dot-live">●</span>
+            <span class="freshness-lbl"><span data-lang="ar">مباشر:</span><span data-lang="en">Live:</span></span>
+            <time id="freshness-live-time" class="freshness-time" datetime="">–</time>
+          </div>
+          <div id="freshness-data-tag" class="freshness-tag" title="عمر بيانات الخريطة وقواعد الفحص">
+            <span class="freshness-dot dot-data">●</span>
+            <span class="freshness-lbl"><span data-lang="ar">بيانات:</span><span data-lang="en">Data:</span></span>
+            <time id="freshness-data-time" class="freshness-time" datetime="">–</time>
+          </div>
         </div>
         <button type="button" id="topbar-btn-lang" class="topbar-btn" title="English / العربية" lang="en">EN</button>
         <button type="button" id="topbar-btn-auth" class="topbar-btn user-btn" title="تسجيل الدخول عبر OpenStreetMap">👤</button>

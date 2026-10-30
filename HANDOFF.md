@@ -561,3 +561,31 @@ Started Phase 2a from `REDESIGN.md` §3.3 & §5:
    - Full Pytest suite: 108 passed.
    - ESLint: 0 errors, 0 warnings.
    - Vite: clean production build in 353 ms.
+
+---
+
+## 17. Redesign Phase 2b: Live Replicator & Freshness Metrics (2026-10-30)
+
+Started Phase 2b from `REDESIGN.md` §3.3 & §5:
+
+### 17.1 Completed Items
+1. **Live Replication Engine (`pipeline/live_replicator.py`):**
+   - Built lightweight daemon for `manara-live` Coolify resource streaming OSM minutely replication diffs.
+   - State polling via `state.txt`, 3-tier sequence path formatting (`006/123/456.osc.gz`), sequential diff parsing.
+   - Strict privacy boundary: drops `user` and `uid` while parsing XML, keeping only `changeset`.
+   - Filters to Saudi Arabia bounding box (`SA_BBOX`) and matches against canonical `is_worship_tagged`.
+   - Writes live change events to `change_events` (`source = 'live'`) and updates `replication_state`.
+2. **Dual Topbar Freshness Labels (`frontend/index.html` & `frontend/src/app.js`):**
+   - Added semantic `<time>` elements for both **مباشر / Live** and **بيانات / Data** indicators.
+   - Automated 60s background polling from `/api/v1/freshness` and window focus refresh.
+   - Relative compact formatting ("now", "5m", "20h", "3d" / "الآن", "5 د", "20 س", "3 ي") reusing `timeago.js`.
+3. **Privacy Policy Formalization (`frontend/privacy.html`):**
+   - Updated both Arabic and English privacy policy sections explicitly documenting the retention of changeset IDs for quality assurance while confirming mapper identities and user IDs from replication diffs are never logged or stored.
+4. **Schema Expansion (`backend/app/schema.py`):**
+   - Added `live_places` and `live_pending` tables for unconfirmed real-time geometries.
+5. **Testing & Verification:**
+   - Added `tests/test_live_replicator.py` (6 unit tests).
+   - Pytest: 114 passed.
+   - Vitest: 67 passed across 8 test files.
+   - ESLint: 0 errors, 0 warnings.
+   - Vite: clean production build in 395 ms.

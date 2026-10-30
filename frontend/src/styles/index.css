@@ -3461,17 +3461,49 @@ kbd {
 .topbar-freshness {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
+  gap: 10px;
+  font-size: 11px;
   color: var(--color-text-muted);
-  padding: 3px 8px;
+  padding: 3px 10px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.freshness-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .freshness-dot {
-  color: #00ff87;
   font-size: 9px;
+}
+
+.dot-live {
+  color: #00ff87;
+}
+
+.dot-data {
+  color: #00f2fe;
+}
+
+.freshness-tag.warn .freshness-dot {
+  color: #ffb03a;
+}
+
+.freshness-tag.stale .freshness-dot {
+  color: #ff453a;
+}
+
+.freshness-lbl {
+  color: var(--color-text-muted);
+}
+
+.freshness-time {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .topbar-btn {

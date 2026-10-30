@@ -1097,6 +1097,12 @@ export function setupAppShell() {
     });
   }
 
+  updateFreshnessLabels();
+  setInterval(() => {
+    if (!document.hidden) updateFreshnessLabels();
+  }, 60000);
+  window.addEventListener('focus', () => updateFreshnessLabels());
+
   setupCommandPalette({
     onSelectRegion: (reg) => {
       if (map) map.flyTo(reg.center, reg.zoom);
@@ -3670,4 +3676,39 @@ export async function fetchOsmoseNearby(lat, lon) {
     }
   } catch (_) {}
   return [];
+}
+
+
+export function formatRelativeAge(seconds, lang = 'ar') {
+  if (typeof seconds !== 'number' || seconds < 0) return '–';
+  return formatAge(seconds * 1000, lang);
+}
+
+export async function updateFreshnessLabels() {
+  try {
+    const res = await fetch('/api/v1/freshness');
+    if (res.ok) {
+      const data = await res.json();
+      const liveTimeEl = document.getElementById('freshness-live-time');
+      const dataTimeEl = document.getElementById('freshness-data-time');
+      const liveTag = document.getElementById('freshness-live-tag');
+      const dataTag = document.getElementById('freshness-data-tag');
+
+      if (data.live && liveTimeEl && liveTag) {
+        liveTimeEl.dateTime = data.live.osm_timestamp || '';
+        liveTimeEl.title = `OSM Live: ${data.live.osm_timestamp}`;
+        liveTimeEl.textContent = formatRelativeAge(data.live.age_seconds, currentLang);
+        liveTag.className = `freshness-tag ${data.live.status}`;
+      } else if (liveTimeEl) {
+        liveTimeEl.textContent = currentLang === 'ar' ? 'غير متصل' : 'Offline';
+      }
+
+      if (data.data && dataTimeEl && dataTag) {
+        dataTimeEl.dateTime = data.data.published_at || '';
+        dataTimeEl.title = `Dataset: ${data.data.version} (${data.data.pbf_date})`;
+        dataTimeEl.textContent = formatRelativeAge(data.data.age_seconds, currentLang);
+        dataTag.className = `freshness-tag ${data.data.status}`;
+      }
+    }
+  } catch (_) {}
 }
