@@ -8,10 +8,13 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke": "vite build && playwright test",
+    "smoke:fast": "playwright test"
   },
   "devDependencies": {
     "@openstreetmap/id-tagging-schema": "^7.3.0",
+    "@playwright/test": "^1.64.1",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
     "astro": "^7.4.4",
     "esbuild": "^0.28.2",

@@ -42,6 +42,7 @@ body {
   display: flex;
   flex-direction: column; /* top bar above the map */
   position: relative;
+  overflow: hidden; /* the collapsed sidebar is parked off-screen by a transform, which still widens the page */
   width: 100%;
   height: 100%;
 }
@@ -4146,4 +4147,55 @@ html[lang="en"] [data-lang="ar"] {
 #map .maplibregl-marker.add-mosque-marker,
 #map .maplibregl-marker.note-marker {
   cursor: pointer;
+}
+
+/* Phones: the top bar must fit 390 px. Tabs scroll sideways, search is icon-only,
+   and the freshness chips are hidden (the data age is also in the sidebar). */
+@media (max-width: 768px) {
+  .app-topbar {
+    padding: 0 8px;
+    gap: 6px;
+  }
+
+  .topbar-start {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .topbar-brand .brand-title {
+    display: none;
+  }
+
+  .topbar-tabs {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .topbar-tab {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .topbar-center {
+    flex: none;
+  }
+
+  .search-trigger-text,
+  .search-trigger-kbd,
+  .topbar-freshness {
+    display: none;
+  }
+
+  .topbar-search-trigger {
+    width: auto;
+    padding: 4px 10px;
+  }
+
+  .topbar-end {
+    flex: none;
+    gap: 6px;
+  }
 }

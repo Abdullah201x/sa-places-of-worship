@@ -37,3 +37,7 @@ frontend/dist/
 
 # Deployment secrets
 deploy/.env
+
+# Playwright output
+frontend/test-results/
+frontend/playwright-report/
