@@ -35,7 +35,9 @@
 
 .search-input-wrapper input {
   width: 100%;
-  padding: 12px 44px 12px 16px;
+  padding-block: 12px;
+  padding-inline-start: 16px;
+  padding-inline-end: 44px;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: 10px;

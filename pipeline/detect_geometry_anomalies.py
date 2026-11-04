@@ -28,6 +28,8 @@ configure_utf8_output()
 # Default alert threshold, used only for the console summary. The dashboard
 # applies its own user-adjustable threshold to qibla_dev.
 QIBLA_ALERT_DEG = 20.0
+KAABA_LAT = 21.422487
+KAABA_LON = 39.826206
 
 
 def get_building_azimuth_and_deviation(poly, qibla_deg):
@@ -98,8 +100,11 @@ class MosqueFeatureExtractor(osmium.SimpleHandler):
         if not self.boundary_prep.contains(Point(centroid_lon, centroid_lat)):
             return
 
-        # Projected coordinates in meters
-        poly = Polygon(to_metres(coords))
+        # Projected coordinates in meters with local latitude scaling
+        m_lon = 111_320.0 * math.cos(math.radians(centroid_lat))
+        m_lat = 110_574.0
+        coords_m = [(x * m_lon, y * m_lat) for x, y in coords]
+        poly = Polygon(coords_m)
         area_m2 = poly.area
         perimeter_m = poly.length
 
@@ -117,8 +122,17 @@ class MosqueFeatureExtractor(osmium.SimpleHandler):
         area_per_node = area_m2 / n_nodes
 
         # FEATURE 6: Qibla Azimuth & Principal Building Axis Deviation
+        # Exempt features within 500m of the Kaaba where azimuth becomes degenerate
+        d_kaaba = math.hypot(
+            (centroid_lat - KAABA_LAT) * m_lat,
+            (centroid_lon - KAABA_LON) * m_lon
+        )
         qibla_az = calculate_qibla_azimuth(centroid_lat, centroid_lon)
-        bldg_az, qibla_dev = get_building_azimuth_and_deviation(poly, qibla_az)
+        if d_kaaba < 500.0:
+            bldg_az = 0.0
+            qibla_dev = 0.0
+        else:
+            bldg_az, qibla_dev = get_building_azimuth_and_deviation(poly, qibla_az)
 
         name = tags.get('name', tags.get('name:ar', tags.get('name:en', 'Unnamed Mosque')))
 
@@ -135,6 +149,71 @@ class MosqueFeatureExtractor(osmium.SimpleHandler):
             "building_azimuth": bldg_az,
             "qibla_dev": qibla_dev if qibla_dev is not None else 0.0,
         })
+
+    def area(self, a):
+        if a.from_way() or not is_worship_tagged(a.tags):
+            return
+        if a.tags.get('place_of_worship') == 'musalla':
+            return
+        polys = []
+        try:
+            for outer in a.outer_rings():
+                shell = [(nd.lon, nd.lat) for nd in outer]
+                holes = [[(nd.lon, nd.lat) for nd in inner] for inner in a.inner_rings(outer)]
+                p = Polygon(shell, holes=holes)
+                if not p.is_valid:
+                    p = p.buffer(0)
+                if p.is_valid and p.area > 0:
+                    polys.append(p)
+        except osmium.InvalidLocationError:
+            return
+        if not polys:
+            return
+
+        for p in polys:
+            centroid_lat = p.centroid.y
+            centroid_lon = p.centroid.x
+            if not (self.minx <= centroid_lon <= self.maxx and self.miny <= centroid_lat <= self.maxy):
+                continue
+            if not self.boundary_prep.contains(Point(centroid_lon, centroid_lat)):
+                continue
+
+            m_lon = 111_320.0 * math.cos(math.radians(centroid_lat))
+            m_lat = 110_574.0
+            shell_m = [(x * m_lon, y * m_lat) for x, y in p.exterior.coords]
+            holes_m = [[(x * m_lon, y * m_lat) for x, y in h.coords] for h in p.interiors]
+            poly_m = Polygon(shell_m, holes=holes_m)
+            area_m2 = poly_m.area
+            perimeter_m = poly_m.length
+            if area_m2 <= 0 or perimeter_m <= 0:
+                continue
+
+            compactness = (4.0 * math.pi * area_m2) / (perimeter_m ** 2)
+            n_nodes = len(p.exterior.coords) + sum(len(h.coords) for h in p.interiors)
+            area_per_node = area_m2 / max(n_nodes, 1)
+
+            d_kaaba = math.hypot((centroid_lat - KAABA_LAT) * m_lat, (centroid_lon - KAABA_LON) * m_lon)
+            qibla_az = calculate_qibla_azimuth(centroid_lat, centroid_lon)
+            if d_kaaba < 500.0:
+                bldg_az = 0.0
+                qibla_dev = 0.0
+            else:
+                bldg_az, qibla_dev = get_building_azimuth_and_deviation(poly_m, qibla_az)
+
+            name = a.tags.get('name', a.tags.get('name:ar', a.tags.get('name:en', 'Unnamed Mosque')))
+            self.records.append({
+                "osm_id": a.orig_id(),
+                "name": name,
+                "centroid": (round(centroid_lat, 6), round(centroid_lon, 6)),
+                "area_m2": round(area_m2, 1),
+                "perimeter_m": round(perimeter_m, 1),
+                "compactness": round(compactness, 4),
+                "node_count": n_nodes,
+                "area_per_node": round(area_per_node, 1),
+                "qibla_azimuth": round(qibla_az, 1),
+                "building_azimuth": bldg_az,
+                "qibla_dev": qibla_dev if qibla_dev is not None else 0.0,
+            })
 
 
 def train_anomaly_detector(records, contamination=0.015):
@@ -168,7 +247,7 @@ def train_anomaly_detector(records, contamination=0.015):
         n_estimators=150,           # Number of decision trees
         contamination=contamination, # Proportion of anomalies to flag
         random_state=42,            # For reproducible results
-        n_jobs=-1                   # Use all CPU cores
+        n_jobs=1                    # Single process to preserve VPS budget
     )
     model.fit(X)
 

@@ -218,7 +218,14 @@ def test_build_all_overlays_with_fallback(tmp_path):
 
     _h, _m, tiles = read_archive(tmp_path / "places.pmtiles")
     props = [p[2] for d in tiles.values() for p in decode_points(d)]
-    assert props and all(p == {"osm_id": 1, "name": "X", "osm_type": "way"} for p in props)  # untrimmed keys never reach the tiles
+    assert props and all(
+        p.get("osm_id") == 1
+        and p.get("name") == "X"
+        and p.get("osm_type") == "way"
+        and "secret" not in p
+        and "qa_mask" in p
+        for p in props
+    )  # untrimmed keys never reach the tiles; compact QA bitmask is enriched
 
     _h, _m, tiles = read_archive(tmp_path / "gaps.pmtiles")
     assert any(p[2]["urgency"] == 40.0 for d in tiles.values() for p in decode_points(d))

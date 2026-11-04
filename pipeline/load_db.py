@@ -67,11 +67,16 @@ def init_db(conn):
             anomaly_score DOUBLE PRECISION,
             qibla_dev DOUBLE PRECISION,
             region_code VARCHAR(10),
-            dataset_id VARCHAR(64)
+            dataset_id VARCHAR(64),
+            name_original TEXT DEFAULT '',
+            name_en_original TEXT DEFAULT ''
         );
+        ALTER TABLE places ADD COLUMN IF NOT EXISTS name_original TEXT DEFAULT '';
+        ALTER TABLE places ADD COLUMN IF NOT EXISTS name_en_original TEXT DEFAULT '';
         CREATE INDEX IF NOT EXISTS idx_places_osm ON places (osm_type, osm_id);
         CREATE INDEX IF NOT EXISTS idx_places_geom ON places USING GIST (geom);
         CREATE INDEX IF NOT EXISTS idx_places_name_norm_trgm ON places USING GIN (name_norm gin_trgm_ops);
+        CREATE INDEX IF NOT EXISTS idx_places_name_en_trgm ON places USING GIN (name_en gin_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_places_region ON places (region_code);
         CREATE INDEX IF NOT EXISTS idx_places_religion ON places (religion);
 
@@ -110,9 +115,11 @@ def init_db(conn):
         CREATE TABLE IF NOT EXISTS dataset_versions (
             version VARCHAR(64) PRIMARY KEY,
             pbf_date DATE,
+            pbf_timestamp TIMESTAMPTZ,
             published_at TIMESTAMPTZ NOT NULL,
             metadata JSONB NOT NULL
         );
+        ALTER TABLE dataset_versions ADD COLUMN IF NOT EXISTS pbf_timestamp TIMESTAMPTZ;
 
         CREATE TABLE IF NOT EXISTS region_stats_history (
             id SERIAL PRIMARY KEY,
@@ -246,6 +253,8 @@ def load_staging_data(conn, data_dir=BASE_DIR):
                 anom_score,
                 qibla_dev,
                 version,
+                p.get("name_original") or p.get("name_ar_original") or "",
+                p.get("name_en_original") or "",
             ))
 
         with conn.cursor() as cur:
@@ -253,7 +262,8 @@ def load_staging_data(conn, data_dir=BASE_DIR):
             COPY places_staging (
                 id, osm_type, osm_id, version, edited_at, name, name_norm, name_en,
                 religion, denomination, building, amenity, poi_node_id, tags,
-                geom_type, geom, area_m2, anomaly_score, qibla_dev, dataset_id
+                geom_type, geom, area_m2, anomaly_score, qibla_dev, dataset_id,
+                name_original, name_en_original
             ) FROM STDIN
             """) as copy:
                 for r in places_rows:
@@ -261,7 +271,8 @@ def load_staging_data(conn, data_dir=BASE_DIR):
                     copy.write_row((
                         r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7],
                         r[8], r[9], r[10], r[11], r[12], r[13],
-                        r[14], geom_wkt, r[17], r[18], r[19], r[20]
+                        r[14], geom_wkt, r[17], r[18], r[19], r[20],
+                        r[21], r[22]
                     ))
         print(f"  [OK] Ingested {len(places_rows)} places into places_staging.")
 
@@ -274,8 +285,8 @@ def load_staging_data(conn, data_dir=BASE_DIR):
         for idx, cell in enumerate(gaps_data.get("cells", []), start=1):
             gx, gy, road_len, gap_score = cell[0], cell[1], cell[2], cell[3]
             urgency_score = cell[4] if len(cell) > 4 else round(gap_score, 1)
-            lon = round(gx * grid_size, 6)
-            lat = round(gy * grid_size, 6)
+            lon = round((float(gx) + 0.5) * grid_size, 6)
+            lat = round((float(gy) + 0.5) * grid_size, 6)
             gaps_rows.append((idx, gx, gy, road_len, gap_score, urgency_score, lon, lat))
 
         with conn.cursor() as cur:
@@ -344,62 +355,119 @@ def load_staging_data(conn, data_dir=BASE_DIR):
     print("  Populating QA issues from places_staging...")
     with conn.cursor() as cur:
         cur.execute("""
+        -- 1. missing_amenity
         INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
         SELECT 'missing_amenity', osm_type, osm_id, 'high', region_code, '{"amenity": "place_of_worship"}'::jsonb
         FROM places_staging WHERE building = 'mosque' AND amenity != 'place_of_worship'
         ON CONFLICT DO NOTHING;
 
+        -- 2. missing_name (catches missing or generic names, including synthetic 'Mosque' fallbacks)
         INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
         SELECT 'missing_name', osm_type, osm_id, 'medium', region_code, NULL
-        FROM places_staging WHERE name = '' OR name_norm IN ('مسجد', 'جامع', 'مصلى')
+        FROM places_staging
+        WHERE name_original IS NULL OR TRIM(name_original) = ''
+           OR LOWER(TRIM(name_original)) IN ('مسجد', 'الجامع', 'جامع', 'المسجد', 'مصلى', 'المصلى', 'مصلي', 'المصلي', 'محراب', 'جمعه', 'بدون اسم', 'بلا اسم', 'mosque', 'masjid', 'musalla', 'jami', 'jame', 'unnamed', 'no name')
+           OR LOWER(TRIM(name)) IN ('mosque', 'masjid', 'place of worship')
         ON CONFLICT DO NOTHING;
 
+        -- 3. missing_name_en (only places with real Arabic names that lack English name or have Arabic in name:en)
         INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
         SELECT 'missing_name_en', osm_type, osm_id, 'medium', region_code, NULL
-        FROM places_staging WHERE name != '' AND name_norm NOT IN ('مسجد', 'جامع', 'مصلى') AND (name_en = '' OR name = name_en)
+        FROM places_staging
+        WHERE (
+            name_original IS NOT NULL AND TRIM(name_original) != ''
+            AND LOWER(TRIM(name_original)) NOT IN ('مسجد', 'الجامع', 'جامع', 'المسجد', 'مصلى', 'المصلى', 'مصلي', 'المصلي', 'محراب', 'جمعه', 'بدون اسم', 'بلا اسم', 'mosque', 'masjid', 'musalla', 'jami', 'jame', 'unnamed', 'no name')
+            AND LOWER(TRIM(name)) NOT IN ('mosque', 'masjid', 'place of worship')
+        ) AND (
+            name_en_original IS NULL OR TRIM(name_en_original) = ''
+            OR LOWER(TRIM(name_en_original)) = LOWER(TRIM(name_original))
+            OR name_en_original ~ '[\u0600-\u06FF]'
+        )
         ON CONFLICT DO NOTHING;
 
+        -- 4. missing_denom
         INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
         SELECT 'missing_denom', osm_type, osm_id, 'medium', region_code, NULL
         FROM places_staging WHERE religion = 'muslim' AND (denomination IS NULL OR denomination = '' OR denomination = 'unknown')
         ON CONFLICT DO NOTHING;
 
+        -- 5. building_yes
         INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
         SELECT 'building_yes', osm_type, osm_id, 'medium', region_code, '{"building": "mosque"}'::jsonb
         FROM places_staging WHERE amenity = 'place_of_worship' AND building = 'yes'
         ON CONFLICT DO NOTHING;
 
+        -- 6. size_too_small
         INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
         SELECT 'size_too_small', osm_type, osm_id, 'low', region_code, NULL
-        FROM places_staging WHERE area_m2 IS NOT NULL AND area_m2 < 30.0
+        FROM places_staging WHERE area_m2 IS NOT NULL AND area_m2 < 50.0
         ON CONFLICT DO NOTHING;
 
+        -- 7. size_too_large
         INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
         SELECT 'size_too_large', osm_type, osm_id, 'low', region_code, NULL
         FROM places_staging WHERE area_m2 IS NOT NULL AND area_m2 > 10000.0
         ON CONFLICT DO NOTHING;
 
+        -- 8. mapped_as_node
         INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
-        SELECT 'ml_geometry_anomaly', osm_type, osm_id, 'high', region_code, NULL
-        FROM places_staging WHERE anomaly_score IS NOT NULL AND anomaly_score < -0.3
+        SELECT 'mapped_as_node', osm_type, osm_id, 'low', region_code, NULL
+        FROM places_staging WHERE geom_type = 'Point' AND osm_type = 'node'
         ON CONFLICT DO NOTHING;
 
+        -- 9. duplicate_poi
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'duplicate_poi', osm_type, osm_id, 'high', region_code, NULL
+        FROM places_staging WHERE poi_node_id IS NOT NULL
+        ON CONFLICT DO NOTHING;
+
+        -- 10. stale_data
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'stale_data', osm_type, osm_id, 'low', region_code, NULL
+        FROM places_staging WHERE version = 1 AND edited_at IS NOT NULL AND edited_at < NOW() - INTERVAL '5 years'
+        ON CONFLICT DO NOTHING;
+
+        -- 11. outdated_tags
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'outdated_tags', osm_type, osm_id, 'low', region_code, NULL
+        FROM places_staging
+        WHERE amenity = 'mosque'
+           OR building = 'yes;mosque'
+           OR religion IN ('islam', 'Islam', 'Muslim', 'moslem', 'muslim;islam')
+           OR denomination IN ('Sunni', 'sunnah', 'sunna', 'sunnite', 'سني', 'سنى', 'السنية', 'السنة', 'أهل السنة', 'Shia', 'shiite', 'shi''a', 'shiah', 'shii', 'شيعي', 'شيعة', 'الشيعة', 'muslim', 'islam', 'Muslim', 'Islam')
+           OR name_original ~ '(رضي\\s+الله|رحمه\\s+الله|رحمها\\s+الله|صلى\\s+الله|كرم\\s+الله|غفر\\s+الله|عفا\\s+الله)'
+        ON CONFLICT DO NOTHING;
+
+        -- 12. ml_geometry_anomaly
+        INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
+        SELECT 'ml_geometry_anomaly', osm_type, osm_id, 'high', region_code, NULL
+        FROM places_staging WHERE anomaly_score IS NOT NULL AND anomaly_score < -0.1
+        ON CONFLICT DO NOTHING;
+
+        -- 13. qibla_deviation
         INSERT INTO issues_staging (rule_id, osm_type, osm_id, severity, region_code, suggested_fix)
         SELECT 'qibla_deviation', osm_type, osm_id, 'high', region_code, NULL
         FROM places_staging WHERE qibla_dev IS NOT NULL AND qibla_dev >= 20.0
         ON CONFLICT DO NOTHING;
         """)
-    print("  [OK] QA issues populated into issues_staging.")
+    print("  [OK] QA issues populated into issues_staging (all 13 rules).")
 
     # 7. Record History Stats and Dataset Version
     now_ts = summary.get("updated_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     pbf_date = summary.get("pbf_date")
+    pbf_timestamp_val = summary.get("pbf_timestamp")
+    if not pbf_timestamp_val and pbf_date:
+        pbf_timestamp_val = f"{pbf_date}T00:00:00Z"
+
     with conn.cursor() as cur:
         cur.execute("""
-        INSERT INTO dataset_versions (version, pbf_date, published_at, metadata)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (version) DO UPDATE SET metadata = EXCLUDED.metadata;
-        """, (version, pbf_date, now_ts, json.dumps(summary)))
+        INSERT INTO dataset_versions (version, pbf_date, pbf_timestamp, published_at, metadata)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (version) DO UPDATE SET
+            pbf_date = EXCLUDED.pbf_date,
+            pbf_timestamp = EXCLUDED.pbf_timestamp,
+            metadata = EXCLUDED.metadata;
+        """, (version, pbf_date, pbf_timestamp_val, now_ts, json.dumps(summary)))
 
         cur.execute("""
         WITH place_counts AS (
@@ -447,6 +515,7 @@ def swap_staging_to_production(conn):
     print("Performing atomic table swap to production...")
     with conn.transaction():
         with conn.cursor() as cur:
+            cur.execute("SET LOCAL lock_timeout = '5s';")
             cur.execute("""
             DROP TABLE IF EXISTS places_old CASCADE;
             DROP TABLE IF EXISTS gaps_old CASCADE;
@@ -475,15 +544,45 @@ def swap_staging_to_production(conn):
             DROP TABLE IF EXISTS regions_old CASCADE;
             DROP TABLE IF EXISTS issues_old CASCADE;
             """)
+    with conn.cursor() as cur:
+        try:
+            cur.execute("ANALYZE places, gaps, regions, issues, suggestions;")
+        except Exception as e:
+            print(f"  [WARN] Post-swap ANALYZE failed: {e}")
     print("  [SUCCESS] All tables swapped to production atomically!")
 
+
+def run_change_detection(conn, data_dir=BASE_DIR):
+    """
+    Compares current places table with places_staging to detect daily changes,
+    records change_events (source='daily'), and reconciles live events.
+    """
+    print("Checking for daily changes between places and places_staging...")
+    with conn.cursor() as cur:
+        cur.execute("SELECT to_regclass('public.places');")
+        res = cur.fetchone()
+        if not res or not res[0]:
+            print("  [SKIP] places table does not exist yet (initial run).")
+            return
+        cur.execute("SELECT COUNT(*) FROM places;")
+        row = cur.fetchone()
+        count = row[0] if isinstance(row, tuple) else (row.get("count", 0) if isinstance(row, dict) else 0)
+        if count == 0:
+            print("  [SKIP] places table is empty (initial run).")
+            return
+
+    try:
+        from detect_changes import detect_and_record_daily_changes
+        detect_and_record_daily_changes(conn, data_dir=data_dir)
+    except Exception as e:
+        print(f"  [WARN] Change detection encountered an error: {e}")
 
 
 def update_sprint_workloads(conn):
     """
     Computes and updates tile workloads and pending_refresh for active/draft sprints.
     Workload = count of issues matching sprint rules + count of gaps exceeding min urgency within tile bbox.
-    pending_refresh = TRUE if verified edits exist newer than published_at for places within the tile.
+    pending_refresh = TRUE if verified edits exist newer than pbf_timestamp/published_at for places within the tile.
     """
     print("Updating active sprint tile workloads and pending refresh flags...")
     with conn.cursor() as cur:
@@ -504,13 +603,13 @@ def update_sprint_workloads(conn):
             print("  [SKIP] No active or draft sprints found.")
             return
 
-        # Fetch latest dataset published_at timestamp
+        # Fetch latest dataset published_at / pbf_timestamp cutoff
         cur.execute("""
-            SELECT published_at FROM dataset_versions
+            SELECT COALESCE(pbf_timestamp, published_at) FROM dataset_versions
             ORDER BY published_at DESC LIMIT 1;
         """)
         row = cur.fetchone()
-        latest_published = row[0] if row else None
+        latest_cutoff = row[0] if row else None
 
         for sprint_id, slug, rule_ids, gap_min_urgency in active_sprints:
             # 1. Update workload per tile
@@ -551,15 +650,16 @@ def update_sprint_workloads(conn):
                   AND st.tile_id = tb.tile_id;
             """, (sprint_id, rule_ids, rule_ids, rule_ids, gap_min_urgency, gap_min_urgency, sprint_id))
 
-            # 2. Update pending_refresh based on verified edits newer than published_at
-            if not latest_published:
+            # 2. Update pending_refresh based on verified edits newer than published_at/pbf_timestamp
+            if not latest_cutoff:
                 cur.execute("UPDATE sprint_tiles SET pending_refresh = FALSE WHERE sprint_id = %s;", (sprint_id,))
             else:
                 cur.execute("""
                     WITH recent_edits AS (
                         SELECT jsonb_array_elements(objects) AS obj
                         FROM edits
-                        WHERE created_at > %s
+                        WHERE (verified_at IS NOT NULL AND verified_at > %s)
+                           OR (verified_at IS NULL AND created_at > %s)
                     ),
                     edited_places AS (
                         SELECT p.geom
@@ -582,9 +682,50 @@ def update_sprint_workloads(conn):
                     LEFT JOIN refreshed_tiles rt ON st2.tile_id = rt.tile_id AND st2.sprint_id = %s
                     WHERE st.sprint_id = %s
                       AND st.tile_id = st2.tile_id;
-                """, (latest_published, sprint_id, sprint_id, sprint_id))
+                """, (latest_cutoff, latest_cutoff, sprint_id, sprint_id, sprint_id))
 
             print(f"  [OK] Updated workloads and refresh status for sprint '{slug}' (ID {sprint_id}).")
+
+
+def run_retention_cleanup(conn, retention_days=180):
+    """Prunes expired sessions and audit logs older than retention_days to prevent VPS bloat."""
+    print("Running database retention cleanup...")
+    deleted_sessions = 0
+    deleted_reviews = 0
+    deleted_tiles = 0
+
+    with conn.cursor() as cur:
+        # 1. Expired user sessions
+        try:
+            cur.execute("DELETE FROM sessions WHERE expires_at < NOW();")
+            deleted_sessions = cur.rowcount
+        except Exception as e:
+            print(f"  [WARN] Skipping sessions cleanup: {e}")
+
+        # 2. Old review audit events
+        try:
+            cur.execute(
+                "DELETE FROM review_events WHERE created_at < NOW() - (%s || ' days')::interval;",
+                (retention_days,)
+            )
+            deleted_reviews = cur.rowcount
+        except Exception as e:
+            print(f"  [WARN] Skipping review_events cleanup: {e}")
+
+        # 3. Old tile event history
+        try:
+            cur.execute(
+                "DELETE FROM tile_events WHERE created_at < NOW() - (%s || ' days')::interval;",
+                (retention_days,)
+            )
+            deleted_tiles = cur.rowcount
+        except Exception as e:
+            print(f"  [WARN] Skipping tile_events cleanup: {e}")
+
+    print(
+        f"  [OK] Retention cleanup: pruned {deleted_sessions} expired sessions, "
+        f"{deleted_reviews} review events, {deleted_tiles} tile events older than {retention_days} days."
+    )
 
 
 def main():
@@ -598,8 +739,10 @@ def main():
     try:
         init_db(conn)
         load_staging_data(conn)
+        run_change_detection(conn)
         swap_staging_to_production(conn)
         update_sprint_workloads(conn)
+        run_retention_cleanup(conn)
         print(f"Database loading finished successfully in {time.time() - started:.1f}s.")
     finally:
         conn.close()

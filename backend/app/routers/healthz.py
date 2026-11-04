@@ -12,8 +12,18 @@ MAX_DATASET_AGE_HOURS = float(os.environ.get("MANARA_MAX_DATASET_AGE_HOURS", "72
 
 
 @router.api_route("/api/healthz", methods=["GET", "HEAD"])
-def healthz():
-    return {"status": "ok"}
+def healthz(conn=Depends(get_db)):
+    """Fast database liveness ping to verify PostgreSQL connectivity for Coolify/Caddy."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SET LOCAL statement_timeout = '1000ms';")
+            cur.execute("SELECT 1;")
+        return {"status": "ok", "db": "ok"}
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "db": "unavailable", "detail": str(e)},
+        )
 
 
 @router.api_route("/api/healthz/freshness", methods=["GET", "HEAD"])

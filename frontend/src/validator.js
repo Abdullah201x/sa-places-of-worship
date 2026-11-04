@@ -26,24 +26,37 @@ export const RULES = [
     } : null),
   },
   {
-    // Empty, or only generic words like "مسجد", "الجامع", "مصلى", "Mosque"
+    // Empty, only generic words like "مسجد", or default name in Latin without Arabic
     id: 'missing_name',
-    check: props => (ArabicText.isGenericMosqueName(arabicName(props)) ? {
-      title_ar: 'اسم المسجد مفقود أو افتراضي (مثال: "مسجد")',
-      title_en: 'Mosque name is missing or set to a generic default',
-    } : null),
+    check: props => {
+      const name = arabicName(props);
+      if (!name || ArabicText.isGenericMosqueName(name)) {
+        return {
+          title_ar: 'اسم المسجد مفقود أو افتراضي (مثال: "مسجد")',
+          title_en: 'Mosque name is missing or set to a generic default',
+        };
+      }
+      if (!/[\u0600-\u06FF]/.test(name) && /[a-zA-Z]/.test(name)) {
+        return {
+          title_ar: 'الاسم الافتراضي (name) مكتوب باللاتينية بدلاً من العربية',
+          title_en: 'Default name (name) is in Latin script instead of Arabic',
+        };
+      }
+      return null;
+    },
   },
   {
-    // name:en missing or identical to the Arabic name. Places without a real
-    // Arabic name are left out (missing_name covers them).
+    // name:en missing, identical to Arabic name, or containing Arabic characters.
+    // Places without a real Arabic name are left out (missing_name covers them).
     id: 'missing_name_en',
     check: props => {
       const nameAr = arabicName(props);
       if (!nameAr || ArabicText.isGenericMosqueName(nameAr)) return null;
       const nameEn = (props.name_en_original || props['name:en'] || '').trim();
-      return !nameEn || nameAr === nameEn ? {
-        title_ar: 'الاسم بالإنجليزية مفقود أو مطابق للاسم العربي',
-        title_en: 'English name translation (name:en) is missing or identical to the Arabic name',
+      const hasArabicInEn = /[\u0600-\u06FF]/.test(nameEn);
+      return !nameEn || nameAr === nameEn || hasArabicInEn ? {
+        title_ar: 'الاسم بالإنجليزية مفقود أو مطابق للاسم العربي أو يحوي حروفاً عربية',
+        title_en: 'English name translation (name:en) is missing, untranslated, or contains Arabic script',
       } : null;
     },
   },
@@ -114,12 +127,16 @@ export const RULES = [
   },
   {
     // Values the preset's upgrade rules fix (iD's deprecated.json plus
-    // Manara's, e.g. denomination=سني -> sunni)
+    // Manara's, e.g. denomination=سني -> sunni), plus pious eulogies inside name
     id: 'outdated_tags',
     check: props => {
       const outdated = outdatedRules(props);
-      if (!outdated.length) return null;
       const changes = describeUpgrade(props, outdated);
+      const name = arabicName(props);
+      if (name && ArabicText.hasEulogy(name)) {
+        changes.push('عبارة تبجيل في الاسم (eulogy in name)');
+      }
+      if (!changes.length) return null;
       return {
         title_ar: `وسوم قديمة أو بصيغة غير معتمدة (${changes.join('، ')})`,
         title_en: `Outdated or non-standard tags (${changes.join(', ')})`,

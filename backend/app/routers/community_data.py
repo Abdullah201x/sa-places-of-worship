@@ -15,21 +15,37 @@ def get_leaderboard(
     """
     with conn.cursor() as cur:
         cur.execute("""
+            WITH edit_counts AS (
+                SELECT osm_uid,
+                       COUNT(changeset_id) AS verified_edits_count,
+                       MAX(verified_at) AS last_edit_at
+                FROM edits
+                GROUP BY osm_uid
+            ),
+            mark_counts AS (
+                SELECT osm_uid,
+                       COUNT(*) AS verified_fixes_count,
+                       MAX(created_at) AS last_mark_at
+                FROM review_marks
+                WHERE status = 'fixed' AND verified_changeset IS NOT NULL
+                GROUP BY osm_uid
+            )
             SELECT
                 u.osm_uid,
                 u.display_name,
                 u.avatar_url,
                 u.osm_changesets,
-                COUNT(DISTINCT e.changeset_id) AS verified_edits_count,
-                COUNT(DISTINCT (rm.osm_type || '/' || rm.osm_id::text)) FILTER (
-                    WHERE rm.status = 'fixed' AND rm.verified_changeset IS NOT NULL
-                ) AS verified_fixes_count,
-                MAX(COALESCE(e.verified_at, rm.created_at)) AS last_active_at
+                COALESCE(ec.verified_edits_count, 0) AS verified_edits_count,
+                COALESCE(mc.verified_fixes_count, 0) AS verified_fixes_count,
+                CASE
+                    WHEN ec.last_edit_at IS NOT NULL AND mc.last_mark_at IS NOT NULL
+                        THEN GREATEST(ec.last_edit_at, mc.last_mark_at)
+                    ELSE COALESCE(ec.last_edit_at, mc.last_mark_at)
+                END AS last_active_at
             FROM users u
-            LEFT JOIN edits e ON e.osm_uid = u.osm_uid
-            LEFT JOIN review_marks rm ON rm.osm_uid = u.osm_uid
+            LEFT JOIN edit_counts ec ON ec.osm_uid = u.osm_uid
+            LEFT JOIN mark_counts mc ON mc.osm_uid = u.osm_uid
             WHERE u.leaderboard_opt_in = TRUE
-            GROUP BY u.osm_uid, u.display_name, u.avatar_url, u.osm_changesets
             ORDER BY verified_fixes_count DESC, verified_edits_count DESC, u.osm_uid ASC
             LIMIT %s;
         """, (limit,))

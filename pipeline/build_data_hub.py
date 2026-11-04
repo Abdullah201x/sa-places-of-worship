@@ -114,6 +114,55 @@ def generate_gaps_csv(gaps_json_path, csv_path):
     return write_gaps_csv_cells(cells, grid_size, csv_path)
 
 
+def generate_gaps_geojson(gaps_json_path, geojson_path):
+    """Converts worship_gaps_sa.json to a genuine RFC 7946 Polygon FeatureCollection."""
+    if not os.path.exists(gaps_json_path):
+        return 0
+
+    with open(gaps_json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    cells = data.get("cells", []) if isinstance(data, dict) else data
+    grid_size = float(data.get("grid_size", 0.004)) if isinstance(data, dict) else 0.004
+
+    features = []
+    for row in cells:
+        if len(row) >= 4:
+            gx, gy, road_len, score = row[0], row[1], row[2], row[3]
+            urgency = row[4] if len(row) > 4 else 0.0
+            min_lon = round(float(gx) * grid_size, 6)
+            min_lat = round(float(gy) * grid_size, 6)
+            max_lon = round((float(gx) + 1.0) * grid_size, 6)
+            max_lat = round((float(gy) + 1.0) * grid_size, 6)
+            features.append({
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [min_lon, min_lat],
+                        [max_lon, min_lat],
+                        [max_lon, max_lat],
+                        [min_lon, max_lat],
+                        [min_lon, min_lat],
+                    ]]
+                },
+                "properties": {
+                    "grid_x": gx,
+                    "grid_y": gy,
+                    "road_length_m": road_len,
+                    "gap_score": score,
+                    "urgency_score": urgency,
+                }
+            })
+
+    fc = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+    write_json(geojson_path, fc)
+    return len(features)
+
+
 def write_suggestions_csv_features(features, csv_path):
     """Writes list of Wikidata suggestion features to CSV with UTF-8 BOM."""
     os.makedirs(os.path.dirname(os.path.abspath(csv_path)), exist_ok=True)
@@ -473,7 +522,9 @@ def build_manifest(data_dir=DATA_DIR):
 
     gaps_json = os.path.join(data_dir, "worship_gaps_sa.json")
     gaps_csv = os.path.join(data_dir, "worship_gaps_sa.csv")
+    gaps_geojson = os.path.join(data_dir, "worship_gaps_sa.geojson")
     gaps_count = generate_gaps_csv(gaps_json, gaps_csv)
+    gaps_geo_count = generate_gaps_geojson(gaps_json, gaps_geojson)
 
     sug_geojson = os.path.join(data_dir, "suggested_mosques_sa.geojson")
     sug_csv = os.path.join(data_dir, "suggested_mosques_sa.csv")
@@ -496,6 +547,14 @@ def build_manifest(data_dir=DATA_DIR):
             "format": "csv",
             "filename": "places_of_worship_sa.csv",
             "features": places_count,
+        },
+        {
+            "id": "gaps-sa-geojson",
+            "scope": "SA",
+            "layer": "gaps",
+            "format": "geojson",
+            "filename": "worship_gaps_sa.geojson",
+            "features": gaps_geo_count or gaps_count or summary.get("datasets", {}).get("gaps", {}).get("count", 0),
         },
         {
             "id": "gaps-sa-json",

@@ -235,7 +235,11 @@ export function setChanges(changes) {
   applyChangesFilters();
 }
 
+const PAGE_SIZE = 200;
+let changesLimit = PAGE_SIZE;
+
 function applyChangesFilters() {
+  changesLimit = PAGE_SIZE;
   const selSource = document.getElementById('changes-filter-source')?.value || 'all';
   const selRegion = document.getElementById('changes-filter-region')?.value || 'all';
   const selKind = document.getElementById('changes-filter-kind')?.value || 'all';
@@ -291,7 +295,28 @@ function renderChangesTable() {
     return;
   }
 
-  changesFiltered.forEach((ch, idx) => {
+  if (!tbody._delegated) {
+    tbody._delegated = true;
+    tbody.addEventListener('click', (e) => {
+      const moreBtn = e.target.closest('#changes-btn-load-more');
+      if (moreBtn) {
+        changesLimit += PAGE_SIZE;
+        renderChangesTable();
+        return;
+      }
+      const tr = e.target.closest('.changes-row');
+      if (!tr) return;
+      const idx = Number(tr.getAttribute('data-idx'));
+      if (Number.isFinite(idx)) {
+        changesSelectedIdx = idx;
+        updateChangesSelection();
+        inspectSelectedChange();
+      }
+    });
+  }
+
+  const visibleChanges = changesFiltered.slice(0, changesLimit);
+  visibleChanges.forEach((ch, idx) => {
     const tr = document.createElement('tr');
     tr.className = `changes-row ${idx === changesSelectedIdx ? 'selected' : ''}`;
     tr.setAttribute('data-idx', idx);
@@ -315,14 +340,23 @@ function renderChangesTable() {
       <td class="changes-cell-triage"><span class="badge ${triageBadge.className}">${triageBadge.glyph} ${triageBadge.label}</span></td>
     `;
 
-    tr.addEventListener('click', () => {
-      changesSelectedIdx = idx;
-      updateChangesSelection();
-      inspectSelectedChange();
-    });
-
     tbody.appendChild(tr);
   });
+
+  if (changesFiltered.length > changesLimit) {
+    const moreTr = document.createElement('tr');
+    moreTr.className = 'changes-more-row';
+    const remaining = changesFiltered.length - changesLimit;
+    const isAr = currentLang === 'ar';
+    moreTr.innerHTML = `
+      <td colspan="8" style="text-align: center; padding: 12px;">
+        <button type="button" id="changes-btn-load-more" class="carto-clear-btn" style="padding: 6px 16px; cursor: pointer;">
+          ${isAr ? `عرض المزيد (متبقي ${fmtNum(remaining)})` : `Load more (${fmtNum(remaining)} remaining)`}
+        </button>
+      </td>
+    `;
+    tbody.appendChild(moreTr);
+  }
 }
 
 function updateChangesSelection() {

@@ -14,8 +14,12 @@ def search_places(
     clean_q = q.strip()
     norm_q = normalize_arabic(clean_q)
 
+    # Escape LIKE metacharacters to prevent wildcard injection
+    escaped_norm = norm_q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    escaped_clean = clean_q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
     with conn.cursor() as cur:
-        # Search places using normalized Arabic trigram index and English ILIKE
+        # Search places using trigram index for both normalized Arabic and English
         cur.execute("""
         SELECT 
             p.osm_type,
@@ -30,14 +34,14 @@ def search_places(
             r.name AS region_name,
             ST_X(p.geom) AS lon,
             ST_Y(p.geom) AS lat,
-            similarity(p.name_norm, %s) AS sim
+            GREATEST(similarity(p.name_norm, %s), similarity(LOWER(COALESCE(p.name_en, '')), LOWER(%s))) AS sim
         FROM places p
         LEFT JOIN regions r ON r.code = p.region_code
         WHERE 
-            (p.name_norm %% %s OR p.name_norm ILIKE %s OR p.name_en ILIKE %s)
+            (p.name_norm %% %s OR LOWER(COALESCE(p.name_en, '')) %% LOWER(%s) OR p.name_norm ILIKE %s ESCAPE '\\' OR p.name_en ILIKE %s ESCAPE '\\')
         ORDER BY sim DESC, p.osm_id ASC
         LIMIT %s;
-        """, (norm_q, norm_q, f"%{norm_q}%", f"%{clean_q}%", limit))
+        """, (norm_q, clean_q, norm_q, clean_q, f"%{escaped_norm}%", f"%{escaped_clean}%", limit))
         rows = cur.fetchall()
 
     results = []

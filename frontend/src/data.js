@@ -2,6 +2,7 @@
 import './styles/fonts.css';
 import './styles/page.css';
 import './styles/data.css';
+import './translations_static.js';
 import { currentLang, setLanguage, addTranslations, fmtNum } from './i18n.js';
 import { initAnalytics } from './analytics.js';
 import {
@@ -138,15 +139,22 @@ function renderOverpassPresets(presets) {
   if (!container) return;
 
   const isAr = currentLang === 'ar';
+  let customBbox = null;
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    customBbox = urlParams.get('bbox') || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('manara_map_bbox') : null);
+  } catch {
+    // Ignore storage errors
+  }
 
   container.innerHTML = presets.map(p => {
     const label = isAr ? (p.label.ar || p.label.en) : (p.label.en || p.label.ar);
-    const overpassUrl = buildOverpassTurboUrl(p.query);
+    const overpassUrl = buildOverpassTurboUrl(p.query, customBbox);
 
     return `
       <div class="preset-card">
         <div>
-          <h3>${label}</h3>
+          <h3>${label} ${customBbox ? `<span class="badge-scope" style="font-size: 11px; margin-inline-start: 8px; color: var(--color-primary);">${isAr ? '📍 النطاق المحدد' : '📍 Current Viewport'}</span>` : ''}</h3>
           <pre><code>${p.query}</code></pre>
         </div>
         <a href="${overpassUrl}" target="_blank" rel="noopener noreferrer" class="btn-overpass">

@@ -32,7 +32,24 @@ def client():
 def test_healthz_endpoint(client):
     res = client.get("/api/healthz")
     assert res.status_code == 200
-    assert res.json() == {"status": "ok"}
+    assert res.json() == {"status": "ok", "db": "ok"}
+
+
+def test_healthz_db_failure():
+    mock_conn = MagicMock()
+    mock_conn.cursor.side_effect = Exception("connection timed out")
+
+    def override_get_db():
+        yield mock_conn
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app, raise_server_exceptions=False) as c:
+        res = c.get("/api/healthz")
+        assert res.status_code == 503
+        data = res.json()
+        assert data["status"] == "error"
+        assert data["db"] == "unavailable"
+    app.dependency_overrides.clear()
 
 
 def _freshness_client(row):
@@ -202,6 +219,36 @@ def test_rate_limiting_active():
         limiter._limiter.storage.reset()
 
 
+def test_delete_me_cleanses_sprint_tiles_and_events():
+    from app.auth import get_current_user, verify_csrf
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
 
+    def override_get_db():
+        yield mock_conn
 
+    def override_user():
+        return {"osm_uid": 99999, "display_name": "TestMapper"}
+
+    def override_csrf():
+        return None
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[verify_csrf] = override_csrf
+
+    try:
+        with TestClient(app, raise_server_exceptions=False) as c:
+            res = c.delete("/api/v1/me")
+            assert res.status_code == 200
+            assert res.json() == {"status": "ok", "deleted": True}
+
+            executed_queries = [call[0][0] for call in mock_cur.execute.call_args_list]
+            assert any("UPDATE sprint_tiles" in q for q in executed_queries)
+            assert any("UPDATE tile_events" in q for q in executed_queries)
+            assert any("UPDATE change_triage" in q for q in executed_queries)
+            assert any("DELETE FROM users" in q for q in executed_queries)
+    finally:
+        app.dependency_overrides.clear()
 

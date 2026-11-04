@@ -10,15 +10,15 @@ label:
 saudi_notes:
   ar: 'الاسم المترجم صوتياً أو المترجم بالإنجليزية. لا تكرر الكلمات العربية بحروف
     عربية في هذا الوسم، ولا تضع مجرد كلمة Mosque بل اكتب الاسم الصوتي للمسجد (مثل:
-    Bilal Ibn Rabah Mosque).'
+    Bilal bin Rabah Mosque).'
   en: Transliterated or translated English name. Never duplicate Arabic script into
     name:en, and avoid generic placeholder Mosque; provide the romanized specific
-    name (e.g., Bilal Ibn Rabah Mosque).
+    name (e.g., Bilal bin Rabah Mosque).
 examples:
   good:
   - tags:
       name: جامع الإمام البخاري
-      name:en: Imam Al-Bukhari Mosque
+      name:en: Imam Al-Bukhari Grand Mosque
   bad:
   - tags:
       name: جامع الإمام البخاري

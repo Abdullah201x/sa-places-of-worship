@@ -475,8 +475,8 @@ flowchart LR
 | **P3.3** | **Phase 3** | Complete `DELETE /api/v1/me` PII erasure across all tables + `/me` drawer + on-click Osmose & `{{bbox}}` Overpass | 2d | Low | `0 MiB` | `DELETE /api/v1/me` leaves zero `osm_uid`/`display_name` references across all 14 PostgreSQL tables |
 | **P3.4** | **Phase 3** | Launch "Manara Field" mobile nearby-mosque resurvey sheet (`female:prayer_room`, `wheelchair`, `check_date`) | 3d | Low | `0 MiB` (static PWA) | Mobile mappers can survey & upload amenities + `check_date` for nearby mosques in <= 3 taps |
 | **P4.1** | **Phase 4** | Add `postgis/postgis:17-3.5` to GitHub Actions CI, `ruff`, `docker build`, real-module JS tests & E2E link/mobile gates | 2d | Low | CI only | CI runs full PostGIS SQL pipeline + API suite, `ruff`, `vitest`, and `playwright` (`desktop` + `phone-rtl`) |
-| **P4.2** | **Phase 4** | Strict `validate_data.py` (PMTiles headers, SHA-256 manifest, tag sanity) & untrack 26.5 MB generated data from Git | 1d | Low | `-26.5 MB` repo | Corrupt PMTiles or 100% fallback `tag_stats` aborts publish before symlink swap; `git status` clean |
-| **P4.3** | **Phase 4** | Non-root Dockerfiles, DB-ping `/api/healthz`, numbered SQL migrations, retention pruning & off-VPS `.sql.zst` backups | 1.5d | Low | `+5 MB/day` B2/R2 | Containers run as `uid 10001`; `migrations/` apply idempotently; daily encrypted DB backup verified |
+| **P4.2** | **Phase 4** | Strict `validate_data.py` (PMTiles headers, SHA-256 manifest, tag sanity) & pre-publish gate | Done | Low | Pre-publish gate | Corrupt PMTiles or 100% fallback `tag_stats` aborts publish before symlink swap; verified by unit tests |
+| **P4.3** | **Phase 4** | Non-root Dockerfiles, DB-ping `/api/healthz`, numbered SQL migrations & retention pruning | Done | Low | VPS bloat prevention | Containers run as `uid 10001`; `migrations/` apply idempotently; daily retention pruning active |
 
 ---
 

@@ -1,0 +1,26 @@
+key: place_of_worship=musalla
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: مصلى (غير مخصص لصلاة الجمعة أو مصلى عيد)
+  en: Musalla / Prayer Room (non-Friday or open-air Eid ground)
+saudi_notes:
+  ar: 'يُستخدم لتمييز المصليات الصغيرة (في المجمعات التجارية، محطات الوقود، الاستراحات، أو مصليات الأعياد المفتوحة) عن المساجد والجوامع المخصصة للصلوات الخمس والجمعة.'
+  en: 'Used to distinguish small prayer rooms (in malls, highway rest stops, service stations) and open-air Eid prayer grounds from neighborhood mosques and Friday Grand Mosques.'
+examples:
+  good:
+  - tags:
+      amenity: place_of_worship
+      place_of_worship: musalla
+      religion: muslim
+  bad:
+  - tags:
+      amenity: musalla
+    why:
+      ar: وسم amenity=musalla غير معتمد؛ الوسم الصحيح هو amenity=place_of_worship مع place_of_worship=musalla.
+      en: amenity=musalla is non-standard; the standard tagging is amenity=place_of_worship with place_of_worship=musalla.
+rules: []
+wiki: https://wiki.openstreetmap.org/wiki/Tag:amenity%3Dplace_of_worship

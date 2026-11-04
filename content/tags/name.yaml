@@ -17,10 +17,10 @@ examples:
   - tags:
       name: جامع الراجحي
       name:ar: جامع الراجحي
-      name:en: Al Rajhi Grand Mosque
+      name:en: Al-Rajhi Grand Mosque
   bad:
   - tags:
-      name: Al Rajhi Mosque
+      name: Al-Rajhi Grand Mosque
     why:
       ar: الاسم الافتراضي في السعودية يجب أن يكون باللغة العربية
       en: Default name in Saudi Arabia must be in Arabic

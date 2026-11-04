@@ -71,12 +71,29 @@ def get_region_stats(conn=Depends(get_db)):
 
 @router.get("/history")
 def get_stats_history(
-    region: str | None = Query(None, description="Optional ISO code to filter by, e.g. 'SA-01'"),
-    limit: int = Query(50, ge=1, le=200, description="Max history points"),
+    region: str | None = Query(None, description="Optional ISO code to filter by, e.g. 'SA-01', or 'ALL' for Kingdom-wide"),
+    limit: int = Query(50, ge=1, le=2000, description="Max history points"),
     conn=Depends(get_db)
 ):
     with conn.cursor() as cur:
-        if region:
+        if region == "ALL":
+            cur.execute("""
+            SELECT 
+                h.version,
+                'ALL' AS region_code,
+                'المملكة العربية السعودية' AS region_name,
+                SUM(h.places_count)::int AS places_count,
+                SUM(h.gaps_count)::int AS gaps_count,
+                SUM(h.suggestions_count)::int AS suggestions_count,
+                SUM(h.anomalies_count)::int AS anomalies_count,
+                MAX(h.recorded_at) AS recorded_at
+            FROM region_stats_history h
+            GROUP BY h.version
+            HAVING COUNT(DISTINCT h.region_code) = 13
+            ORDER BY recorded_at DESC
+            LIMIT %s;
+            """, (limit,))
+        elif region:
             cur.execute("""
             SELECT 
                 h.version,

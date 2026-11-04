@@ -109,6 +109,7 @@
 		header @pages Cache-Control "no-cache"
 		@workspaces path /qa /changes
 		rewrite @workspaces /index.html
+		redir /mapgl / 301
 		try_files {path} {path}.html
 		file_server {
 			precompressed br gzip

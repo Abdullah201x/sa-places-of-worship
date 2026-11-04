@@ -8,6 +8,9 @@ def init_app_tables(conn):
     """Ensure Phase 4 tables and their indexes exist."""
     with conn.cursor() as cur:
         cur.execute("""
+        CREATE EXTENSION IF NOT EXISTS postgis;
+        CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
         CREATE TABLE IF NOT EXISTS users (
             osm_uid BIGINT PRIMARY KEY,
             display_name TEXT NOT NULL,
@@ -65,6 +68,8 @@ def init_app_tables(conn):
         );
         CREATE INDEX IF NOT EXISTS idx_edits_osm_uid ON edits (osm_uid);
         CREATE INDEX IF NOT EXISTS idx_edits_created_at ON edits (created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_edits_verified_at ON edits (verified_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_edits_uid_verified ON edits (osm_uid, verified_at DESC);
 
         CREATE TABLE IF NOT EXISTS issues (
             rule_id VARCHAR(64) NOT NULL,
@@ -100,12 +105,15 @@ def init_app_tables(conn):
             name TEXT DEFAULT '',
             tag_diff JSONB DEFAULT '{}'::jsonb,
             version_before INT,
-            version_after INT
+            version_after INT,
+            UNIQUE NULLS NOT DISTINCT (source, osm_type, osm_id, version_after, changeset_id)
         );
         CREATE INDEX IF NOT EXISTS idx_change_events_osm ON change_events (osm_type, osm_id);
         CREATE INDEX IF NOT EXISTS idx_change_events_observed ON change_events (observed_at DESC);
         CREATE INDEX IF NOT EXISTS idx_change_events_region ON change_events (region_code);
         CREATE INDEX IF NOT EXISTS idx_change_events_source ON change_events (source);
+        CREATE INDEX IF NOT EXISTS idx_change_events_flags_gin ON change_events USING GIN (flags);
+        CREATE INDEX IF NOT EXISTS idx_change_events_region_observed ON change_events (region_code, observed_at DESC);
 
         CREATE TABLE IF NOT EXISTS change_triage (
             change_id BIGINT PRIMARY KEY REFERENCES change_events(id) ON DELETE CASCADE,

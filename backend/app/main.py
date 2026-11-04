@@ -34,7 +34,8 @@ async def lifespan(app: FastAPI):
         try:
             with database.pool.connection() as conn:
                 init_app_tables(conn)
-                print("[INFO] Phase 4 tables initialized successfully.")
+                database.run_migrations(conn)
+                print("[INFO] Phase 4 tables and migrations initialized successfully.")
         except Exception as e:
             print(f"[WARN] Could not initialize Phase 4 tables: {e}")
     yield

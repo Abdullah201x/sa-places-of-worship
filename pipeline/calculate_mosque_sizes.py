@@ -1,3 +1,4 @@
+import math
 import os
 import time
 
@@ -46,11 +47,47 @@ class MosqueSizeExtractor(osmium.SimpleHandler):
         if not self.boundary_prep.contains(Point(centroid_lon, centroid_lat)):
             return
 
-        area_m2 = Polygon(to_metres(coords)).area
+        m_lon = 111_320.0 * math.cos(math.radians(centroid_lat))
+        m_lat = 110_574.0
+        coords_m = [(x * m_lon, y * m_lat) for x, y in coords]
+        area_m2 = Polygon(coords_m).area
         if area_m2 <= 0:
             return
 
         self.sizes[str(w.id)] = {"area_m2": round(area_m2, 1)}
+
+    def area(self, a):
+        if a.from_way() or not is_worship_tagged(a.tags):
+            return
+        if a.tags.get('place_of_worship') == 'musalla':
+            return
+        polys = []
+        try:
+            for outer in a.outer_rings():
+                shell = [(nd.lon, nd.lat) for nd in outer]
+                holes = [[(nd.lon, nd.lat) for nd in inner] for inner in a.inner_rings(outer)]
+                p = Polygon(shell, holes=holes)
+                if not p.is_valid:
+                    p = p.buffer(0)
+                if p.is_valid and p.area > 0:
+                    polys.append(p)
+        except osmium.InvalidLocationError:
+            return
+        if not polys:
+            return
+
+        total_m2 = 0.0
+        for p in polys:
+            c_lat = p.centroid.y
+            m_lon = 111_320.0 * math.cos(math.radians(c_lat))
+            m_lat = 110_574.0
+            shell_m = [(x * m_lon, y * m_lat) for x, y in p.exterior.coords]
+            holes_m = [[(x * m_lon, y * m_lat) for x, y in h.coords] for h in p.interiors]
+            poly_m = Polygon(shell_m, holes=holes_m)
+            total_m2 += poly_m.area
+
+        if total_m2 > 0:
+            self.sizes[str(a.orig_id())] = {"area_m2": round(total_m2, 1)}
 
 def main():
     pbf_path = find_pbf(BASE_DIR)

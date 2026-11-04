@@ -11,11 +11,15 @@
 import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { Protocol } from 'pmtiles';
 import { interpolateGapScore, gapPixel, invertedMask } from './gap_field.js';
 
 // The default worker URL is derived from the bundle's own location, which does
 // not hold the worker file after bundling; point at the emitted asset instead.
 maplibregl.setWorkerUrl(workerUrl);
+
+const protocol = new Protocol();
+maplibregl.addProtocol('pmtiles', protocol.tile);
 
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
 const ESRI_ATTR = 'Tiles &copy; Esri';
@@ -659,6 +663,34 @@ class GlGapLayer {
   _mount(map) {
     this._map = map;
     const id = this._id = nextId('gap');
+
+    if (window.location && window.location.origin && window.location.origin.startsWith('http')) {
+      try {
+        map.gl.addSource(id, {
+          type: 'vector',
+          url: `pmtiles://${window.location.origin}/data/gaps.pmtiles`,
+        });
+        map.addStyleLayer({
+          id,
+          type: 'circle',
+          source: id,
+          'source-layer': 'gaps',
+          paint: {
+            'circle-color': [
+              'interpolate', ['linear'], ['coalesce', ['get', 'urgency'], 0],
+              0, 'rgb(63,43,150)', 50, 'rgb(168,192,255)', 80, 'rgb(236,0,140)', 100, 'rgb(252,103,103)'
+            ],
+            'circle-opacity': 0.55,
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 1.5, 8, 3, 10, 5, 12, 9, 14, 18, 17, 60],
+          }
+        }, 'field');
+        this._usesVector = true;
+        return;
+      } catch (_) {
+        // Fall back to CPU canvas
+      }
+    }
+
     this._canvas = document.createElement('canvas');
     this._canvas.width = this._canvas.height = 1;
     const coords = this._draw();
@@ -670,6 +702,12 @@ class GlGapLayer {
   }
 
   _unmount(map) {
+    if (this._usesVector) {
+      if (map.gl.getLayer(this._id)) map.gl.removeLayer(this._id);
+      if (map.gl.getSource(this._id)) map.gl.removeSource(this._id);
+      this._map = null;
+      return;
+    }
     map.gl.off('moveend', this._refresh);
     if (map.gl.getLayer(this._id)) map.gl.removeLayer(this._id);
     if (map.gl.getSource(this._id)) map.gl.removeSource(this._id);

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>خارطة الكثافة وفجوات التغطية لأماكن العبادة بالمملكة</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕌%3C/text%3E%3C/svg%3E">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0b10">
   <link rel="canonical" href="https://manara.saudiosm.org/">
   <meta name="description" content="خارطة تفاعلية لعرض التوزيع الجغرافي ونقاط الكثافة وفجوات التغطية لأماكن العبادة في المملكة العربية السعودية مع إمكانية التعديل عبر OpenStreetMap.">
   
@@ -66,6 +68,7 @@
             <time id="freshness-data-time" class="freshness-time" datetime="">–</time>
           </div>
         </div>
+        <button type="button" id="topbar-btn-field" class="topbar-btn" title="المسح الميداني الذكي (منارة فيلد)" aria-label="المسح الميداني الذكي">📱</button>
         <button type="button" id="topbar-btn-lang" class="topbar-btn" title="English / العربية" lang="en">EN</button>
         <button type="button" id="topbar-btn-auth" class="topbar-btn user-btn" title="تسجيل الدخول عبر OpenStreetMap">👤</button>
       </div>
@@ -94,6 +97,7 @@
           <span class="user-status-text">مرحباً، <strong id="user-display-name">-</strong></span>
           <span class="user-role-text">مساهم في OpenStreetMap</span>
         </div>
+        <button id="btn-user-settings" class="user-settings-btn" title="إعدادات الحساب والخصوصية" aria-label="إعدادات الحساب والخصوصية" style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; color: var(--color-text-muted);">⚙️</button>
         <button id="btn-osm-logout" class="osm-logout-btn" title="تسجيل الخروج">تسجيل خروج</button>
       </div>
 
@@ -709,7 +713,12 @@
               <a id="btn-edit-osm" class="mapper-btn id-editor" href="#" target="_blank" rel="noopener noreferrer">تعديل عبر iD Editor (ويب)</a>
               <button type="button" id="btn-edit-josm" class="mapper-btn josm-editor">تعديل عبر JOSM (تحكم عن بعد)</button>
               <a id="btn-view-osm" class="mapper-btn osm-site" href="#" target="_blank" rel="noopener noreferrer">عرض المعلم على OSM</a>
+              <button type="button" id="btn-osmose-nearby" class="mapper-btn osmose-editor">
+                <span data-lang="ar">🔍 فحص تنبيهات Osmose القريبة</span>
+                <span data-lang="en">🔍 Check nearby Osmose alerts</span>
+              </button>
             </div>
+            <div id="osmose-results-container" class="osmose-results-container" style="display: none; margin-top: 10px;"></div>
           </div>
 
           <!-- Guest Mode Editing Block -->
@@ -1118,6 +1127,55 @@
             <span>إغلاق</span>
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Account & Privacy Modal (GDPR / Right to be forgotten) -->
+    <div id="account-privacy-dialog" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="account-privacy-title">
+      <div class="auth-card" style="max-width: 480px;">
+        <button id="btn-close-privacy-dialog" class="auth-close-btn" aria-label="إغلاق" title="إغلاق">&times;</button>
+        <div class="auth-header">
+          <h2 id="account-privacy-title">حسابك والخصوصية في منارة</h2>
+          <p>إدارة بياناتك المسجلة وحق النسيان الكامل بموجب معايير حماية البيانات والخصوصية.</p>
+        </div>
+        <div class="account-details-box" style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+            <div>
+              <div style="font-weight: 600;" id="privacy-user-name">-</div>
+              <div style="font-size: 11px; color: var(--color-text-muted);" id="privacy-user-uid">-</div>
+            </div>
+            <span class="badge-scope" id="privacy-edit-count">0 تعديل موثق</span>
+          </div>
+
+          <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+            <div>
+              <div style="font-weight: 600; font-size: 13px;">لوحة الشرف والمجتمع</div>
+              <div style="font-size: 11px; color: var(--color-text-muted);">إظهار اسمي في قائمة المتصدرين والمساهمين</div>
+            </div>
+            <input type="checkbox" id="chk-leaderboard-opt-in" style="width: 18px; height: 18px; accent-color: var(--color-primary); cursor: pointer;" />
+          </label>
+
+          <button type="button" id="btn-export-my-marks" class="btn-overpass" style="width: 100%; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: var(--color-text); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px;">
+            📥 تصدير علامات المراجعة الخاصة بي (JSON)
+          </button>
+
+          <div style="margin-top: 10px; padding-top: 14px; border-top: 1px solid rgba(255, 59, 48, 0.2);">
+            <div style="font-size: 12px; color: #ff8b85; margin-bottom: 8px;">
+              ⚠️ منطقة الإجراءات الحساسة (حق النسيان الكامل):
+            </div>
+            <button type="button" id="btn-delete-account" class="carto-clear-btn" style="width: 100%;">
+              🗑️ حذف حسابي ومسح كافة سجلاتي نهائياً
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Field Surveyor Modal (Manara Field) -->
+    <div id="field-surveyor-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="field-surveyor-title">
+      <div class="auth-card" style="max-width: 520px; max-height: 85dvh; overflow-y: auto;">
+        <button id="btn-close-field-surveyor" class="auth-close-btn" aria-label="إغلاق" title="إغلاق">&times;</button>
+        <div id="field-surveyor-content"></div>
       </div>
     </div>
 

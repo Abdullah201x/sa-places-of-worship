@@ -85,23 +85,47 @@ def is_in_sa_bbox(lat: float, lon: float) -> bool:
 
 def load_known_places(conn) -> dict[tuple[str, int], dict[str, Any]]:
     """
-    Loads the known-places cache: (osm_type, osm_id) -> {"lat", "lon"} for the
-    ~14k places in the daily dataset plus live-created ones. Only these objects
-    can be recognised when they are deleted, since diffs carry no tags for
-    deletions, and ways/relations in the diff have no coordinates of their own.
+    Loads the known-places cache: (osm_type, osm_id) -> {"lat", "lon", "region_code", "tags"} for the
+    ~14k places in the daily dataset plus live-created ones. Enables tag diffing,
+    worship-tag removal detection, and deletion recognition.
     """
     known: dict[tuple[str, int], dict[str, Any]] = {}
     with conn.cursor() as cur:
         for table in ("places", "live_places"):
-            cur.execute(
-                f"SELECT osm_type, osm_id, ST_Y(geom) AS lat, ST_X(geom) AS lon FROM {table} WHERE geom IS NOT NULL;"
-            )
-            for row in cur.fetchall():
-                if isinstance(row, dict):
-                    osm_type, osm_id, lat, lon = row["osm_type"], row["osm_id"], row["lat"], row["lon"]
-                else:
-                    osm_type, osm_id, lat, lon = row
-                known[(osm_type, int(osm_id))] = {"lat": lat, "lon": lon}
+            try:
+                cur.execute(
+                    f"SELECT osm_type, osm_id, ST_Y(geom) AS lat, ST_X(geom) AS lon, region_code, tags FROM {table} WHERE geom IS NOT NULL;"
+                )
+                for row in cur.fetchall():
+                    if isinstance(row, dict):
+                        osm_type = row["osm_type"]
+                        osm_id = int(row["osm_id"])
+                        lat = row["lat"]
+                        lon = row["lon"]
+                        region_code = row.get("region_code")
+                        tags_val = row.get("tags")
+                    else:
+                        osm_type = row[0]
+                        osm_id = int(row[1])
+                        lat = row[2]
+                        lon = row[3]
+                        region_code = row[4] if len(row) > 4 else None
+                        tags_val = row[5] if len(row) > 5 else {}
+
+                    if isinstance(tags_val, str):
+                        try:
+                            import json
+                            tags_val = json.loads(tags_val)
+                        except Exception:
+                            tags_val = {}
+                    place_info = {"lat": lat, "lon": lon}
+                    if region_code:
+                        place_info["region_code"] = region_code
+                    if tags_val:
+                        place_info["tags"] = tags_val
+                    known[(osm_type, osm_id)] = place_info
+            except Exception as e:
+                print(f"[WARN] Could not load known places from {table}: {e}")
     return known
 
 
@@ -224,14 +248,24 @@ def parse_osc_stream(
             name = tags.get("name") or tags.get("name:ar") or tags.get("name:en") or ""
             name_norm = normalize_arabic(name) if name else ""
 
+            old_tags = cached.get("tags") or {} if cached else {}
+            if kind == "modified":
+                tag_diff = compute_tag_diff(old_tags, tags)
+            elif kind == "deleted":
+                tag_diff = compute_tag_diff(old_tags, {})
+            else:
+                tag_diff = compute_tag_diff({}, tags)
+
             # Evaluate change flags
             flags = evaluate_change_flags(
-                old_tags={},
-                new_tags=tags,
+                old_tags=old_tags,
+                new_tags=tags if kind != "deleted" else {},
                 is_deleted=(kind == "deleted"),
                 normalized_name=name_norm,
                 normalized_name_ar=normalize_arabic(tags.get("name:ar", "")),
             )
+
+            region_code = cached.get("region_code") if cached else None
 
             events.append({
                 "source": "live",
@@ -244,16 +278,18 @@ def parse_osc_stream(
                 "name": name,
                 "lat": lat,
                 "lon": lon,
+                "region_code": region_code,
                 "tags": tags,
+                "tag_diff": tag_diff,
                 "flags": flags,
             })
 
     return events
 
 
-def record_live_events(conn, seq: int, osm_timestamp: str, events: list[dict[str, Any]]):
+def record_live_events(conn, seq: int, osm_timestamp: str, events: list[dict[str, Any]], sync_live_places: bool = False):
     """
-    Atomically records live change events and updates replication_state.
+    Atomically records live change events, optionally updates live_places, and updates replication_state.
     """
     with conn.transaction():
         with conn.cursor() as cur:
@@ -271,10 +307,11 @@ def record_live_events(conn, seq: int, osm_timestamp: str, events: list[dict[str
                     ev["osm_id"],
                     ev["kind"],
                     import_json(ev.get("flags") or []),
-                    import_json(ev.get("tags") or {}),
+                    import_json(ev.get("tag_diff") or {}),
                     ev.get("name", ""),
                     ev.get("version_before"),
                     ev.get("version_after"),
+                    ev.get("region_code"),
                 ]
                 if lat is not None and lon is not None:
                     params.extend([lon, lat])
@@ -283,14 +320,30 @@ def record_live_events(conn, seq: int, osm_timestamp: str, events: list[dict[str
                 INSERT INTO change_events (
                     source, confirmed, osm_timestamp, observed_at, changeset_id,
                     replication_seq, osm_type, osm_id, kind, flags,
-                    tag_diff, name, version_before, version_after, geom
+                    tag_diff, name, version_before, version_after, region_code, geom
                 ) VALUES (
                     %s, %s, %s, NOW(), %s,
                     %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, {geom_sql}
-                );
+                    %s, %s, %s, %s, %s, {geom_sql}
+                )
+                ON CONFLICT DO NOTHING;
                 """
                 cur.execute(insert_sql, params)
+
+                # Maintain live_places for fast lookups and freshness if requested
+                if sync_live_places:
+                    if ev["kind"] == "deleted":
+                        cur.execute("DELETE FROM live_places WHERE osm_type = %s AND osm_id = %s;", (ev["osm_type"], ev["osm_id"]))
+                    elif lat is not None and lon is not None and is_worship_tagged(ev.get("tags") or {}):
+                        cur.execute("""
+                        INSERT INTO live_places (osm_type, osm_id, version, geom, tags, seen_at)
+                        VALUES (%s, %s, %s, ST_SetSRID(ST_Point(%s, %s), 4326), %s::jsonb, NOW())
+                        ON CONFLICT (osm_type, osm_id) DO UPDATE SET
+                            version = EXCLUDED.version,
+                            geom = EXCLUDED.geom,
+                            tags = EXCLUDED.tags,
+                            seen_at = NOW();
+                        """, (ev["osm_type"], ev["osm_id"], ev.get("version_after"), lon, lat, import_json(ev.get("tags") or {})))
 
             # Update replication_state
             cur.execute("""
@@ -303,6 +356,130 @@ def record_live_events(conn, seq: int, osm_timestamp: str, events: list[dict[str
             """, (seq, osm_timestamp))
 
 
+def fetch_replication_state(base_url: str = DEFAULT_REPLICATION_URL) -> dict[str, Any]:
+    """Fetches and parses current state.txt from the replication feed."""
+    import urllib.request
+    req = urllib.request.Request(
+        f"{base_url.rstrip('/')}/state.txt",
+        headers={"User-Agent": USER_AGENT},
+    )
+    with urllib.request.urlopen(req, timeout=15) as res:
+        content = res.read().decode("utf-8")
+    return parse_state_txt(content)
+
+
+def fetch_diff_bytes(base_url: str, seq: int) -> bytes:
+    """Downloads and uncompresses a minutely .osc.gz replication diff."""
+    import urllib.request
+    url = build_diff_url(base_url, seq)
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=30) as res:
+        compressed = res.read()
+    with gzip.GzipFile(fileobj=io.BytesIO(compressed)) as gz:
+        return gz.read()
+
+
+def run_replication_step(conn, known_places: dict, base_url: str = DEFAULT_REPLICATION_URL) -> int:
+    """
+    Runs one sequence catchup or advances to current. Returns number of events processed.
+    """
+    with conn.cursor() as cur:
+        cur.execute("SELECT sequence, osm_timestamp FROM replication_state WHERE id = 1;")
+        row = cur.fetchone()
+
+    remote_state = fetch_replication_state(base_url)
+    remote_seq = remote_state.get("sequence")
+    remote_ts = remote_state.get("timestamp")
+
+    if not row or not row.get("sequence"):
+        # Initialize at current remote sequence - 1 to start monitoring live
+        init_seq = remote_seq - 1 if remote_seq else 0
+        with conn.cursor() as cur:
+            cur.execute("""
+            INSERT INTO replication_state (id, sequence, osm_timestamp, processed_at)
+            VALUES (1, %s, %s, NOW())
+            ON CONFLICT (id) DO UPDATE SET sequence = EXCLUDED.sequence, osm_timestamp = EXCLUDED.osm_timestamp;
+            """, (init_seq, remote_ts))
+        print(f"  [INIT] Replication state initialized at sequence {init_seq} ({remote_ts}).")
+        current_seq = init_seq
+    else:
+        current_seq = row["sequence"]
+
+    if remote_seq is None or current_seq >= remote_seq:
+        return 0
+
+    target_seq = current_seq + 1
+    xml_bytes = fetch_diff_bytes(base_url, target_seq)
+    events = parse_osc_stream(xml_bytes, known_places=known_places)
+    record_live_events(conn, target_seq, remote_ts or datetime.now(timezone.utc).isoformat(), events)
+
+    # Update cache with newly processed events
+    for ev in events:
+        key = (ev["osm_type"], ev["osm_id"])
+        if ev["kind"] == "deleted":
+            known_places.pop(key, None)
+        else:
+            known_places[key] = {
+                "lat": ev.get("lat"),
+                "lon": ev.get("lon"),
+                "region_code": ev.get("region_code"),
+                "tags": ev.get("tags") or {},
+            }
+
+    print(f"  [OK] Processed sequence {target_seq}: {len(events)} worship change events.")
+    return len(events)
+
+
+def main():
+    DATABASE_URL = os.environ.get("MANARA_DATABASE_URL") or os.environ.get("DATABASE_URL")
+    if not DATABASE_URL:
+        sys.exit("[SKIP] No DATABASE_URL or MANARA_DATABASE_URL set.")
+
+    import argparse
+    parser = argparse.ArgumentParser(description="Manara Live Minutely Replicator")
+    parser.add_argument("--once", action="store_true", help="Process available sequences once and exit")
+    parser.add_argument("--interval", type=int, default=60, help="Poll interval in seconds (default 60)")
+    args = parser.parse_args()
+
+    try:
+        import psycopg
+        from psycopg.rows import dict_row
+        conn = psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=True)
+    except Exception as e:
+        sys.exit(f"Could not connect to database: {e}")
+
+    try:
+        print("Loading known places cache into memory...")
+        known = load_known_places(conn)
+        print(f"Known places loaded: {len(known)} entries (~{len(known)*300//1024} KB).")
+
+        if args.once:
+            run_replication_step(conn, known)
+            return
+
+        print(f"Starting live replication daemon (polling every {args.interval}s)...")
+        consecutive_errors = 0
+        while True:
+            try:
+                processed = run_replication_step(conn, known)
+                consecutive_errors = 0
+                time.sleep(args.interval if processed == 0 else 5)
+            except KeyboardInterrupt:
+                print("\nShutting down live replicator.")
+                break
+            except Exception as e:
+                consecutive_errors += 1
+                backoff = min(300, args.interval * (2 ** min(consecutive_errors, 5)))
+                print(f"[ERROR] Live replication error: {e}. Backing off {backoff}s.")
+                time.sleep(backoff)
+    finally:
+        conn.close()
+
+
 def import_json(val: Any) -> str:
     import json
     return json.dumps(val)
+
+
+if __name__ == "__main__":
+    main()

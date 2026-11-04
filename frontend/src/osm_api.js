@@ -216,6 +216,19 @@ export const OsmApi = {
           if (data.user.display_name) {
             localStorage.setItem('osm_user_display_name', data.user.display_name);
           }
+          // Verify backend session cookie via /api/v1/me, re-POSTing /auth/session if expired
+          try {
+            const meRes = await fetch('/api/v1/me');
+            if (meRes.status === 401) {
+              await fetch('/auth/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Manara-CSRF': '1' },
+                body: JSON.stringify({ access_token: token })
+              });
+            }
+          } catch (_) {
+            // Keep going if backend is temporarily unreachable
+          }
           return true;
         }
       } else if (response.status === 401 || response.status === 403) {
@@ -238,6 +251,52 @@ export const OsmApi = {
     if (reload) {
       showToast(t('authLoggedOut'));
       window.location.reload();
+    }
+  },
+
+  async getMe() {
+    try {
+      const res = await fetch('/api/v1/me');
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.user || null;
+    } catch {
+      return null;
+    }
+  },
+
+  async updateMe(settings) {
+    try {
+      const res = await fetch('/api/v1/me', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Manara-CSRF': '1'
+        },
+        body: JSON.stringify(settings)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.error('Failed to update user settings:', err);
+      throw err;
+    }
+  },
+
+  async deleteAccount() {
+    try {
+      const res = await fetch('/api/v1/me', {
+        method: 'DELETE',
+        headers: {
+          'X-Manara-CSRF': '1'
+        }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      this.logout(false);
+      return true;
+    } catch (err) {
+      console.error('Failed to delete account:', err);
+      throw err;
     }
   },
 

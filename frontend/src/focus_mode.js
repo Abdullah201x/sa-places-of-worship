@@ -231,12 +231,33 @@ export const FocusMode = {
     if (!keydownListener) {
       keydownListener = (e) => {
         if (!focusActive) return;
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
 
         const tag = (e.target.tagName || '').toLowerCase();
         if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
         const anyModalOpen = [...document.querySelectorAll('.auth-overlay')].some(o => !o.classList.contains('hidden'));
         if (anyModalOpen) return;
+
+        // Undo/Redo shortcuts in Focus Mode
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (EditBatch.undo()) {
+            showToast(currentLang === 'ar' ? '↶ تم التراجع عن التعديل الأخير' : '↶ Undid last queued edit', 'info');
+            this.renderHUD();
+          }
+          return;
+        }
+        if ((e.ctrlKey || e.metaKey) && ((e.key === 'y' || e.key === 'Y') || (e.shiftKey && (e.key === 'z' || e.key === 'Z')))) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (EditBatch.redo()) {
+            showToast(currentLang === 'ar' ? '↷ تمت إعادة التعديل' : '↷ Redid queued edit', 'info');
+            this.renderHUD();
+          }
+          return;
+        }
+
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
 
         const key = shortcutKey(e);
         const handled = key === 'Escape' || key === ']' || key === 'n' || key === '[' || key === 'p' ||

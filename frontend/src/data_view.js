@@ -7,9 +7,17 @@ export function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function buildOverpassTurboUrl(query) {
+export function buildOverpassTurboUrl(query, customBbox = null) {
   if (!query) return 'https://overpass-turbo.eu/';
-  return `https://overpass-turbo.eu/?Q=${encodeURIComponent(query.trim())}`;
+  let q = query.trim();
+  if (customBbox && typeof customBbox === 'string') {
+    if (q.includes('{{bbox}}')) {
+      q = q.replace(/\{\{bbox\}\}/g, customBbox);
+    } else if (!q.startsWith('[bbox:')) {
+      q = `[bbox:${customBbox}];\n` + q;
+    }
+  }
+  return `https://overpass-turbo.eu/?Q=${encodeURIComponent(q)}`;
 }
 
 export function formatShaBadge(sha256) {

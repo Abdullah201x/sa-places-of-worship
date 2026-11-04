@@ -8,6 +8,7 @@ manifest.json
 /*.csv
 *.pmtiles
 by-region/
+worship_gaps_sa.geojson
 
 
 # Python

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.auth import get_current_user, verify_csrf
-from app.database import get_db
+from app.database import get_db, get_db_context
 from app.limiter import limiter
 
 OSM_USER_AGENT = "Manara/1.0 (+https://manara.saudiosm.org)"
@@ -82,7 +82,6 @@ async def report_and_verify_edit(
     payload: EditReportRequest,
     _csrf: None = Depends(verify_csrf),
     user: dict = Depends(get_current_user),
-    conn=Depends(get_db),
 ):
     """
     Verify and record an OSM changeset uploaded with #sa-worship-map.
@@ -92,24 +91,25 @@ async def report_and_verify_edit(
     cid = payload.changeset_id
 
     # 1. Check if already recorded
-    with conn.cursor() as cur:
-        cur.execute("SELECT changeset_id, osm_uid, comment, verified_at, objects FROM edits WHERE changeset_id = %s;", (cid,))
-        existing = cur.fetchone()
-        if existing:
-            # A repeated report still (re)binds marks: the first report may have
-            # arrived before the mapper's 'fixed' mark existed.
-            rebound = 0
-            if existing["osm_uid"] == user["osm_uid"]:
-                with conn.transaction():
-                    with conn.cursor() as bind_cur:
-                        rebound = bind_verified_marks(bind_cur, cid, user["osm_uid"], existing["objects"] or [])
-            return {
-                "status": "ok",
-                "changeset_id": existing["changeset_id"],
-                "already_verified": True,
-                "objects_count": len(existing["objects"] or []),
-                "verified_marks_updated": rebound,
-            }
+    with get_db_context() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT changeset_id, osm_uid, comment, verified_at, objects FROM edits WHERE changeset_id = %s;", (cid,))
+            existing = cur.fetchone()
+            if existing:
+                # A repeated report still (re)binds marks: the first report may have
+                # arrived before the mapper's 'fixed' mark existed.
+                rebound = 0
+                if existing["osm_uid"] == user["osm_uid"]:
+                    with conn.transaction():
+                        with conn.cursor() as bind_cur:
+                            rebound = bind_verified_marks(bind_cur, cid, user["osm_uid"], existing["objects"] or [])
+                return {
+                    "status": "ok",
+                    "changeset_id": existing["changeset_id"],
+                    "already_verified": True,
+                    "objects_count": len(existing["objects"] or []),
+                    "verified_marks_updated": rebound,
+                }
 
     # 2. Fetch changeset metadata from OSM API once
     changeset_url = f"{OSM_CHANGESET_BASE}/{cid}.json"
@@ -190,16 +190,17 @@ async def report_and_verify_edit(
         )
 
     # 3. Store verified edit and bind marks inside an atomic transaction
-    with conn.transaction():
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO edits (changeset_id, osm_uid, objects, comment, verified_at, created_at)
-                VALUES (%s, %s, %s::jsonb, %s, NOW(), NOW())
-                ON CONFLICT (changeset_id) DO NOTHING;
-            """, (cid, user["osm_uid"], json.dumps(objects), comment))
+    with get_db_context() as conn:
+        with conn.transaction():
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO edits (changeset_id, osm_uid, objects, comment, verified_at, created_at)
+                    VALUES (%s, %s, %s::jsonb, %s, NOW(), NOW())
+                    ON CONFLICT (changeset_id) DO NOTHING;
+                """, (cid, user["osm_uid"], json.dumps(objects), comment))
 
-            # 4. Batch bind verified_changeset to user's 'fixed' marks for touched objects
-            updated_marks_count = bind_verified_marks(cur, cid, user["osm_uid"], objects)
+                # 4. Batch bind verified_changeset to user's 'fixed' marks for touched objects
+                updated_marks_count = bind_verified_marks(cur, cid, user["osm_uid"], objects)
 
     return {
         "status": "ok",

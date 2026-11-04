@@ -28,18 +28,22 @@ COPY --from=builder /app/dist /srv/manara/dist
 # Copy dataset files into the data directory
 COPY summary.json \
      places_of_worship_sa.geojson \
+     places_of_worship_sa.csv \
      worship_gaps_sa.json \
+     worship_gaps_sa.csv \
      sa_boundary.geojson \
      sa_regions.geojson \
      mosque_sizes.json \
      mosque_anomalies.json \
      suggested_mosques_sa.geojson \
+     suggested_mosques_sa.csv \
      tag_stats_sa.json \
      tags.json \
+     manifest.json \
      /srv/manara/data/
 
 RUN find /srv/manara -type f \( -name '*.html' -o -name '*.js' -o -name '*.mjs' -o -name '*.css' -o -name '*.json' \
-       -o -name '*.geojson' -o -name '*.svg' -o -name '*.txt' \) \
+       -o -name '*.geojson' -o -name '*.svg' -o -name '*.txt' -o -name '*.csv' \) \
        -exec gzip -9 -k {} \; -exec brotli -q 11 -k {} \;
 
 # Stage 3: Fast, secure Caddy edge container

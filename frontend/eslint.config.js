@@ -7,7 +7,7 @@ export default [
     files: ['src/**/*.js'],
     ignores: ['src/vendor/**'],
     languageOptions: {
-      ecmaVersion: 2023,
+      ecmaVersion: 'latest',
       sourceType: 'module',
       globals: { ...globals.browser, L: 'readonly' },
     },

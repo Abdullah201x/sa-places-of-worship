@@ -14,6 +14,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const DATA_FILES = new Set([
   'summary.json',
   'places_of_worship_sa.geojson',
+  'worship_gaps_sa.geojson',
   'worship_gaps_sa.json',
   'sa_boundary.geojson',
   'sa_regions.geojson',

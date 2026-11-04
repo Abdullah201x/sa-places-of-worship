@@ -8,7 +8,7 @@ export function setKit(k) {
   kit = k;
 }
 
-export function wantsGl(search = window.location.search) {
+export function wantsGl(search = (typeof window !== 'undefined' ? window.location?.search : '') || '') {
   const p = new URLSearchParams(search).get('map');
   if (p === 'leaflet') return false;
   return true;

@@ -134,6 +134,19 @@ export const ReviewMarks = {
     return Object.values(this._load()).filter(m => m.at >= start.getTime()).length;
   },
 
+  exportJson() {
+    const marks = this._load();
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(marks, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `manara_review_marks_${new Date().toISOString().slice(0, 10)}.json`);
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+  },
+
   // Drops marks that newer data has superseded so storage doesn't grow forever.
   prune(places) {
     const marks = this._load();

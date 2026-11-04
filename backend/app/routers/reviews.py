@@ -41,7 +41,7 @@ def get_reviews(
 
     query = """
     WITH latest_dataset AS (
-        SELECT published_at
+        SELECT COALESCE(pbf_timestamp, published_at) AS cutoff_time
         FROM dataset_versions
         ORDER BY published_at DESC
         LIMIT 1
@@ -69,8 +69,8 @@ def get_reviews(
             AND u.osm_changesets >= %s
             AND (
                 rm.verified_changeset IS NOT NULL
-                OR ld.published_at IS NULL
-                OR rm.created_at >= ld.published_at
+                OR ld.cutoff_time IS NULL
+                OR rm.created_at >= ld.cutoff_time
             )
         );
     """

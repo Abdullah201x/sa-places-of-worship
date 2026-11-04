@@ -1,0 +1,110 @@
+/* ==========================================================================
+   Manara - Mobile Responsiveness & Bottom Sheet Layout (< 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  body {
+    height: 100dvh;
+  }
+  #app-container {
+    height: 100dvh;
+  }
+
+  /* Peekable bottom sheet instead of covering full screen */
+  #sidebar {
+    top: auto;
+    bottom: 24px;
+    inset-inline-start: 12px;
+    inset-inline-end: 12px;
+    width: auto;
+    max-height: 38dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 16px;
+    transform: translateY(0);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  #app-container.sidebar-collapsed #sidebar {
+    transform: translateY(calc(100% - 44px)); /* Peekable 44px pill */
+  }
+
+  .sidebar-toggle-btn {
+    top: auto;
+    bottom: calc(38dvh + 32px);
+    inset-inline-end: 16px;
+  }
+
+  #app-container.sidebar-collapsed .sidebar-toggle-btn {
+    bottom: 72px;
+    inset-inline-end: 16px;
+  }
+
+  .toast-notification {
+    inset-inline-start: 16px;
+    inset-inline-end: 16px;
+  }
+
+  .leaflet-control-zoom-in,
+  .leaflet-control-zoom-out {
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    font-size: 18px !important;
+  }
+
+  .auth-card {
+    padding: 20px;
+  }
+}
+
+/* Phones: the top bar must fit 390 px. Tabs scroll sideways, search is icon-only,
+   and the freshness chips are hidden (the data age is also in the sidebar). */
+@media (max-width: 768px) {
+  .app-topbar {
+    padding: 0 8px;
+    gap: 6px;
+  }
+
+  .topbar-start {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .topbar-brand .brand-title {
+    display: none;
+  }
+
+  .topbar-tabs {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .topbar-tab {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .topbar-center {
+    flex: none;
+  }
+
+  .search-trigger-text,
+  .search-trigger-kbd,
+  .topbar-freshness {
+    display: none;
+  }
+
+  .topbar-search-trigger {
+    width: auto;
+    padding: 4px 10px;
+  }
+
+  .topbar-end {
+    flex: none;
+    gap: 6px;
+  }
+}
+

@@ -876,3 +876,34 @@ The full map page (not just the overlay preview) now runs on MapLibre with `/?ma
 **What the first run found (fixed):** on a 390 px phone the map page scrolled sideways by 572 px. The top bar tried to fit seven tabs, the search box, two freshness chips and two buttons in one row, and the collapsed sidebar (parked off-screen with `translateX(120%)`) widened the page. Fixes in `index.css`: a phone layout for the top bar (tabs scroll, search is icon-only, freshness chips hidden under 768 px; the data age is still in the sidebar) and `overflow: hidden` on `#app-container`.
 
 **Limits:** these tests check that things work, not that they look right or run fast. They cannot answer the open Phase 5 questions (60 fps on a mid-range Android, first-load transfer): that still needs a real phone. Expect to add a test per new route or map feature. The first CI run of the `smoke` job has not happened yet (Linux, bundled Chromium); if it is flaky there, raise the timeouts before loosening assertions.
+
+---
+
+## 21. Engineering Overhaul Completion: Phases 3 & 4 (2026-11-04)
+
+### 21.1 Phase 3: Frontend Architecture, Mobile UX & Ecosystem Integration
+1. **Modular CSS Architecture (`frontend/src/styles/`):**
+   - Decomposed monolithic 4,675-line `index.css` into 7 domain-specific modules: `tokens.css`, `topbar.css`, `sidebar.css`, `details.css`, `workspaces.css`, `modals.css`, and `mobile.css`.
+   - Converted layout to CSS logical properties (`inset-inline-start`, `padding-inline`) and `100dvh`.
+2. **Mobile Ergonomics & Accessibility:**
+   - Peekable bottom sheet (`max-height: 38dvh`) with 44px touch targets.
+   - Fixed statusbar geometry to flex row ensuring 100% visible MapLibre attribution per ODbL.
+   - Focus trapping (`trapFocus()`), `Escape` handlers, and `:focus-visible` styling on all modal dialogs.
+3. **On-Click Ecosystem Integration:**
+   - `osmose.js`: On-demand nearby Osmose issue fetching (< 0.02° bbox, session cache, 0 background polling).
+   - `data_view.js`: Dynamic map viewport `{{bbox}}` injection into Overpass Turbo queries.
+   - `field_mode.js` & PWA (`manifest.webmanifest`, `sw.js`): "Manara Field" mobile surveyor mode with 3-tap rapid amenities tagging (`female:prayer_room`, `wheelchair`, `check_date=YYYY-MM-DD`).
+
+### 21.2 Phase 4: Production Hardening, Contract Gates & Migrations
+1. **Strict Pre-Publish Contract Gate (`pipeline/validate_data.py`):**
+   - Validates PMTiles v3 magic bytes (`b"PMTiles\x03"`), min size, and non-zero addressed tile counts across all `.pmtiles` archives.
+   - Enforces `manifest.json` integrity: verifies every catalogued file exists with matching size and SHA-256.
+   - Asserts exactly 13 administrative regions in `sa_regions.geojson`.
+   - Checks `tag_stats_sa.json` English name ratio (`0.01 <= name:en < 0.95`) to prevent synthetic fallback regressions.
+   - Enforces CSV UTF-8 BOM, required `id` and `osm_type` columns, and non-empty rows.
+2. **PostgreSQL Liveness & Container Hardening:**
+   - `/api/healthz` executes a fast `SELECT 1;` with 1-second timeout, returning `{"status": "ok", "db": "ok"}` or 503 on DB disconnect.
+   - Lightweight SQL migration runner (`backend/app/database.py` & `backend/migrations/`) tracking applied scripts in `schema_migrations`.
+   - Daily retention cleanup in `pipeline/load_db.py`: prunes expired `sessions` (`expires_at < NOW()`) and audit logs older than 180 days (`review_events`, `tile_events`).
+   - Hardened `pipeline/Dockerfile` running as unprivileged `USER manara` (`uid 10001`).
+

@@ -78,7 +78,6 @@ STEPS = [
     ["build_overlays.py"],
     ["build_data_hub.py"],
     ["validate_data.py"],
-    ["load_db.py"],
 ]
 STEP_TIMEOUT_S = 45 * 60
 
@@ -216,6 +215,25 @@ def update_extract():
 # 2-5. Processing
 # ---------------------------------------------------------------------------
 
+def run_step(step, env=None):
+    if env is None:
+        env = dict(
+            os.environ,
+            MANARA_DATA_DIR=WORK_DIR,
+            OSM_PBF=PBF_PATH,
+            MANARA_WIKIDATA_SOURCE=WIKIDATA_PATH,
+            MANARA_PREVIOUS_SUMMARY=os.path.join(CURRENT_LINK, "summary.json"),
+            PYTHONUNBUFFERED="1",
+        )
+    log(f"Running {step[0]}")
+    started = time.time()
+    res = subprocess.run([sys.executable, os.path.join(CODE_DIR, step[0]), *step[1:]],
+                         cwd=WORK_DIR, env=env, timeout=STEP_TIMEOUT_S)
+    if res.returncode != 0:
+        raise RuntimeError(f"{step[0]} failed (exit {res.returncode})")
+    log(f"{step[0]} done in {time.time() - started:.0f}s")
+
+
 def run_steps():
     shutil.rmtree(WORK_DIR, ignore_errors=True)
     os.makedirs(WORK_DIR)
@@ -229,13 +247,7 @@ def run_steps():
         PYTHONUNBUFFERED="1",
     )
     for step in STEPS:
-        log(f"Running {step[0]}")
-        started = time.time()
-        res = subprocess.run([sys.executable, os.path.join(CODE_DIR, step[0]), *step[1:]],
-                             cwd=WORK_DIR, env=env, timeout=STEP_TIMEOUT_S)
-        if res.returncode != 0:
-            raise RuntimeError(f"{step[0]} failed (exit {res.returncode})")
-        log(f"{step[0]} done in {time.time() - started:.0f}s")
+        run_step(step, env=env)
 
 
 # ---------------------------------------------------------------------------
@@ -355,6 +367,8 @@ def run_once(force=False):
             log("Downloaded a new Wikidata source")
         run_steps()
         version = publish()
+        # Publish static files atomically first, then load and swap database tables
+        run_step(["load_db.py"])
         write_status(last_result="published", last_success=now, published_version=version,
                      duration_s=round(time.time() - started), last_error=None)
         return True

@@ -1,8 +1,8 @@
 import { kit } from './map_kit.js';
 import { worldPixel } from './gap_field.js';
-import { safeUrl, showToast, showLoadingText } from './ui.js';
+import { safeUrl, showToast, showLoadingText, openModal, closeModal } from './ui.js';
 // The other map modules (editing, review, exporters) still import these from app.js.
-export { safeUrl, showToast, showLoadingText };
+export { safeUrl, showToast, showLoadingText, openModal, closeModal };
 import { setupCommandPalette } from './palette.js';
 import { setupQAWorkspace, openQAWorkspace, closeQAWorkspace, isQAWorkspaceOpen, loadQAIssues } from './qa_view.js';
 import { setupChangesWorkspace, openChangesWorkspace, closeChangesWorkspace } from './changes_view.js';
@@ -12,13 +12,15 @@ import { ArabicText } from './arabic.js';
 import { ReviewMarks, hideReviewedPlaces, setHideReviewedPlaces, isHiddenByReview, markCurrentPlace, clearCurrentMark, renderReviewActions, rebuildReviewQueue, navigateReview, updateReviewNavUI, Permalink, updatePermalinkSoon, setupKeyboardShortcuts } from './review.js';
 import { Exporters } from './exporters.js';
 import { OsmApi, EditHistory } from './osm_api.js';
-import { renderQuickFixes, setupEditing, createFieldRow, readFieldValues, showFieldErrors, openEditDialog } from './editing.js';
+import { renderQuickFixes, setupEditing, createFieldRow, readFieldValues, showFieldErrors, openEditDialog, LocalPatches } from './editing.js';
 import { FocusMode } from './focus_mode.js';
 import { MOSQUE_PRESET, presetFieldIds, tagsFromValues, validateValues } from './presets.js';
 import { evaluateRules } from './validator.js';
 import { DATA_AGE_OK_MS, DATA_AGE_WARN_MS, ageLevel, clockOffset, formatAge } from './timeago.js';
 import { trackEvent } from './analytics.js';
 import { canViewSuggestions, checkSuggestionsAccess } from './suggestions_access.js';
+import { fetchNearbyOsmoseIssues, renderOsmoseResults } from './osmose.js';
+import { findNearbyPlaces, renderFieldSurveyorUI } from './field_mode.js';
 export let map;
 export let heatmapLayer = null;
 export let markerClusterLayer = null;
@@ -1158,6 +1160,7 @@ export function setupAppShell() {
 
 // main.js loads the map kit first, so this module can run after DOMContentLoaded.
 function boot() {
+  if (!document.getElementById('map')) return;
   onLanguageChange(refreshLanguageDependentUI);
   if (currentLang !== 'ar') setLanguage(currentLang);
   document.getElementById('btn-toggle-lang').addEventListener('click', () => {
@@ -1294,20 +1297,20 @@ export function setupCartoModalEvents() {
   if (configBtn && modal) {
     configBtn.addEventListener('click', () => {
       updateCartoBadgeStatus();
-      modal.classList.remove('hidden');
+      openModal(modal);
     });
   }
 
   if (closeBtn && modal) {
     closeBtn.addEventListener('click', () => {
-      modal.classList.add('hidden');
+      closeModal(modal);
     });
   }
 
   if (modal) {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
-        modal.classList.add('hidden');
+        closeModal(modal);
       }
     });
   }
@@ -1318,12 +1321,12 @@ export function setupCartoModalEvents() {
       if (key) {
         localStorage.setItem('carto_api_key', key);
         reloadBasemapLayers();
-        modal.classList.add('hidden');
+        closeModal(modal);
         showToast(t('cartoEnabled'));
       } else {
         localStorage.removeItem('carto_api_key');
         reloadBasemapLayers();
-        modal.classList.add('hidden');
+        closeModal(modal);
         showToast(t('cartoDefault'));
       }
     });
@@ -1334,7 +1337,7 @@ export function setupCartoModalEvents() {
       localStorage.removeItem('carto_api_key');
       if (inputEl) inputEl.value = '';
       reloadBasemapLayers();
-      modal.classList.add('hidden');
+      closeModal(modal);
       showToast(t('cartoRestored'));
     });
   }
@@ -1497,6 +1500,8 @@ export function loadData() {
     .then(summary => {
       dataSummary = summary || {};
       if (dataSummary.updated_at) dataVersion = dataSummary.updated_at;
+      const pbfTime = Date.parse(dataSummary.pbf_timestamp || dataSummary.published_at || dataSummary.updated_at || '');
+      if (pbfTime) LocalPatches.prune(pbfTime);
       renderDataUpdatedLabel();
       // Keep the age current while the page stays open.
       setInterval(renderDataUpdatedLabel, 30 * 1000);
@@ -1535,6 +1540,7 @@ export function loadData() {
 
 export function initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData) {
   allPlaces = poiData.features;
+  allPlaces.forEach(f => LocalPatches.apply(f.properties));
   if (isQAWorkspaceOpen()) {
     loadQAIssues();
   }
@@ -1575,10 +1581,16 @@ export function initializeDashboard(poiData, gapData, boundaryData, sizeData, an
     basemaps['satellite'] = kit.createClippedSatellite(boundaryData.geometry);
   }
 
-  // Derive the date-slider bounds from the real edited_at range in the data.
-  const days = allPlaces.map(f => dayIndex(f.properties.edited_at));
-  DATA_MIN_DAY = Math.min(...days);
-  DATA_MAX_DAY = Math.max(...days);
+  // Derive the date-slider bounds from the real edited_at range in the data (single pass, no stack overflow).
+  let minDay = Infinity;
+  let maxDay = -Infinity;
+  for (let i = 0; i < allPlaces.length; i++) {
+    const d = dayIndex(allPlaces[i].properties.edited_at);
+    if (d < minDay) minDay = d;
+    if (d > maxDay) maxDay = d;
+  }
+  DATA_MIN_DAY = Number.isFinite(minDay) ? minDay : 0;
+  DATA_MAX_DAY = Number.isFinite(maxDay) ? maxDay : 0;
   currentDateFrom = DATA_MIN_DAY;
   currentDateTo = DATA_MAX_DAY;
   initDateSliders();
@@ -1855,7 +1867,8 @@ export function updateMapLayers() {
 
 // Show detailed information about a single place of worship in the sidebar
 export function showDetails(props, lat, lon) {
-    const sbSel = document.getElementById('sb-selection');
+  props = LocalPatches.apply(props);
+  const sbSel = document.getElementById('sb-selection');
   if (sbSel) {
     const pName = props.name || props.name_en || (currentLang === 'ar' ? 'مكان بدون اسم' : 'Unnamed place');
     sbSel.textContent = `${osmTypeOf(props)}/${props.osm_id} — ${pName}`;
@@ -2026,6 +2039,29 @@ export function showDetails(props, lat, lon) {
     addNoteBtn.parentNode.replaceChild(newAddNoteBtn, addNoteBtn);
     newAddNoteBtn.addEventListener('click', () => {
       openNoteComposer(lat, lon);
+    });
+  }
+
+  // Osmose nearby QA alerts on demand
+  const osmoseBtn = document.getElementById('btn-osmose-nearby');
+  const osmoseBox = document.getElementById('osmose-results-container');
+  if (osmoseBox) {
+    osmoseBox.style.display = 'none';
+    osmoseBox.innerHTML = '';
+  }
+  if (osmoseBtn) {
+    const newOsmoseBtn = osmoseBtn.cloneNode(true);
+    osmoseBtn.parentNode.replaceChild(newOsmoseBtn, osmoseBtn);
+    newOsmoseBtn.addEventListener('click', async () => {
+      if (!osmoseBox) return;
+      osmoseBox.style.display = 'block';
+      osmoseBox.innerHTML = `<div style="font-size: 11px; color: var(--color-text-muted); padding: 8px;">${currentLang === 'ar' ? 'جارٍ فحص خادم Osmose...' : 'Checking Osmose server...'}</div>`;
+      try {
+        const result = await fetchNearbyOsmoseIssues(lat, lon);
+        renderOsmoseResults(osmoseBox, result, lat, lon);
+      } catch (err) {
+        renderOsmoseResults(osmoseBox, { error: err }, lat, lon);
+      }
     });
   }
 
@@ -2554,10 +2590,10 @@ export function setupEventListeners() {
   document.getElementById('btn-export-overpass').addEventListener('click', () => Exporters.openOverpassTurbo());
 
   const shortcutsOverlay = document.getElementById('shortcuts-overlay');
-  document.getElementById('btn-shortcuts').addEventListener('click', () => shortcutsOverlay.classList.remove('hidden'));
-  document.getElementById('btn-close-shortcuts').addEventListener('click', () => shortcutsOverlay.classList.add('hidden'));
+  document.getElementById('btn-shortcuts').addEventListener('click', () => openModal(shortcutsOverlay));
+  document.getElementById('btn-close-shortcuts').addEventListener('click', () => closeModal(shortcutsOverlay));
   shortcutsOverlay.addEventListener('click', (e) => {
-    if (e.target === shortcutsOverlay) shortcutsOverlay.classList.add('hidden');
+    if (e.target === shortcutsOverlay) closeModal(shortcutsOverlay);
   });
 
   // 3. Search Box keypress (POI Mode Only)
@@ -2768,7 +2804,7 @@ export function setupEventListeners() {
       } else {
         const authOverlay = document.getElementById('osm-auth-overlay');
         if (authOverlay) {
-          authOverlay.classList.remove('hidden');
+          openModal(authOverlay);
         }
       }
     });
@@ -2776,10 +2812,7 @@ export function setupEventListeners() {
 
   // Modal close handlers (close button, backdrop, Escape, guest notice link)
   const closeAuthModal = () => {
-    const authOverlay = document.getElementById('osm-auth-overlay');
-    if (authOverlay) {
-      authOverlay.classList.add('hidden');
-    }
+    closeModal('osm-auth-overlay');
   };
 
   const closeAuthBtn = document.getElementById('btn-close-auth-modal');
@@ -2801,7 +2834,7 @@ export function setupEventListeners() {
       closeAuthModal();
       closeAddMosqueComposer();
       closeNoteComposer();
-      document.getElementById('shortcuts-overlay').classList.add('hidden');
+      closeModal('shortcuts-overlay');
     }
   });
 
@@ -2809,10 +2842,7 @@ export function setupEventListeners() {
   if (guestLoginLink) {
     guestLoginLink.addEventListener('click', (e) => {
       e.preventDefault();
-      const overlay = document.getElementById('osm-auth-overlay');
-      if (overlay) {
-        overlay.classList.remove('hidden');
-      }
+      openModal('osm-auth-overlay');
     });
   }
 
@@ -2898,6 +2928,9 @@ export function setupEventListeners() {
       redirectUriDisplay.innerText = OsmApi.redirectUri();
     }
   }
+
+  setupAccountPrivacyModal();
+  setupFieldMode();
 
   // 7a. Suggested Additions (Wikidata mosques missing in OSM) Toggle & Chips
   // The section is hidden in the HTML and only revealed for allowlisted OSM users.
@@ -2997,13 +3030,13 @@ export function openNoteComposer(lat, lon) {
     ? t('notePostedAs', { name: displayName })
     : t('notePostedAnon');
 
-  overlay.classList.remove('hidden');
+  openModal(overlay);
   textInput.focus();
 }
 
 export function closeNoteComposer() {
   const overlay = document.getElementById('note-composer-overlay');
-  if (overlay) overlay.classList.add('hidden');
+  if (overlay) closeModal(overlay);
   pendingNoteLatLng = null;
 }
 
@@ -3168,6 +3201,128 @@ export function redirectToOSM() {
   });
 }
 
+export function setupFieldMode() {
+  const btn = document.getElementById('topbar-btn-field');
+  const overlay = document.getElementById('field-surveyor-overlay');
+  const closeBtn = document.getElementById('btn-close-field-surveyor');
+  const contentEl = document.getElementById('field-surveyor-content');
+
+  if (btn) {
+    btn.addEventListener('click', () => {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        showToast(currentLang === 'ar' ? 'خاصية تحديد الموقع غير مدعومة في متصفحك.' : 'Geolocation is not supported in your browser.');
+        return;
+      }
+      showToast(currentLang === 'ar' ? 'جارٍ تحديد موقعك الحالي للمسح الميداني...' : 'Acquiring your location for field survey...');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          if (map && typeof map.setView === 'function') {
+            map.setView([latitude, longitude], 17);
+          }
+          const nearby = findNearbyPlaces(allPlaces, latitude, longitude, 500);
+          renderFieldSurveyorUI(contentEl, latitude, longitude, nearby);
+          openModal(overlay);
+        },
+        (err) => {
+          console.warn('Geolocation error:', err);
+          showToast(currentLang === 'ar' ? 'يرجى السماح بصلاحية الموقع لعرض المساجد القريبة منك.' : 'Please allow location permission to view nearby mosques.');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      );
+    });
+  }
+
+  if (closeBtn && overlay) {
+    closeBtn.addEventListener('click', () => closeModal(overlay));
+  }
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal(overlay);
+    });
+  }
+}
+
+export function setupAccountPrivacyModal() {
+  const settingsBtn = document.getElementById('btn-user-settings');
+  const modal = document.getElementById('account-privacy-dialog');
+  const closeBtn = document.getElementById('btn-close-privacy-dialog');
+  const optInChk = document.getElementById('chk-leaderboard-opt-in');
+  const exportBtn = document.getElementById('btn-export-my-marks');
+  const deleteBtn = document.getElementById('btn-delete-account');
+
+  if (settingsBtn && modal) {
+    settingsBtn.addEventListener('click', async () => {
+      openModal(modal);
+      const displayName = localStorage.getItem('osm_user_display_name') || '-';
+      const uid = localStorage.getItem('osm_uid') || '-';
+      const nameEl = document.getElementById('privacy-user-name');
+      const uidEl = document.getElementById('privacy-user-uid');
+      if (nameEl) nameEl.textContent = displayName;
+      if (uidEl) uidEl.textContent = `OSM UID: ${uid}`;
+
+      const me = await OsmApi.getMe();
+      if (me) {
+        if (nameEl) nameEl.textContent = me.display_name;
+        if (uidEl) uidEl.textContent = `OSM UID: ${me.osm_uid}`;
+        const editCountEl = document.getElementById('privacy-edit-count');
+        if (editCountEl) {
+          const count = me.osm_changesets ?? 0;
+          editCountEl.textContent = currentLang === 'ar' ? `${fmtNum(count)} تعديل موثق` : `${fmtNum(count)} verified edits`;
+        }
+        if (optInChk) {
+          optInChk.checked = !!me.leaderboard_opt_in;
+        }
+      }
+    });
+  }
+
+  if (closeBtn && modal) {
+    closeBtn.addEventListener('click', () => closeModal(modal));
+  }
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal(modal);
+    });
+  }
+
+  if (optInChk) {
+    optInChk.addEventListener('change', async () => {
+      try {
+        await OsmApi.updateMe({ leaderboard_opt_in: optInChk.checked });
+        showToast(currentLang === 'ar' ? 'تم تحديث إعدادات لوحة الشرف.' : 'Leaderboard settings updated.');
+      } catch {
+        showToast(currentLang === 'ar' ? 'تعذر حفظ الإعدادات.' : 'Failed to save settings.');
+      }
+    });
+  }
+
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      ReviewMarks.exportJson();
+      showToast(currentLang === 'ar' ? 'تم تصدير علامات المراجعة بنجاح.' : 'Review marks exported successfully.');
+    });
+  }
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', async () => {
+      const confirmMsg = currentLang === 'ar'
+        ? 'هل أنت متأكد تماماً من رغبتك في حذف حسابك وكافة سجلاتك من منارة؟ لا يمكن التراجع عن هذا الإجراء.'
+        : 'Are you sure you want to permanently delete your account and all records from Manara? This cannot be undone.';
+      if (window.confirm(confirmMsg)) {
+        try {
+          await OsmApi.deleteAccount();
+          closeModal(modal);
+          showToast(currentLang === 'ar' ? 'تم مسح حسابك وكافة سجلاتك بنجاح.' : 'Account and data erased successfully.');
+          window.location.reload();
+        } catch {
+          showToast(currentLang === 'ar' ? 'تعذر مسح الحساب.' : 'Failed to erase account.');
+        }
+      }
+    });
+  }
+}
+
 export function updateUserWidgetUI() {
   const widget = document.getElementById('user-profile-widget');
   const nameEl = document.getElementById('user-display-name');
@@ -3317,7 +3472,7 @@ export function openAddMosqueComposer(lat, lon, prefill = {}) {
         <div style="background: rgba(255, 176, 58, 0.1); border: 1px solid rgba(255, 176, 58, 0.3); padding: 8px 12px; border-radius: 8px; margin-bottom: 6px;">
           <p style="color: #ffb03a; margin: 0 0 6px 0; font-size: 11.5px;">${escapeHtml(t('addMosqueNeedsAuth'))}</p>
           <button type="button" id="btn-add-mosque-quick-login" class="quick-fix-btn" style="font-size: 11.5px; padding: 4px 10px; cursor: pointer;">
-            ${escapeHtml(t('authSuccess') ? 'تسجيل الدخول عبر OSM' : 'Log in with OSM')}
+            ${escapeHtml(currentLang === 'ar' ? 'تسجيل الدخول عبر OSM' : 'Log in with OSM')}
           </button>
         </div>
       `;
@@ -3331,13 +3486,13 @@ export function openAddMosqueComposer(lat, lon, prefill = {}) {
     }
   }
 
-  overlay.classList.remove('hidden');
+  openModal(overlay);
   nameArInput.focus();
 }
 
 export function closeAddMosqueComposer() {
   const overlay = document.getElementById('add-mosque-overlay');
-  if (overlay) overlay.classList.add('hidden');
+  if (overlay) closeModal(overlay);
   pendingMosqueLatLng = null;
   pendingMosqueSuggestionQid = null;
   removeMosqueMarker();

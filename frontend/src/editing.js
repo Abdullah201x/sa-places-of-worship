@@ -9,6 +9,7 @@ import { Exporters } from './exporters.js';
 import { OsmApi, EditHistory } from './osm_api.js';
 import { FIELDS, MOSQUE_PRESET, BUILDING_YES_RULE, fieldLabel, fieldPlaceholder, fieldOptions, optionLabel, normalizeValue, validateValue, outdatedRules, upgradeChanges, tagsFromProps } from './presets.js';
 import { allPlaces, selectedPlace, denomLabel, osmTypeOf, getIssues, invalidateIssues, updateImprovementIssueCounts, showToast, placeName, showDetails } from './app.js';
+import { openModal, closeModal } from './ui.js';
 import { FocusMode, CHANGESET_LIMITS, getChangesetSizeReminder } from './focus_mode.js';
 
 addTranslations({
@@ -54,6 +55,9 @@ addTranslations({
   batchIntro: ['تُرفع جميع التعديلات أدناه في مجموعة تغييرات واحدة. كل تعديل راجعته بنفسك.', 'All edits below are uploaded in a single changeset. Each one was reviewed by you.'],
   batchEmpty: ['الدفعة فارغة.', 'The batch is empty.'],
   batchRemove: ['إزالة', 'Remove'],
+  batchRefetchRetry: ['إعادة جلب ومحاولة', 'Re-fetch & Retry'],
+  batchRefetched: ['تم تحديث الإصدار إلى {v}.', 'Refetched to version {v}.'],
+  batchConflictBadge: ['تعارض', 'Conflict'],
   batchUpload: ['رفع {n} تعديل في مجموعة تغييرات واحدة', 'Upload {n} edits in one changeset'],
   batchClear: ['إفراغ الدفعة', 'Clear batch'],
   batchProgress: ['جارٍ الرفع {current} / {total}...', 'Uploading {current} / {total}...'],
@@ -76,6 +80,9 @@ export const FIX_COMMENT_SUMMARY = {
   missing_name_en: 'add name:en',
   missing_denom: 'add denomination',
   outdated_tags: 'upgrade outdated tags',
+  female_prayer_room: 'survey women prayer facilities',
+  wheelchair_access: 'survey wheelchair accessibility',
+  place_of_worship_type: 'survey place of worship classification',
 };
 
 // Issue id -> how to fix it, built from the mosque preset (presets.js).
@@ -116,6 +123,21 @@ export const QUICK_FIXES = {
     target: props => (outdatedRules(props).every(r => Object.keys(r.old).every(k => k === 'building')) ? 'place' : 'poi'),
     source: 'local knowledge',
     edits: (_, props) => ({ upgrade: outdatedRules(props) })
+  },
+  female_prayer_room: {
+    target: 'poi',
+    source: 'survey',
+    edits: v => ({ set: { 'female:prayer_room': v, 'check_date': new Date().toISOString().slice(0, 10) } })
+  },
+  wheelchair_access: {
+    target: 'poi',
+    source: 'survey',
+    edits: v => ({ set: { 'wheelchair': v, 'check_date': new Date().toISOString().slice(0, 10) } })
+  },
+  place_of_worship_type: {
+    target: 'poi',
+    source: 'survey',
+    edits: v => ({ set: { 'place_of_worship': v, 'check_date': new Date().toISOString().slice(0, 10) } })
   }
 };
 
@@ -135,6 +157,9 @@ export function findPlaceByKey(key) {
 // marks the place fixed so it stays hidden until the pipeline publishes the
 // new version.
 export function applyUploadedTagsToPlace(placeKey, result) {
+  if (result.type && result.id && result.newTags) {
+    LocalPatches.set(result.type, result.id, result.newVersion, result.newTags);
+  }
   const f = findPlaceByKey(placeKey);
   if (!f) return;
   const props = f.properties;
@@ -151,6 +176,7 @@ export function applyUploadedTagsToPlace(placeKey, result) {
   } else {
     props._editedNodeVersion = result.newVersion;
   }
+  props._locallyPatched = true;
   return markSynced;
 }
 
@@ -374,8 +400,8 @@ export function openOverlay(id, build) {
   const overlay = document.getElementById(id);
   const card = overlay.querySelector('.auth-card');
   card.innerHTML = '';
-  build(card, () => overlay.classList.add('hidden'));
-  overlay.classList.remove('hidden');
+  build(card, () => closeModal(overlay));
+  openModal(overlay);
   return overlay;
 }
 
@@ -558,10 +584,125 @@ export async function uploadSingle(item, comment, source) {
 }
 
 // ---------------------------------------------------------------------------
+// Local Patches Overlay (manara_local_patches_v1)
+// Overlays locally uploaded tags onto static GeoJSON/PMTiles until the next
+// daily pipeline build publishes an updated dataset.
+// ---------------------------------------------------------------------------
+export const LocalPatches = {
+  KEY: 'manara_local_patches_v1',
+
+  all() {
+    try {
+      return JSON.parse(localStorage.getItem(this.KEY)) || {};
+    } catch (_) {
+      return {};
+    }
+  },
+
+  get(type, id) {
+    const patches = this.all();
+    return patches[`${type}/${id}`] || null;
+  },
+
+  set(type, id, version, tags, pbfCutoff = null) {
+    const patches = this.all();
+    patches[`${type}/${id}`] = {
+      type,
+      id,
+      version,
+      tags: { ...tags },
+      uploadedAt: Date.now(),
+      pbfCutoff,
+    };
+    try {
+      localStorage.setItem(this.KEY, JSON.stringify(patches));
+    } catch (_) {}
+  },
+
+  setMany(results, pbfCutoff = null) {
+    const patches = this.all();
+    const now = Date.now();
+    let count = 0;
+    (results || []).forEach(r => {
+      if (r && r.status === 'success' && r.newTags) {
+        patches[`${r.type}/${r.id}`] = {
+          type: r.type,
+          id: r.id,
+          version: r.newVersion,
+          tags: { ...r.newTags },
+          uploadedAt: now,
+          pbfCutoff,
+        };
+        count++;
+      }
+    });
+    if (count > 0) {
+      try {
+        localStorage.setItem(this.KEY, JSON.stringify(patches));
+      } catch (_) {}
+    }
+  },
+
+  // Removes patches that are older than the published dataset's pbf_timestamp
+  prune(pbfTimestampMs) {
+    if (!pbfTimestampMs) return;
+    const patches = this.all();
+    let changed = false;
+    for (const [k, p] of Object.entries(patches)) {
+      if (p.uploadedAt <= pbfTimestampMs) {
+        delete patches[k];
+        changed = true;
+      }
+    }
+    if (changed) {
+      try {
+        localStorage.setItem(this.KEY, JSON.stringify(patches));
+      } catch (_) {}
+    }
+  },
+
+  // Overlays any local patch onto a place's properties object
+  apply(props) {
+    if (!props) return props;
+    const type = props.osm_type || (props.geom_type === 'Point' ? 'node' : 'way');
+    const id = props.osm_id;
+    if (!id) return props;
+    const patch = this.get(type, id);
+    if (!patch || !patch.tags) return props;
+
+    const t = patch.tags;
+    if (t.name) props.name = t.name;
+    if (t['name:ar']) props.name_ar = t['name:ar'];
+    if (t['name:en']) {
+      props.name_en = t['name:en'];
+      props.name_en_original = t['name:en'];
+    }
+    if (t.denomination) props.denomination = t.denomination;
+    if (t.religion) props.religion = t.religion;
+    if (t.building) props.building = t.building;
+    if (t.amenity) props.amenity = t.amenity;
+    if (t.wheelchair) props.wheelchair = t.wheelchair;
+    if (t['female:prayer_room'] || t.female) {
+      props.female = t['female:prayer_room'] || t.female;
+    }
+    if (t.wikidata) props.wikidata = t.wikidata;
+    if (t.opening_hours) props.opening_hours = t.opening_hours;
+    if (patch.version) props.version = patch.version;
+    props._locallyPatched = true;
+    props._patchedAt = patch.uploadedAt;
+    return props;
+  }
+};
+
+// ---------------------------------------------------------------------------
 // Batch queue (localStorage), uploaded as one changeset
+// Persisted in manara_pending_edits_v1 with Undo/Redo support
 // ---------------------------------------------------------------------------
 export const EditBatch = {
-  KEY: 'gcc_edit_batch',
+  KEY: 'manara_pending_edits_v1',
+  LEGACY_KEY: 'gcc_edit_batch',
+  UNDO_KEY: 'manara_edits_undo_v1',
+  REDO_KEY: 'manara_edits_redo_v1',
   _listeners: new Set(),
 
   subscribe(fn) {
@@ -571,22 +712,89 @@ export const EditBatch = {
 
   items() {
     try {
-      return JSON.parse(localStorage.getItem(this.KEY)) || [];
-    } catch (e) {
+      const stored = localStorage.getItem(this.KEY);
+      if (stored) return JSON.parse(stored);
+      // Migrate from legacy key if present
+      const legacy = localStorage.getItem(this.LEGACY_KEY);
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        localStorage.setItem(this.KEY, legacy);
+        localStorage.removeItem(this.LEGACY_KEY);
+        return parsed;
+      }
+      return [];
+    } catch (_) {
       return [];
     }
   },
 
-  _save(items) {
+  _getStack(key) {
+    try {
+      return JSON.parse(sessionStorage.getItem(key)) || [];
+    } catch (_) {
+      return [];
+    }
+  },
+
+  _setStack(key, stack) {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(stack.slice(-20))); // cap at 20 steps
+    } catch (_) {}
+  },
+
+  _save(items, recordUndo = true) {
+    if (recordUndo) {
+      const prev = this.items();
+      const undoStack = this._getStack(this.UNDO_KEY);
+      undoStack.push(prev);
+      this._setStack(this.UNDO_KEY, undoStack);
+      this._setStack(this.REDO_KEY, []); // clear redo on new action
+    }
     try {
       localStorage.setItem(this.KEY, JSON.stringify(items));
-    } catch (e) {
-      // Ignore storage errors in private browsing
-    }
+    } catch (_) {}
     renderBatchDock();
     this._listeners.forEach(fn => {
       try { fn(items); } catch (_) {}
     });
+  },
+
+  canUndo() {
+    return this._getStack(this.UNDO_KEY).length > 0;
+  },
+
+  canRedo() {
+    return this._getStack(this.REDO_KEY).length > 0;
+  },
+
+  undo() {
+    const undoStack = this._getStack(this.UNDO_KEY);
+    if (!undoStack.length) return false;
+    const prev = undoStack.pop();
+    this._setStack(this.UNDO_KEY, undoStack);
+
+    const current = this.items();
+    const redoStack = this._getStack(this.REDO_KEY);
+    redoStack.push(current);
+    this._setStack(this.REDO_KEY, redoStack);
+
+    this._save(prev, false);
+    return true;
+  },
+
+  redo() {
+    const redoStack = this._getStack(this.REDO_KEY);
+    if (!redoStack.length) return false;
+    const next = redoStack.pop();
+    this._setStack(this.REDO_KEY, redoStack);
+
+    const current = this.items();
+    const undoStack = this._getStack(this.UNDO_KEY);
+    undoStack.push(current);
+    this._setStack(this.UNDO_KEY, undoStack);
+
+    this._save(next, false);
+    return true;
   },
 
   isQueued(placeKeyOrProps, fixId = null) {
@@ -633,6 +841,7 @@ export const EditBatch = {
 };
 
 export function renderBatchDock() {
+  if (typeof document === 'undefined') return;
   const dock = document.getElementById('batch-dock');
   if (!dock) return;
   const n = EditBatch.items().length;
@@ -689,7 +898,35 @@ export function openBatchDialog() {
     items.forEach((item, i) => {
       const li = document.createElement('li');
       const text = document.createElement('span');
-      text.textContent = `${item.label} — ${item.summary} (${item.type}/${item.id})`;
+      const statusBadge = item.lastStatus === 'conflict'
+        ? ` <span class="batch-conflict-tag" style="color: var(--color-warning, #f59e0b); font-weight: 600;">[${t('batchConflictBadge')}]</span>`
+        : '';
+      text.innerHTML = `${item.label} — ${item.summary} (${item.type}/${item.id})${statusBadge}`;
+
+      const btnGroup = document.createElement('div');
+      btnGroup.style.display = 'flex';
+      btnGroup.style.gap = '6px';
+
+      const retryBtn = document.createElement('button');
+      retryBtn.type = 'button';
+      retryBtn.className = 'review-action-btn subtle';
+      retryBtn.textContent = t('batchRefetchRetry');
+      retryBtn.addEventListener('click', async () => {
+        retryBtn.disabled = true;
+        try {
+          const fresh = await OsmApi.fetchElement(item.type, item.id);
+          item.expectedVersion = fresh.version;
+          item.force = true;
+          delete item.lastStatus;
+          EditBatch.replace(items);
+          showToast(t('batchRefetched', { v: fresh.version }));
+          openBatchDialog();
+        } catch (err) {
+          showToast(err.message, 'error');
+          retryBtn.disabled = false;
+        }
+      });
+
       const rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'review-action-btn subtle';
@@ -698,7 +935,9 @@ export function openBatchDialog() {
         EditBatch.remove(i);
         openBatchDialog();
       });
-      li.append(text, rm);
+
+      btnGroup.append(retryBtn, rm);
+      li.append(text, btnGroup);
       list.appendChild(li);
     });
     body.appendChild(list);
@@ -753,8 +992,15 @@ export function openBatchDialog() {
           // Marks reach the server before the changeset is reported for binding.
           await Promise.all(markSyncs);
           if (changesetId) OsmApi.reportEdit(changesetId);
-          // Keep only what still needs attention.
-          EditBatch.replace(items.filter((_, i) => ['conflict', 'error'].includes(results[i].status)));
+          // Keep only what still needs attention, tracking status for conflict resolution.
+          const kept = [];
+          items.forEach((item, i) => {
+            if (['conflict', 'error'].includes(results[i].status)) {
+              item.lastStatus = results[i].status;
+              kept.push(item);
+            }
+          });
+          EditBatch.replace(kept);
           refreshAfterEdits();
           const msg = t('batchDone', {
             ok: fmtNum(counts.success), skipped: fmtNum(counts.unchanged),
@@ -777,7 +1023,31 @@ export function openBatchDialog() {
         EditBatch.replace([]);
         close();
       });
-      body.append(comment.wrap, sourceWrap, progress, uploadBtn, clearBtn);
+
+      const undoRedoWrap = document.createElement('div');
+      undoRedoWrap.style.display = 'flex';
+      undoRedoWrap.style.gap = '8px';
+
+      const undoBtn = document.createElement('button');
+      undoBtn.type = 'button';
+      undoBtn.className = 'carto-clear-btn';
+      undoBtn.textContent = '↶ ' + (currentLang === 'ar' ? 'تراجع (Ctrl+Z)' : 'Undo (Ctrl+Z)');
+      undoBtn.disabled = !EditBatch.canUndo();
+      undoBtn.addEventListener('click', () => {
+        if (EditBatch.undo()) openBatchDialog();
+      });
+
+      const redoBtn = document.createElement('button');
+      redoBtn.type = 'button';
+      redoBtn.className = 'carto-clear-btn';
+      redoBtn.textContent = '↷ ' + (currentLang === 'ar' ? 'إعادة (Ctrl+Y)' : 'Redo (Ctrl+Y)');
+      redoBtn.disabled = !EditBatch.canRedo();
+      redoBtn.addEventListener('click', () => {
+        if (EditBatch.redo()) openBatchDialog();
+      });
+
+      undoRedoWrap.append(undoBtn, redoBtn);
+      body.append(comment.wrap, sourceWrap, progress, uploadBtn, clearBtn, undoRedoWrap);
     }
 
     const closeBtn = document.createElement('button');
@@ -884,13 +1154,14 @@ export function setupEditing() {
   document.getElementById('btn-edit-history').addEventListener('click', openHistoryDialog);
   ['edit-overlay', 'batch-overlay', 'history-overlay'].forEach(id => {
     const overlay = document.getElementById(id);
+    if (!overlay) return;
     overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.classList.add('hidden');
+      if (e.target === overlay) closeModal(overlay);
     });
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      ['edit-overlay', 'batch-overlay', 'history-overlay'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      ['edit-overlay', 'batch-overlay', 'history-overlay'].forEach(id => closeModal(id));
     }
   });
   renderBatchDock();

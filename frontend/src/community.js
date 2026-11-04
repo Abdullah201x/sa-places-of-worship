@@ -552,6 +552,21 @@ function populateHistoryRegionSelect() {
 }
 
 function getAggregatedKingdomSeries(rows) {
+  // If backend provided pre-aggregated 'ALL' rows, return them directly
+  const allRows = rows.filter(r => r.region_code === 'ALL');
+  if (allRows.length > 0) {
+    return allRows
+      .map(r => ({
+        version: r.version || '-',
+        recorded_at: r.recorded_at,
+        places_count: Number(r.places_count || 0),
+        gaps_count: Number(r.gaps_count || 0),
+        suggestions_count: Number(r.suggestions_count || 0),
+        anomalies_count: Number(r.anomalies_count || 0),
+      }))
+      .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
+  }
+
   const byVersion = new Map();
   rows.forEach(row => {
     const ver = row.version || row.recorded_at;
@@ -579,9 +594,9 @@ function getAggregatedKingdomSeries(rows) {
     }
   });
 
-  return Array.from(byVersion.values()).sort(
-    (a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
-  );
+  return Array.from(byVersion.values())
+    .filter(entry => entry.regions_seen >= 13)
+    .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
 }
 
 function getRegionSeries(rows, regionCode) {
@@ -1082,7 +1097,7 @@ async function loadCommunityData() {
     const [statsRes, regionsRes, historyRes, metaRes, meRes, lbRes, editsRes, changesRes] = await Promise.all([
       fetchJson('/api/v1/stats'),
       fetchJson('/api/v1/stats/regions'),
-      fetchJson('/api/v1/stats/history?limit=200'),
+      fetchJson('/api/v1/stats/history?limit=1170'),
       fetchJson('/api/v1/meta').catch(() => null),
       fetchJson('/api/v1/me').catch(() => null),
       fetchJson('/api/v1/leaderboard').catch(() => ({ leaderboard: [] })),

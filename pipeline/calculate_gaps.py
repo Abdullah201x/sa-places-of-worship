@@ -14,13 +14,22 @@ from common import (BASE_DIR, M_PER_DEG_LAT, M_PER_DEG_LON, find_pbf, load_bound
 # Through-traffic road classes are downweighted: OSM fragments them into many
 # short tagged segments (speed/lane/name changes), which inflates apparent
 # density in cities without indicating where people actually live.
+# Exclude non-residential and through-transit/infrastructure ways
+EXCLUDED_HIGHWAYS = {
+    'footway', 'path', 'steps', 'cycleway', 'pedestrian',
+    'bridleway', 'corridor', 'platform', 'elevator',
+    'proposed', 'construction', 'abandoned', 'escape', 'sidewalk',
+    'track', 'service', 'motorway', 'motorway_link', 'trunk', 'trunk_link',
+    'raceway', 'bus_guideway'
+}
+
 HIGHWAY_WEIGHTS = {
-    'motorway': 0.2,
-    'motorway_link': 0.2,
-    'trunk': 0.2,
-    'trunk_link': 0.2,
     'primary': 0.3,
     'primary_link': 0.3,
+    'secondary': 0.6,
+    'secondary_link': 0.6,
+    'tertiary': 0.8,
+    'tertiary_link': 0.8,
 }
 DEFAULT_HIGHWAY_WEIGHT = 1.0
 
@@ -30,44 +39,33 @@ class DrivableRoadExtractor(osmium.SimpleHandler):
         super().__init__()
         self.boundary_prep = boundary_prep
         self.minx, self.miny, self.maxx, self.maxy = bounds
-        # (centroid_lon, centroid_lat, highway-weighted length in meters, residential_length_m)
+        # (segment_lon, segment_lat, weighted_length_m, residential_length_m)
         self.roads = []
 
     def way(self, w):
         tags = w.tags
         if 'highway' in tags:
             h_type = tags['highway']
-            # Exclude non-drivable pedestrian, construction, and service paths
-            if h_type not in (
-                'footway', 'path', 'steps', 'cycleway', 'pedestrian',
-                'bridleway', 'corridor', 'platform', 'elevator',
-                'proposed', 'construction', 'abandoned', 'escape', 'sidewalk'
-            ):
+            if h_type not in EXCLUDED_HIGHWAYS:
                 try:
-                    # Single traversal coordinate retrieval to avoid repeated C++ wrapper overhead
                     coords = [(node.lon, node.lat) for node in w.nodes]
                     n_nodes = len(coords)
                     if n_nodes >= 2:
-                        sum_lon = 0.0
-                        sum_lat = 0.0
-                        for lon, lat in coords:
-                            sum_lon += lon
-                            sum_lat += lat
-                        centroid_lon = sum_lon / n_nodes
-                        centroid_lat = sum_lat / n_nodes
-
-                        if self.minx <= centroid_lon <= self.maxx and self.miny <= centroid_lat <= self.maxy:
-                            pt = Point(centroid_lon, centroid_lat)
-                            if self.boundary_prep.contains(pt):
-                                length_m = 0.0
-                                for i in range(n_nodes - 1):
-                                    dx = (coords[i+1][0] - coords[i][0]) * M_PER_DEG_LON
-                                    dy = (coords[i+1][1] - coords[i][1]) * M_PER_DEG_LAT
-                                    length_m += math.hypot(dx, dy)
-                                weight = HIGHWAY_WEIGHTS.get(h_type, DEFAULT_HIGHWAY_WEIGHT)
-                                is_residential = h_type in ('residential', 'living_street')
-                                res_len_m = length_m if is_residential else 0.0
-                                self.roads.append((centroid_lon, centroid_lat, length_m * weight, res_len_m))
+                        weight = HIGHWAY_WEIGHTS.get(h_type, DEFAULT_HIGHWAY_WEIGHT)
+                        is_residential = h_type in ('residential', 'living_street')
+                        for i in range(n_nodes - 1):
+                            c1 = coords[i]
+                            c2 = coords[i+1]
+                            seg_lon = (c1[0] + c2[0]) / 2.0
+                            seg_lat = (c1[1] + c2[1]) / 2.0
+                            if self.minx <= seg_lon <= self.maxx and self.miny <= seg_lat <= self.maxy:
+                                m_per_deg_lon_local = 111_320.0 * math.cos(math.radians(seg_lat))
+                                dx = (c2[0] - c1[0]) * m_per_deg_lon_local
+                                dy = (c2[1] - c1[1]) * M_PER_DEG_LAT
+                                seg_len = math.hypot(dx, dy)
+                                if seg_len > 0:
+                                    res_len = seg_len if is_residential else 0.0
+                                    self.roads.append((seg_lon, seg_lat, seg_len * weight, res_len))
                 except osmium.InvalidLocationError:
                     pass
 
@@ -110,7 +108,7 @@ def main():
 
     print("Indexing places of worship for nearest-distance queries...")
     worship_tree = STRtree([
-        Point(f["geometry"]["coordinates"][0] * M_PER_DEG_LON,
+        Point(f["geometry"]["coordinates"][0] * (111_320.0 * math.cos(math.radians(f["geometry"]["coordinates"][1]))),
               f["geometry"]["coordinates"][1] * M_PER_DEG_LAT)
         for f in worship_features
     ])
@@ -155,7 +153,7 @@ def main():
 
         candidate_keys.append(key)
         candidate_points.append((rep_lon, rep_lat))
-        candidate_points_m.append(Point(rep_lon * M_PER_DEG_LON, rep_lat * M_PER_DEG_LAT))
+        candidate_points_m.append(Point(rep_lon * (111_320.0 * math.cos(math.radians(rep_lat))), rep_lat * M_PER_DEG_LAT))
         candidate_lengths.append(cell["road_length_m"])
         candidate_res_lengths.append(cell["res_length_m"])
 

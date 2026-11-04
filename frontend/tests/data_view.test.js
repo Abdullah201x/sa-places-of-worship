@@ -33,6 +33,20 @@ describe('Data Hub View Helpers', () => {
       expect(url).toContain(encodeURIComponent(q));
     });
 
+    it('injects dynamic bbox when provided', () => {
+      const q = 'nwr["amenity"="place_of_worship"]({{bbox}}); out;';
+      const bbox = '24.1,46.5,24.9,47.2';
+      const url = buildOverpassTurboUrl(q, bbox);
+      expect(url).toContain(encodeURIComponent('nwr["amenity"="place_of_worship"](24.1,46.5,24.9,47.2); out;'));
+    });
+
+    it('prepends bbox clause if query lacks {{bbox}} template', () => {
+      const q = 'nwr["amenity"="place_of_worship"]; out;';
+      const bbox = '24.1,46.5,24.9,47.2';
+      const url = buildOverpassTurboUrl(q, bbox);
+      expect(decodeURIComponent(url)).toContain('[bbox:24.1,46.5,24.9,47.2];');
+    });
+
     it('handles empty query', () => {
       expect(buildOverpassTurboUrl('')).toBe('https://overpass-turbo.eu/');
       expect(buildOverpassTurboUrl(null)).toBe('https://overpass-turbo.eu/');

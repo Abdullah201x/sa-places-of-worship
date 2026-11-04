@@ -1,0 +1,24 @@
+key: opening_hours
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: أوقات الفتح والعمل
+  en: Opening hours
+saudi_notes:
+  ar: 'يوضح ساعات فتح المسجد. المساجد والجوامع عادة ما تُفتح قبل الأذان وتُغلق بعد الصلاة، وبعض مساجد الطرق السريعة ومحطات الوقود مفتوحة على مدار الساعة (24/7).'
+  en: 'Indicates the operating hours of the mosque. Urban mosques typically open before the call to prayer and close after prayer, whereas highway mosques often operate 24/7.'
+examples:
+  good:
+  - tags:
+      opening_hours: 24/7
+  bad:
+  - tags:
+      opening_hours: مفتوح دائما
+    why:
+      ar: يجب استخدام الصيغة القياسية لوسم أوقات الفتح في OSM (مثل 24/7).
+      en: Use the standard OSM opening_hours syntax (e.g. 24/7).
+rules: []
+wiki: https://wiki.openstreetmap.org/wiki/Key:opening_hours

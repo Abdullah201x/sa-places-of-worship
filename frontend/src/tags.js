@@ -2,6 +2,7 @@
 import './styles/fonts.css';
 import './styles/page.css';
 import './styles/tags.css';
+import './translations_static.js';
 import { currentLang, setLanguage, addTranslations } from './i18n.js';
 import { ArabicText } from './arabic.js';
 import { initAnalytics } from './analytics.js';

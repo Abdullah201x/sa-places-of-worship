@@ -10,6 +10,7 @@ from build_data_hub import (
     sha256_file,
     generate_places_csv,
     generate_gaps_csv,
+    generate_gaps_geojson,
     generate_suggestions_csv,
     generate_regional_exports,
     stamp_region_codes,
@@ -92,6 +93,36 @@ def test_generate_gaps_csv(tmp_path):
     assert "grid_x" in lines[0]
     assert "12500" in lines[1]
     assert "45.0" in lines[1]
+
+
+def test_generate_gaps_geojson(tmp_path):
+    gaps_json_path = tmp_path / "worship_gaps_sa.json"
+    geojson_path = tmp_path / "worship_gaps_sa.geojson"
+
+    sample_gaps = {
+        "grid_size": 0.004,
+        "fields": ["gx", "gy", "road_length_m", "gap_score", "urgency_score"],
+        "cells": [
+            [12500, 6500, 1500, 12.5, 45.0],
+            [12501, 6501, 800, 8.2, 25.0],
+        ]
+    }
+    gaps_json_path.write_text(json.dumps(sample_gaps), encoding="utf-8")
+
+    count = generate_gaps_geojson(str(gaps_json_path), str(geojson_path))
+    assert count == 2
+    assert geojson_path.exists()
+
+    data = json.loads(geojson_path.read_text(encoding="utf-8"))
+    assert data["type"] == "FeatureCollection"
+    assert len(data["features"]) == 2
+    f0 = data["features"][0]
+    assert f0["geometry"]["type"] == "Polygon"
+    assert f0["properties"]["grid_x"] == 12500
+    assert f0["properties"]["urgency_score"] == 45.0
+    coords = f0["geometry"]["coordinates"][0]
+    assert len(coords) == 5  # closed linear ring
+    assert coords[0] == coords[-1]
 
 
 def test_generate_suggestions_csv(tmp_path):

@@ -7,10 +7,18 @@ import './styles/index.css';
 import './translations.js';
 import './translations_static.js';
 import { initAnalytics } from './analytics.js';
-import { setKit, wantsGl } from './map_kit.js';
+import { setKit } from './map_kit.js';
 
-const { kit } = await (wantsGl() ? import('./kit_gl.js') : import('./kit_leaflet.js'));
+const [{ kit }] = await Promise.all([
+  import('./kit_gl.js'),
+  import('./app.js'),
+]);
 setKit(kit);
-await import('./app.js');
 
 initAnalytics();
+
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}

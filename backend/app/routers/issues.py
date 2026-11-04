@@ -115,13 +115,15 @@ def get_issues(
         # Dynamic fallback on places table
         rule_conditions = {
             "missing_amenity": "(p.building = 'mosque' AND p.amenity != 'place_of_worship')",
-            "missing_name": "(p.name = '' OR p.name_norm IN ('مسجد', 'جامع', 'مصلى'))",
-            "missing_name_en": "(p.name != '' AND p.name_norm NOT IN ('مسجد', 'جامع', 'مصلى') AND (p.name_en = '' OR p.name = p.name_en))",
+            "missing_name": "(COALESCE(p.name_original, '') = '' OR LOWER(TRIM(COALESCE(p.name_original, ''))) IN ('مسجد', 'جامع', 'مصلى', 'مصلي', 'الجامع', 'المسجد', 'المصلى', 'محراب', 'جمعه', 'بدون اسم', 'بلا اسم', 'mosque', 'masjid', 'unnamed', 'place of worship') OR LOWER(TRIM(p.name)) IN ('mosque', 'masjid', 'place of worship'))",
+            "missing_name_en": "((COALESCE(p.name_original, '') != '' AND LOWER(TRIM(p.name_original)) NOT IN ('مسجد', 'جامع', 'مصلى', 'مصلي', 'الجامع', 'المسجد', 'المصلى', 'محراب', 'جمعه', 'بدون اسم', 'بلا اسم', 'mosque', 'masjid', 'unnamed', 'place of worship') AND LOWER(TRIM(p.name)) NOT IN ('mosque', 'masjid', 'place of worship')) AND (COALESCE(p.name_en_original, '') = '' OR LOWER(TRIM(COALESCE(p.name_en_original, ''))) = LOWER(TRIM(p.name_original)) OR p.name_en = '' OR p.name = p.name_en))",
             "missing_denom": "(p.religion = 'muslim' AND (p.denomination IS NULL OR p.denomination IN ('unknown', '')))",
             "building_yes": "(p.religion = 'muslim' AND p.building = 'yes')",
             "mapped_as_node": "(p.geom_type = 'Point' AND p.osm_type = 'node')",
             "size_too_small": "(p.area_m2 IS NOT NULL AND p.area_m2 < 50)",
             "size_too_large": "(p.area_m2 IS NOT NULL AND p.area_m2 > 10000)",
+            "stale_data": "(p.version = 1 AND p.edited_at IS NOT NULL AND p.edited_at < NOW() - INTERVAL '5 years')",
+            "outdated_tags": "(p.amenity = 'mosque' OR p.building = 'yes;mosque' OR p.religion IN ('islam', 'Islam', 'Muslim', 'moslem', 'muslim;islam') OR p.denomination IN ('Sunni', 'sunnah', 'sunna', 'sunnite', 'سني', 'سنى', 'السنية', 'السنة', 'أهل السنة', 'Shia', 'shiite', 'shi''a', 'shiah', 'shii', 'شيعي', 'شيعة', 'الشيعة', 'muslim', 'islam', 'Muslim', 'Islam'))",
             "duplicate_poi": "(p.poi_node_id IS NOT NULL)",
             "qibla_deviation": "(p.qibla_dev IS NOT NULL AND p.qibla_dev >= 20.0)",
             "ml_geometry_anomaly": "(p.anomaly_score IS NOT NULL AND p.anomaly_score < -0.1)",

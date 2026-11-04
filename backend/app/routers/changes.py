@@ -183,7 +183,7 @@ def get_freshness(conn=Depends(get_db)):
         # 1. Dataset version age
         try:
             cur.execute("""
-            SELECT version, pbf_date, published_at
+            SELECT version, pbf_date, pbf_timestamp, published_at
             FROM dataset_versions
             ORDER BY published_at DESC
             LIMIT 1;
@@ -194,9 +194,11 @@ def get_freshness(conn=Depends(get_db)):
                 if pub_at.tzinfo is None:
                     pub_at = pub_at.replace(tzinfo=timezone.utc)
                 age_sec = (now - pub_at).total_seconds()
+                pbf_ts = d_row.get("pbf_timestamp")
                 res["data"] = {
                     "version": d_row["version"],
                     "pbf_date": str(d_row["pbf_date"]),
+                    "pbf_timestamp": pbf_ts.isoformat() if pbf_ts else None,
                     "published_at": pub_at.isoformat(),
                     "age_seconds": max(0, int(age_sec)),
                     "status": "ok" if age_sec <= 36 * 3600 else ("warn" if age_sec <= 72 * 3600 else "stale"),

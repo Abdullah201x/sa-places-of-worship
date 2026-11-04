@@ -72,20 +72,20 @@ class TileActionRequest(BaseModel):
     note: str | None = Field(None, max_length=500, description="Optional note for done or approve")
 
 
-def generate_tiles_for_bounds(min_lon: float, min_lat: float, max_lon: float, max_lat: float) -> list[dict]:
-    """Generates 0.02° grid tiles within given bounding box."""
-    min_tx = math.floor(min_lon / 0.02)
-    max_tx = math.floor(max_lon / 0.02)
-    min_ty = math.floor(min_lat / 0.02)
-    max_ty = math.floor(max_lat / 0.02)
+def generate_tiles_for_bounds(min_lon: float, min_lat: float, max_lon: float, max_lat: float, grid_deg: float = 0.02) -> list[dict]:
+    """Generates grid tiles within given bounding box, with configurable grid_deg."""
+    min_tx = math.floor(min_lon / grid_deg)
+    max_tx = math.floor(max_lon / grid_deg)
+    min_ty = math.floor(min_lat / grid_deg)
+    max_ty = math.floor(max_lat / grid_deg)
 
     tiles = []
     for tx in range(min_tx, max_tx + 1):
         for ty in range(min_ty, max_ty + 1):
-            t_min_lon = round(tx * 0.02, 6)
-            t_min_lat = round(ty * 0.02, 6)
-            t_max_lon = round((tx + 1) * 0.02, 6)
-            t_max_lat = round((ty + 1) * 0.02, 6)
+            t_min_lon = round(tx * grid_deg, 6)
+            t_min_lat = round(ty * grid_deg, 6)
+            t_max_lon = round((tx + 1) * grid_deg, 6)
+            t_max_lat = round((ty + 1) * grid_deg, 6)
             tiles.append({
                 "tile_id": f"{tx}:{ty}",
                 "bbox": [t_min_lon, t_min_lat, t_max_lon, t_max_lat]
@@ -333,7 +333,16 @@ def create_sprint(
     tiles = workload_tiles_for_area(conn, area_dict, payload.rule_ids, payload.gap_min_urgency)
     if not tiles:
         # Dataset not loaded (or nothing to do yet): plain bounding-box tiles.
-        tiles = generate_tiles_for_bounds(min_lon, min_lat, max_lon, max_lat)
+        # Auto-scale grid_deg for large area bounds to stay within MAX_SPRINT_TILES
+        grid_deg = 0.02
+        span_x = max_lon - min_lon
+        span_y = max_lat - min_lat
+        for candidate_deg in (0.02, 0.05, 0.1, 0.2, 0.5):
+            est_count = (math.ceil(span_x / candidate_deg) + 1) * (math.ceil(span_y / candidate_deg) + 1)
+            if est_count <= MAX_SPRINT_TILES:
+                grid_deg = candidate_deg
+                break
+        tiles = generate_tiles_for_bounds(min_lon, min_lat, max_lon, max_lat, grid_deg=grid_deg)
     if len(tiles) > MAX_SPRINT_TILES:
         raise HTTPException(
             status_code=400,

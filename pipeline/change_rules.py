@@ -60,6 +60,13 @@ CHANGE_FLAGS = {
         "description_ar": "انتقل موقع المكان إلى خارج حدود المملكة العربية السعودية.",
         "description_en": "Place coordinates moved outside the Saudi Arabia boundary polygon.",
     },
+    "moved-far": {
+        "severity": "medium",
+        "title_ar": "تحريك المعلم لمسافة بعيدة",
+        "title_en": "Moved significantly (>200m)",
+        "description_ar": "تم تغيير موقع المعلم بأكثر من 200 متر عن موقعه السابق.",
+        "description_en": "Centroid moved by more than 200 metres from its previous location.",
+    },
     "building-downgraded": {
         "severity": "low",
         "title_ar": "تخفيض تصنيف المبنى",
@@ -106,6 +113,7 @@ def evaluate_change_flags(
     is_upgraded: bool = False,
     is_outside_boundary: bool = False,
     is_potential_duplicate: bool = False,
+    is_moved_far: bool = False,
     normalized_name: str = "",
     normalized_name_ar: str = "",
     resolved_issues: list[str] | None = None,
@@ -163,7 +171,11 @@ def evaluate_change_flags(
         if is_potential_duplicate:
             flags.append("new-duplicate")
 
-    # 9. issue-fixed
+        # 9. moved-far
+        if is_moved_far:
+            flags.append("moved-far")
+
+    # 10. issue-fixed
     if resolved_issues and len(resolved_issues) > 0:
         flags.append("issue-fixed")
 

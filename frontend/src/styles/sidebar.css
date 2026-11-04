@@ -1,0 +1,731 @@
+/* ==========================================================================
+   Manara - Glassmorphism Sidebar & Navigation
+   ========================================================================== */
+/* Glassmorphism Sidebar */
+#sidebar {
+  position: absolute;
+  top: 52px; /* below the 40px top bar */
+  right: 20px; /* Positioned on the right for RTL layout */
+  bottom: 20px;
+  width: 420px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+}
+
+#sidebar:hover {
+  border-color: rgba(0, 242, 254, 0.25);
+  box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6), 
+              0 0 30px rgba(0, 242, 254, 0.1);
+}
+
+/* Header & Gradient Text */
+header {
+  margin-bottom: 24px;
+}
+
+.title-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.logo-glow {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 12px 3px var(--color-primary);
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+h1 {
+  font-family: var(--font-title);
+  font-size: 24px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+/* Stats Section */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(0, 242, 254, 0.15);
+  transform: translateY(-2px);
+}
+
+.stat-val {
+  font-family: var(--font-title);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-val.highlight {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-lbl {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Filters and Search */
+.section-title {
+  font-family: var(--font-title);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.control-group {
+  margin-bottom: 24px;
+}
+
+.section-hint {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  margin: 0 0 12px 0;
+}
+
+.search-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding-block: 12px;
+  padding-inline: 42px 16px; /* room for the icon on the start side */
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
+}
+
+.search-icon {
+  position: absolute;
+  inset-inline-start: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+/* Choice Chips / Filters */
+.chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.chip.active[data-religion="muslim"] {
+  background: rgba(0, 255, 135, 0.15);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  box-shadow: 0 0 10px rgba(0, 255, 135, 0.1);
+}
+
+.chip.active[data-religion="musalla"] {
+  background: rgba(79, 172, 254, 0.15);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+  box-shadow: 0 0 10px rgba(79, 172, 254, 0.1);
+}
+
+.chip.active[data-religion="other"] {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: #ffd700;
+  color: #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.1);
+}
+
+.chip.active[data-religion="all"] {
+  background: rgba(0, 242, 254, 0.15);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.1);
+}
+
+.chip.active[data-basemap] {
+  background: rgba(0, 242, 254, 0.15);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.1);
+}
+
+
+/* Range Sliders */
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  transition: background 0.3s;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--color-primary);
+  transition: transform 0.1s;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+
+/* Dashboard Mode Toggle Button Group */
+.mode-toggle-container {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 4px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.mode-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mode-btn:hover {
+  color: var(--color-text);
+}
+
+.mode-btn.active {
+  background: rgba(0, 242, 254, 0.12);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.05);
+}
+
+.mode-btn.active[data-mode="gap"] {
+  background: rgba(255, 59, 48, 0.15);
+  border-color: #ff3b30;
+  color: #ff3b30;
+  box-shadow: 0 0 10px rgba(255, 59, 48, 0.05);
+}
+
+
+/* ==========================================================================
+   Qibla Compass & Toggle Switch Styles
+   ========================================================================== */
+
+/* Switch Toggle Option in Sidebar */
+.switch-control-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-top: 6px;
+  transition: all 0.3s ease;
+}
+
+.switch-control-wrapper:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(0, 242, 254, 0.15);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider-switch {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: .3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slider-switch:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--color-text-muted);
+  transition: .3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.switch input:checked + .slider-switch {
+  background-color: rgba(0, 242, 254, 0.15);
+  border-color: var(--color-primary);
+}
+
+.switch input:checked + .slider-switch:before {
+  transform: translateX(20px);
+  background-color: var(--color-primary);
+  box-shadow: 0 0 8px var(--color-primary);
+}
+
+.slider-switch.round {
+  border-radius: 24px;
+}
+
+.slider-switch.round:before {
+  border-radius: 50%;
+}
+
+.switch-label {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  user-select: none;
+  cursor: pointer;
+  flex-grow: 1;
+  text-align: start;
+}
+
+.switch input:checked ~ .switch-label {
+  color: var(--color-text);
+}
+
+
+/* User Profile Sidebar Widget */
+.user-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  margin-bottom: 8px;
+  animation: fade-in 0.3s ease;
+}
+
+.user-avatar {
+  font-size: 18px;
+  background: rgba(0, 242, 254, 0.08);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.user-status-text {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.user-status-text strong {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.user-role-text {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 2px;
+}
+
+.osm-logout-btn {
+  background: rgba(255, 59, 48, 0.08);
+  border: 1px solid rgba(255, 59, 48, 0.25);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: #ff5b5b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.osm-logout-btn:hover {
+  background: rgba(255, 59, 48, 0.18);
+  color: #ff3b30;
+  box-shadow: 0 0 10px rgba(255, 59, 48, 0.1);
+}
+
+
+/* Guest Skip Button styling */
+.auth-skip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.auth-skip-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--color-text);
+  transform: translateY(-1px);
+}
+
+.auth-skip-btn:active {
+  transform: translateY(0);
+}
+
+/* Sidebar Guest Small Login Button */
+.osm-login-btn-small {
+  background: rgba(0, 242, 254, 0.08);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.osm-login-btn-small:hover {
+  background: rgba(0, 242, 254, 0.18);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
+}
+
+/* Guide Container & Steps styling */
+.guide-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guide-intro {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.guide-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guide-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 242, 254, 0.1);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.step-text {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--color-text);
+  line-height: 1.5;
+  flex-grow: 1;
+}
+
+.guide-sublist {
+  margin: 6px 0 0 0;
+  padding-inline-start: 18px;
+  list-style-type: square;
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.guide-sublist li {
+  margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   Sidebar Collapse/Expand Toggle
+   ========================================================================== */
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 52px;
+  right: 440px; /* just outside the expanded sidebar's left edge (420px width + 20px margin) */
+  z-index: 11; /* above #sidebar (10), below loading/auth overlays (1000/9999) */
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  color: var(--color-text);
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-toggle-btn:hover {
+  border-color: rgba(0, 242, 254, 0.25);
+  color: var(--color-primary);
+}
+
+.sidebar-toggle-btn svg {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#app-container.sidebar-collapsed .sidebar-toggle-btn {
+  right: 20px;
+}
+
+#app-container.sidebar-collapsed .sidebar-toggle-btn svg {
+  transform: rotate(180deg);
+}
+
+#app-container.sidebar-collapsed #sidebar {
+  transform: translateX(120%);
+}
+
+
+/* ==========================================================================
+   Wikidata Suggested Mosques Layer & Popups
+   ========================================================================== */
+
+.suggestions-count-badge {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-family: var(--font-body);
+  letter-spacing: 0.3px;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+}
+
+.suggestions-subcontrols {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.suggestions-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.suggestions-viewport-text strong {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+
+/* ===== Header actions (language, shortcuts) ===== */
+.header-actions {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.header-action-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-action-btn:hover {
+  color: var(--color-text);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+
+/* Links to the about / privacy pages at the bottom of the sidebar */
+.site-links {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--panel-border);
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.site-links a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.site-links a:hover {
+  color: var(--color-primary);
+}
+

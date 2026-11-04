@@ -3,6 +3,7 @@
 // and the shared i18n module handles the toggle and the remembered choice.
 import './styles/fonts.css';
 import './styles/page.css';
+import './translations_static.js';
 import { currentLang, setLanguage, addTranslations } from './i18n.js';
 import { initAnalytics } from './analytics.js';
 

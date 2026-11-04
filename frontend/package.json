@@ -16,7 +16,6 @@
     "@openstreetmap/id-tagging-schema": "^7.3.0",
     "@playwright/test": "^1.64.1",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
-    "astro": "^7.4.4",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",

@@ -2,13 +2,16 @@
 import './styles/fonts.css';
 import './styles/page.css';
 import './styles/tasks.css';
+import './translations_static.js';
 import { currentLang, setLanguage, addTranslations } from './i18n.js';
 import { initAnalytics } from './analytics.js';
 import { OsmApi } from './osm_api.js';
 import { showToast } from './ui.js';
 import { shortcutKey } from './keys.js';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import * as maplibregl from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+import 'maplibre-gl/dist/maplibre-gl.css';
+maplibregl.setWorkerUrl(workerUrl);
 import {
   TILE_STATE_LABELS,
   generateIdEditorUrl,
@@ -81,7 +84,6 @@ let selectedTileId = null;
 let currentRevMax = 0;
 let pollInterval = null;
 let mapInstance = null;
-let tileLayersGroup = null;
 let mapInitializedForSlug = null;
 
 // Names and sprint text come from OSM / the API, so escape them before innerHTML.
@@ -201,7 +203,7 @@ function setupViewControls() {
     }
 
     setTimeout(() => {
-      mapInstance?.invalidateSize();
+      mapInstance?.resize();
     }, 100);
   }
 
@@ -210,109 +212,184 @@ function setupViewControls() {
   btnGrid?.addEventListener('click', () => setViewMode('grid'));
 }
 
+const ESRI_IMAGERY_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const CARTO_LABEL_TILES = 'https://a.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png';
+const MAP_ATTRIBUTION = 'Tiles &copy; Esri, Maxar &mdash; &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
+
+function tilesToGeoJson(tiles, selectedId) {
+  const features = [];
+  tiles.forEach(t => {
+    if (!t.bbox || t.bbox.length !== 4) return;
+    const [minLon, minLat, maxLon, maxLat] = t.bbox;
+    const isSelected = t.tile_id === selectedId;
+    const style = STATE_COLORS[t.state] || STATE_COLORS.ready;
+    features.push({
+      type: 'Feature',
+      id: t.tile_id,
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [minLon, minLat],
+          [maxLon, minLat],
+          [maxLon, maxLat],
+          [minLon, maxLat],
+          [minLon, minLat],
+        ]]
+      },
+      properties: {
+        tile_id: t.tile_id,
+        state: t.state,
+        workload: t.workload || 0,
+        isSelected: isSelected ? 1 : 0,
+        fillColor: style.fill,
+        fillOpacity: isSelected ? 0.65 : style.fillOpacity,
+        strokeColor: isSelected ? '#ffffff' : style.stroke,
+        strokeWidth: isSelected ? 3.5 : 1.5,
+      }
+    });
+  });
+  return { type: 'FeatureCollection', features };
+}
+
+let tileHoverPopup = null;
+
 export function initOrUpdateSprintMap(tiles) {
   const mapContainer = document.getElementById('sprint-leaflet-map');
   if (!mapContainer || !tiles || !tiles.length) return;
 
+  const geojson = tilesToGeoJson(tiles, selectedTileId);
+
   if (!mapInstance) {
-    mapInstance = L.map('sprint-leaflet-map', {
-      zoomControl: true,
-      attributionControl: true
-    }).setView([24.0, 45.0], 12);
-
-    // High resolution satellite imagery
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    mapInstance = new maplibregl.Map({
+      container: 'sprint-leaflet-map',
+      style: {
+        version: 8,
+        sources: {
+          satellite: {
+            type: 'raster',
+            tiles: [ESRI_IMAGERY_TILES],
+            tileSize: 256,
+            maxzoom: 19,
+            attribution: MAP_ATTRIBUTION,
+          },
+          labels: {
+            type: 'raster',
+            tiles: [CARTO_LABEL_TILES],
+            tileSize: 256,
+            maxzoom: 19,
+          },
+          sprint_tiles: {
+            type: 'geojson',
+            data: geojson,
+          }
+        },
+        layers: [
+          { id: 'satellite-layer', type: 'raster', source: 'satellite' },
+          { id: 'labels-layer', type: 'raster', source: 'labels' },
+          {
+            id: 'tiles-fill-layer',
+            type: 'fill',
+            source: 'sprint_tiles',
+            paint: {
+              'fill-color': ['get', 'fillColor'],
+              'fill-opacity': ['get', 'fillOpacity'],
+            }
+          },
+          {
+            id: 'tiles-line-layer',
+            type: 'line',
+            source: 'sprint_tiles',
+            paint: {
+              'line-color': ['get', 'strokeColor'],
+              'line-width': ['get', 'strokeWidth'],
+            }
+          }
+        ]
+      },
+      center: [45.0, 24.0],
+      zoom: 11,
       maxZoom: 19,
-      attribution: 'Esri, Maxar'
-    }).addTo(mapInstance);
+    });
 
-    // Transparent labels & street overlay
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      maxZoom: 19,
-      opacity: 0.8
-    }).addTo(mapInstance);
+    mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-left');
 
-    tileLayersGroup = L.featureGroup().addTo(mapInstance);
+    tileHoverPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      className: 'sprint-tile-tooltip'
+    });
+
+    mapInstance.on('mousemove', 'tiles-fill-layer', (e) => {
+      const f = e.features && e.features[0];
+      if (!f) return;
+      mapInstance.getCanvas().style.cursor = 'pointer';
+      const props = f.properties;
+      const isAr = currentLang === 'ar';
+      const stateLbl = isAr ? TILE_STATE_LABELS[props.state]?.ar : TILE_STATE_LABELS[props.state]?.en;
+      tileHoverPopup
+        .setLngLat(e.lngLat)
+        .setHTML(`<strong>Tile: ${props.tile_id}</strong><br/>${isAr ? 'الحالة' : 'State'}: ${stateLbl}<br/>${isAr ? 'الأعمال' : 'Workload'}: ${props.workload || 0}`)
+        .addTo(mapInstance);
+    });
+
+    mapInstance.on('mouseleave', 'tiles-fill-layer', () => {
+      mapInstance.getCanvas().style.cursor = '';
+      tileHoverPopup.remove();
+    });
+
+    mapInstance.on('click', 'tiles-fill-layer', (e) => {
+      const f = e.features && e.features[0];
+      if (!f) return;
+      const tId = f.properties.tile_id;
+      selectedTileId = tId;
+      document.querySelectorAll('.tile-cell').forEach(c => {
+        c.classList.toggle('selected', c.dataset.tileId === tId);
+      });
+      const t = currentTiles.find(x => x.tile_id === tId);
+      if (t) renderInspector(t);
+      highlightMapTile(tId);
+    });
+  } else {
+    const src = mapInstance.getSource('sprint_tiles');
+    if (src) src.setData(geojson);
   }
 
-  tileLayersGroup.clearLayers();
-  const boundsList = [];
-
-  tiles.forEach(t => {
-    if (!t.bbox || t.bbox.length !== 4) return;
-    const [minLon, minLat, maxLon, maxLat] = t.bbox;
-    const bounds = [[minLat, minLon], [maxLat, maxLon]];
-    boundsList.push(bounds);
-
-    const isSelected = t.tile_id === selectedTileId;
-    const style = STATE_COLORS[t.state] || STATE_COLORS.ready;
-
-    const rect = L.rectangle(bounds, {
-      color: isSelected ? '#ffffff' : style.stroke,
-      weight: isSelected ? 3.5 : 1.5,
-      fillColor: style.fill,
-      fillOpacity: isSelected ? 0.65 : style.fillOpacity,
-      dashArray: t.state === 'skipped' ? '4, 4' : null
-    });
-
-    const isAr = currentLang === 'ar';
-    const stateLbl = isAr ? TILE_STATE_LABELS[t.state]?.ar : TILE_STATE_LABELS[t.state]?.en;
-    rect.bindTooltip(
-      `<strong>Tile: ${t.tile_id}</strong><br/>${isAr ? 'الحالة' : 'State'}: ${stateLbl}<br/>${isAr ? 'الأعمال' : 'Workload'}: ${t.workload || 0}`,
-      { className: 'sprint-tile-tooltip', sticky: true }
-    );
-
-    rect.on('click', () => {
-      selectedTileId = t.tile_id;
-      document.querySelectorAll('.tile-cell').forEach(c => {
-        c.classList.toggle('selected', c.dataset.tileId === t.tile_id);
-      });
-      renderInspector(t);
-      highlightMapTile(t.tile_id);
-    });
-
-    rect.tileId = t.tile_id;
-    tileLayersGroup.addLayer(rect);
-  });
-
   // Fit bounds when loading a new sprint
-  if (boundsList.length > 0 && mapInitializedForSlug !== currentSprint?.slug) {
+  const minLons = tiles.map(t => t.bbox[0]);
+  const minLats = tiles.map(t => t.bbox[1]);
+  const maxLons = tiles.map(t => t.bbox[2]);
+  const maxLats = tiles.map(t => t.bbox[3]);
+  const minX = Math.min(...minLons);
+  const minY = Math.min(...minLats);
+  const maxX = Math.max(...maxLons);
+  const maxY = Math.max(...maxLats);
+
+  if (mapInitializedForSlug !== currentSprint?.slug) {
     mapInitializedForSlug = currentSprint?.slug;
-    const groupBounds = L.latLngBounds(boundsList.map(b => b[0]).concat(boundsList.map(b => b[1])));
-    mapInstance.fitBounds(groupBounds, { padding: [30, 30], maxZoom: 15 });
+    const fit = () => {
+      mapInstance.fitBounds([[minX, minY], [maxX, maxY]], { padding: 30, maxZoom: 15 });
+    };
+    if (mapInstance.loaded()) fit();
+    else mapInstance.once('load', fit);
   }
 
   setTimeout(() => {
-    mapInstance?.invalidateSize();
+    mapInstance?.resize();
   }, 120);
 }
 
 export function highlightMapTile(tileId) {
-  if (!tileLayersGroup) return;
-  tileLayersGroup.eachLayer(layer => {
-    const isSelected = layer.tileId === tileId;
-    const tile = currentTiles.find(t => t.tile_id === layer.tileId);
-    const style = STATE_COLORS[tile?.state] || STATE_COLORS.ready;
-
-    if (isSelected) {
-      layer.setStyle({
-        color: '#ffffff',
-        weight: 3.5,
-        fillOpacity: 0.65
-      });
-      layer.bringToFront();
-      if (mapInstance) {
-        mapInstance.panTo(layer.getBounds().getCenter(), { animate: true, duration: 0.5 });
-      }
-    } else {
-      layer.setStyle({
-        color: style.stroke,
-        weight: 1.5,
-        fillOpacity: style.fillOpacity
-      });
-    }
-  });
+  if (!mapInstance || !currentTiles.length) return;
+  const src = mapInstance.getSource('sprint_tiles');
+  if (src) {
+    src.setData(tilesToGeoJson(currentTiles, tileId));
+  }
+  const tile = currentTiles.find(t => t.tile_id === tileId);
+  if (tile && tile.bbox) {
+    const cLon = (tile.bbox[0] + tile.bbox[2]) / 2;
+    const cLat = (tile.bbox[1] + tile.bbox[3]) / 2;
+    mapInstance.easeTo({ center: [cLon, cLat], duration: 500 });
+  }
 }
 
 // 1. Sprints List View

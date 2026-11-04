@@ -200,14 +200,17 @@ def get_sitemap(conn=Depends(get_db)):
                 f'  <url><loc>{base_url}/region/{r["code"]}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>'
             )
 
-        # Named places only
+        # Named places only (excludes generic fallbacks like 'Mosque' that are marked noindex)
         cur.execute("""
-            SELECT osm_type, osm_id, edited_at
+            SELECT osm_type, osm_id, edited_at, name
             FROM places
             WHERE name != '' AND name IS NOT NULL
+              AND LOWER(TRIM(name)) NOT IN ('مسجد', 'الجامع', 'جامع', 'المسجد', 'مصلى', 'المصلى', 'مصلي', 'المصلي', 'mosque', 'masjid', 'place of worship', 'unnamed')
             ORDER BY osm_id ASC;
         """)
         for p in cur.fetchall():
+            if "name" in p and p["name"] is not None and not is_named_place(p["name"]):
+                continue
             lastmod = ""
             if p.get("edited_at"):
                 lastmod = f"<lastmod>{p['edited_at'].strftime('%Y-%m-%d')}</lastmod>"

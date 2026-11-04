@@ -12,8 +12,12 @@ from common import (BASE_DIR, configure_utf8_output, find_pbf, is_worship_tagged
 configure_utf8_output()
 
 # Tags taken from a POI node when it is merged into the building it sits in.
-POI_TAG_KEYS = ("name", "name:en", "name:ar", "amenity", "religion", "denomination",
-                "place_of_worship", "wheelchair", "capacity", "addr:city")
+POI_TAG_KEYS = (
+    "name", "name:en", "name:ar", "amenity", "religion", "denomination",
+    "place_of_worship", "wheelchair", "capacity", "addr:city", "addr:street",
+    "addr:housenumber", "female", "female:prayer_room", "worship:female",
+    "wikidata", "opening_hours"
+)
 
 
 class PlacesOfWorshipExtractor(osmium.SimpleHandler):
@@ -64,11 +68,18 @@ class PlacesOfWorshipExtractor(osmium.SimpleHandler):
         # relations (large mosques with courtyards) are picked up here.
         if a.from_way() or not is_worship_tagged(a.tags):
             return
+        polys = []
         try:
-            polys = [Polygon([(nd.lon, nd.lat) for nd in ring]) for ring in a.outer_rings()]
+            for outer in a.outer_rings():
+                shell = [(nd.lon, nd.lat) for nd in outer]
+                holes = [[(nd.lon, nd.lat) for nd in inner] for inner in a.inner_rings(outer)]
+                p = Polygon(shell, holes=holes)
+                if not p.is_valid:
+                    p = p.buffer(0)
+                if p.is_valid and p.area > 0:
+                    polys.append(p)
         except osmium.InvalidLocationError:
             return
-        polys = [p for p in polys if p.is_valid and p.area > 0]
         if not polys:
             return
         geom = MultiPolygon(polys) if len(polys) > 1 else polys[0]
@@ -104,7 +115,7 @@ def _create_feature(osm_id, lat, lon, tags, geom_type, osm_obj):
         "amenity": tags.get("amenity", ""),
         "place_of_worship": tags.get("place_of_worship", ""),
         "wheelchair": tags.get("wheelchair", ""),
-        "female": tags.get("female", tags.get("worship:female", tags.get("female_prayer_space", ""))),
+        "female": tags.get("female:prayer_room") or tags.get("female") or tags.get("worship:female") or tags.get("female_prayer_space") or "",
         "capacity": tags.get("capacity", ""),
         "addr_city": tags.get("addr:city", ""),
         "wikidata": tags.get("wikidata", ""),
@@ -158,7 +169,8 @@ def merge_nodes_into_buildings(nodes, ways):
     for node_feat, node_tags in nodes:
         lon, lat = node_feat["geometry"]["coordinates"]
         pt = Point(lon, lat)
-        hits = [i for i in tree.query(pt) if footprints[i][2].contains(pt)
+        # Check if footprint covers point directly or within a 1.5m tolerance (entrance/facade nodes)
+        hits = [i for i in tree.query(pt) if (footprints[i][2].covers(pt) or footprints[i][2].buffer(1.5e-5).covers(pt))
                 and "poi_node_id" not in footprints[i][0]["properties"]]
         if not hits:
             remaining.append(node_feat)
@@ -206,8 +218,10 @@ def _create_feature_props_from(tags, base_props):
         "amenity": tags.get("amenity", ""),
         "place_of_worship": tags.get("place_of_worship", ""),
         "wheelchair": tags.get("wheelchair", ""),
+        "female": tags.get("female:prayer_room") or tags.get("female") or tags.get("worship:female") or tags.get("female_prayer_space") or "",
         "capacity": tags.get("capacity", ""),
         "addr_city": tags.get("addr:city", ""),
+        "wikidata": tags.get("wikidata", ""),
     })
     _apply_name_fallbacks(props)
     return props
