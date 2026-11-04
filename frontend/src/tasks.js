@@ -6,6 +6,7 @@ import { currentLang, setLanguage, addTranslations } from './i18n.js';
 import { initAnalytics } from './analytics.js';
 import { OsmApi } from './osm_api.js';
 import { showToast } from './ui.js';
+import { shortcutKey } from './keys.js';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -16,6 +17,9 @@ import {
   formatTileStateBadge,
   calculateSprintProgress,
 } from './tasks_view.js';
+
+// The demo sprint/tiles are a walkthrough aid only: never shown as if real data.
+const DEMO_MODE = new URLSearchParams(window.location.search).get('demo') === '1';
 
 export {
   TILE_STATE_LABELS,
@@ -334,8 +338,8 @@ async function loadSprintsList() {
     console.warn('Failed to fetch sprints from API:', err);
   }
 
-  // Fallback demo sprint if empty
-  if (!sprints || sprints.length === 0) {
+  // Demo sprint only with ?demo=1
+  if (DEMO_MODE && (!sprints || sprints.length === 0)) {
     sprints = [
       {
         id: 1,
@@ -431,7 +435,11 @@ async function loadSprintBoard(slug) {
     console.warn('Failed to load sprint details:', err);
   }
 
-  // Fallback demo sprint if not found
+  if (!currentSprint && !DEMO_MODE) {
+    showToast(currentLang === 'ar' ? 'تعذر تحميل الحملة.' : 'Could not load this sprint.', 'error');
+    return;
+  }
+  // Demo sprint only with ?demo=1
   if (!currentSprint) {
     currentSprint = {
       id: 1,
@@ -509,8 +517,8 @@ async function fetchBoardTiles(slug) {
     console.warn('Failed to fetch sprint tiles:', err);
   }
 
-  // Fallback demo tiles if empty
-  if (!currentTiles || currentTiles.length === 0) {
+  // Demo tiles only with ?demo=1
+  if (DEMO_MODE && (!currentTiles || currentTiles.length === 0)) {
     currentTiles = generateDemoTiles();
     renderTileGrid(currentTiles);
     updateBoardProgressStats(currentTiles);
@@ -622,7 +630,7 @@ function renderInspector(tile) {
 
   let actionButtonsHtml = '';
 
-  if (tile.state === 'ready') {
+  if (tile.state === 'ready' || tile.state === 'invalidated') {
     actionButtonsHtml = `
       <button type="button" class="tile-action-btn primary" id="btn-action-lock-mapping">
         ${isAr ? '🔒 قفل للرسم (L)' : '🔒 Lock for Mapping (L)'}
@@ -752,7 +760,7 @@ async function executeTileAction(tile, action, extraBody = {}) {
     const myName = OsmApi.userName() || 'demo_mapper';
 
     if (action === 'lock') {
-      const lockKind = extraBody.kind || (tile.state === 'ready' ? 'mapping' : 'validation');
+      const lockKind = extraBody.kind || (tile.state === 'mapped' ? 'validation' : 'mapping');
       updated.state = lockKind === 'mapping' ? 'mapping' : 'validating';
       updated.lock = { osm_uid: myUid, display_name: myName, kind: lockKind, expires_at: new Date(Date.now() + 7200000).toISOString() };
       updated.rev = (tile.rev || 1) + 1;
@@ -922,11 +930,15 @@ function startPolling(slug) {
 
 function setupGlobalShortcuts() {
   window.addEventListener('keydown', (e) => {
+    // Never hijack browser/OS shortcuts (Ctrl+A, Ctrl+L, Cmd+D ...).
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (['input', 'textarea'].includes(document.activeElement?.tagName?.toLowerCase())) {
       return;
     }
 
-    if (e.key === 'n' || e.key === 'N') {
+    const key = shortcutKey(e);
+
+    if (key === 'n') {
       const nextTile = findNextReadyTile(currentTiles);
       if (nextTile) {
         selectedTileId = nextTile.tile_id;
@@ -934,7 +946,7 @@ function setupGlobalShortcuts() {
         renderInspector(nextTile);
         highlightMapTile(nextTile.tile_id);
       }
-    } else if (e.key === 'Escape') {
+    } else if (key === 'Escape') {
       const modal = document.getElementById('invalidate-modal');
       if (modal && modal.style.display === 'flex') {
         modal.style.display = 'none';
@@ -943,15 +955,15 @@ function setupGlobalShortcuts() {
       const tile = currentTiles.find(t => t.tile_id === selectedTileId);
       if (!tile) return;
 
-      if ((e.key === 'l' || e.key === 'L') && (tile.state === 'ready' || tile.state === 'mapped')) {
-        executeTileAction(tile, 'lock', { kind: tile.state === 'ready' ? 'mapping' : 'validation' });
-      } else if ((e.key === 'd' || e.key === 'D') && tile.state === 'mapping') {
+      if (key === 'l' && (tile.state === 'ready' || tile.state === 'invalidated' || tile.state === 'mapped')) {
+        executeTileAction(tile, 'lock', { kind: tile.state === 'mapped' ? 'validation' : 'mapping' });
+      } else if (key === 'd' && tile.state === 'mapping') {
         executeTileAction(tile, 'done');
-      } else if ((e.key === 'a' || e.key === 'A') && (tile.state === 'validating' || tile.state === 'mapped')) {
+      } else if (key === 'a' && (tile.state === 'validating' || tile.state === 'mapped')) {
         executeTileAction(tile, 'approve');
-      } else if ((e.key === 'x' || e.key === 'X') && (tile.state === 'validating' || tile.state === 'mapped')) {
+      } else if (key === 'x' && (tile.state === 'validating' || tile.state === 'mapped')) {
         openInvalidateModal(tile);
-      } else if ((e.key === 's' || e.key === 'S') && (tile.state === 'ready' || tile.state === 'mapping')) {
+      } else if (key === 's' && (tile.state === 'ready' || tile.state === 'mapping')) {
         executeTileAction(tile, 'skip');
       }
     }

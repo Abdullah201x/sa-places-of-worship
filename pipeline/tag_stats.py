@@ -54,25 +54,44 @@ TRACKED_TAGS = [
 ]
 
 
+# GeoJSON property -> OSM tag key, for properties that hold the raw tag value.
+# Synthetic fallbacks written by extract_places (name="Mosque", name_en=name,
+# denomination="unknown", inferred religion) must not count as tagged, so
+# they are read from the *_original / raw properties only.
+_RAW_PROP_TO_TAG = {
+    "name_original": "name",
+    "name_ar_original": "name:ar",
+    "name_en_original": "name:en",
+    "religion_original": "religion",
+    "denomination": "denomination",
+    "amenity": "amenity",
+    "building": "building",
+    "place_of_worship": "place_of_worship",
+    "wheelchair": "wheelchair",
+    "female": "female",
+    "capacity": "capacity",
+    "opening_hours": "opening_hours",
+    "addr_city": "addr:city",
+    "wikidata": "wikidata",
+}
+
+
 def props_to_tags(props):
-    """Normalize properties from GeoJSON into canonical OSM tags dict."""
+    """Rebuild the place's real OSM tags from its GeoJSON properties.
+
+    Only raw tag values count: fallbacks (``name``/``name_en`` placeholders,
+    ``denomination=unknown``) and internal properties are ignored, so the
+    percentages match what is actually tagged in OSM.
+    """
     tags = {}
-    for k, v in props.items():
-        if v is None or v == "":
+    for prop, key in _RAW_PROP_TO_TAG.items():
+        v = props.get(prop)
+        if v is None:
             continue
-        if k in ("osm_id", "geom_type", "version", "edited_at", "edited_by",
-                 "region_id", "ml_anomaly", "footprint_area", "poi_node_id"):
+        v = str(v).strip()
+        if not v or (key == "denomination" and v == "unknown"):
             continue
-        if k == "name_en":
-            tags["name:en"] = str(v).strip()
-        elif k == "name_original":
-            tags["name:ar"] = str(v).strip()
-        elif k == "name_en_original":
-            tags["name:en_original"] = str(v).strip()
-        elif k == "addr_city":
-            tags["addr:city"] = str(v).strip()
-        else:
-            tags[k] = str(v).strip()
+        tags[key] = v
     return tags
 
 
@@ -192,16 +211,16 @@ def load_from_geojson(geojson_path):
 
 
 def record_stats_to_db(stats, db_url=None):
-    """Inserts or updates rows in the tag_usage_history table."""
-    url = db_url or os.environ.get("MANARA_DB_URL") or os.environ.get("DATABASE_URL")
+    """Replaces this dataset_version's rows in tag_usage_history."""
+    url = (db_url or os.environ.get("MANARA_DATABASE_URL")
+           or os.environ.get("MANARA_DB_URL") or os.environ.get("DATABASE_URL"))
     if not url:
         return False
 
     try:
-        import psycopg2
-        import psycopg2.extras
+        import psycopg
     except ImportError:
-        print("psycopg2 not installed; skipping database record")
+        print("Warning: psycopg is not installed; skipping tag_usage_history record")
         return False
 
     version = stats["dataset_version"]
@@ -210,45 +229,26 @@ def record_stats_to_db(stats, db_url=None):
     rows = []
     # Key-level rows (tag_value = None)
     for k, info in stats["keys"].items():
-        rows.append((
-            version,
-            k,
-            None,
-            info["count"],
-            total,
-            json.dumps(info["with_key"])
-        ))
-
+        rows.append((version, k, None, info["count"], total, json.dumps(info["with_key"])))
     # Tag-level rows (tag_value = val)
-    for tag_str, info in stats["tags"].items():
-        rows.append((
-            version,
-            info["key"],
-            info["value"],
-            info["count"],
-            total,
-            json.dumps(info["with_key"])
-        ))
+    for info in stats["tags"].values():
+        rows.append((version, info["key"], info["value"], info["count"], total, json.dumps(info["with_key"])))
 
     try:
-        with psycopg2.connect(url) as conn:
+        # Delete-then-insert in one transaction: re-runs of the same version
+        # stay idempotent even though tag_value is NULL for key-level rows
+        # (NULLs never collide in a plain UNIQUE constraint).
+        with psycopg.connect(url) as conn:
             with conn.cursor() as cur:
-                psycopg2.extras.execute_values(
-                    cur,
+                cur.execute("DELETE FROM tag_usage_history WHERE dataset_version = %s", (version,))
+                cur.executemany(
                     """
                     INSERT INTO tag_usage_history (
                         dataset_version, tag_key, tag_value, count, total_places, with_keys
-                    ) VALUES %s
-                    ON CONFLICT (dataset_version, tag_key, tag_value)
-                    DO UPDATE SET
-                        count = EXCLUDED.count,
-                        total_places = EXCLUDED.total_places,
-                        with_keys = EXCLUDED.with_keys,
-                        recorded_at = NOW();
+                    ) VALUES (%s, %s, %s, %s, %s, %s::jsonb)
                     """,
-                    rows
+                    rows,
                 )
-            conn.commit()
         print(f"Recorded {len(rows)} tag usage metrics to tag_usage_history")
         return True
     except Exception as e:

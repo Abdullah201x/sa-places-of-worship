@@ -6,6 +6,7 @@ This document summarises the architecture, live infrastructure, completed phases
 
 ## START HERE (next agent)
 
+0. **Newest work (2026-11-04):** `IMPROVEMENT_PLAN.md` is the active roadmap; its **"Progress Status" section** says exactly what is done (Phase 0, mostly) and what to do next (P1.1 onward). Read it before the items below, which predate it.
 1. **Read §20.3 to §20.6 at the end of this file first**: they are the latest work (real tiles from the PMTiles fallback, the first-ever browser run and the bugs it found, the MapLibre "map kit" with full parity behind `?map=gl`, and the Playwright smoke tests).
 2. **Uncommitted files to leave alone:** `design prompt.md` and `handover.md` (scratch chat transcripts) are untracked; keep them out of git commits.
 3. **Verify before you trust anything** (all green at the end of this session): `python -m pytest tests -q` (146), then in `frontend/`: `npm run lint`, `npm test` (121 Vitest), `npm run smoke` (61 Playwright tests, about 7 minutes; builds first). Earlier phases were verified without a browser and the first real browser run found four bugs, so **always run the smoke tests after UI changes**.

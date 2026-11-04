@@ -42,6 +42,8 @@ export const FIELDS = {
   },
   building: {
     key: 'building', type: 'check', checkValue: 'mosque', idField: 'building_area_yes',
+    // building=* describes an outline; it is invalid on a point (<node>).
+    geometry: ['area'],
     label: ['المعلم يمثل مبنى مسجداً مستقلاً', 'This is a standalone mosque building'],
   },
   wheelchair: { key: 'wheelchair', type: 'combo', idField: 'wheelchair' },
@@ -119,22 +121,26 @@ export function validateValue(fieldId, value) {
   return null;
 }
 
-export function presetFieldIds(preset) {
-  return [...preset.fields, ...preset.moreFields];
+// geometry ('point' | 'area'): only the fields valid on that geometry type;
+// omitted: all of them.
+export function presetFieldIds(preset, geometry = null) {
+  const ids = [...preset.fields, ...preset.moreFields];
+  if (!geometry) return ids;
+  return ids.filter(id => !FIELDS[id].geometry || FIELDS[id].geometry.includes(geometry));
 }
 
 // values: { fieldId: raw } -> [{ fieldId, code }] for every invalid field.
-export function validateValues(preset, values) {
-  return presetFieldIds(preset)
+export function validateValues(preset, values, geometry = null) {
+  return presetFieldIds(preset, geometry)
     .map(fieldId => ({ fieldId, code: validateValue(fieldId, normalizeValue(fieldId, values[fieldId])) }))
     .filter(e => e.code);
 }
 
 // values: { fieldId: raw } -> the tags of a new feature with this preset.
 // name follows name:ar (the local language), else name:en.
-export function tagsFromValues(preset, values) {
+export function tagsFromValues(preset, values, geometry = null) {
   const tags = { ...preset.addTags };
-  presetFieldIds(preset).forEach(fieldId => {
+  presetFieldIds(preset, geometry).forEach(fieldId => {
     const value = normalizeValue(fieldId, values[fieldId]);
     if (value) tags[FIELDS[fieldId].key] = value;
   });

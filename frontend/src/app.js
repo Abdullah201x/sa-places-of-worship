@@ -14,7 +14,7 @@ import { Exporters } from './exporters.js';
 import { OsmApi, EditHistory } from './osm_api.js';
 import { renderQuickFixes, setupEditing, createFieldRow, readFieldValues, showFieldErrors, openEditDialog } from './editing.js';
 import { FocusMode } from './focus_mode.js';
-import { MOSQUE_PRESET, tagsFromValues, validateValues } from './presets.js';
+import { MOSQUE_PRESET, presetFieldIds, tagsFromValues, validateValues } from './presets.js';
 import { evaluateRules } from './validator.js';
 import { DATA_AGE_OK_MS, DATA_AGE_WARN_MS, ageLevel, clockOffset, formatAge } from './timeago.js';
 import { trackEvent } from './analytics.js';
@@ -269,6 +269,7 @@ export function escapeHtml(str) {
 
 // OSM element type ('node' | 'way' | 'relation') for a place's properties.
 export function osmTypeOf(props) {
+  if (props.osm_type) return props.osm_type;
   if (props.geom_type === 'Point') return 'node';
   if (props.geom_type === 'Relation') return 'relation';
   return 'way';
@@ -1116,15 +1117,17 @@ export function setupAppShell() {
       else if (actionId === 'mode_gap') document.getElementById('mode-gap')?.click();
       else if (actionId === 'mode_improve') document.getElementById('mode-improve')?.click();
       else if (actionId === 'toggle_satellite') {
-        const satBtn = document.getElementById('btn-basemap-satellite');
-        if (satBtn) satBtn.click();
+        const satBtn = document.querySelector('#basemap-filters [data-basemap="satellite"]');
+        const isSat = satBtn?.classList.contains('active');
+        const target = isSat ? document.querySelector('#basemap-filters [data-basemap="dark"]') : satBtn;
+        target?.click();
       } else if (actionId === 'toggle_qibla') {
-        document.getElementById('btn-qibla-compass')?.click();
+        document.getElementById('qibla-compass-toggle')?.click();
       } else if (actionId === 'toggle_wikidata') {
-        const chk = document.getElementById('chk-wikidata-suggestions');
-        if (chk) {
-          chk.checked = !chk.checked;
-          chk.dispatchEvent(new Event('change'));
+        // The suggestions section is only shown to allowlisted mappers.
+        const section = document.getElementById('suggestions-section');
+        if (section && section.style.display !== 'none') {
+          document.getElementById('suggestions-toggle')?.click();
         }
       } else if (actionId === 'export_csv') {
         document.getElementById('btn-export-csv')?.click();
@@ -3251,11 +3254,13 @@ export function removeMosqueMarker() {
 export const STATIC_MOSQUE_FIELDS = ['name:ar', 'name:en'];
 
 export function renderAddMosqueFields(values = {}) {
+  // The composer creates a point (<node>): offer only fields valid on points.
+  const pointFields = new Set(presetFieldIds(MOSQUE_PRESET, 'point'));
   [['add-mosque-fields', MOSQUE_PRESET.fields], ['add-mosque-more-fields', MOSQUE_PRESET.moreFields]].forEach(([id, fieldIds]) => {
     const box = document.getElementById(id);
     if (!box) return;
     box.replaceChildren(...fieldIds
-      .filter(fieldId => !STATIC_MOSQUE_FIELDS.includes(fieldId))
+      .filter(fieldId => pointFields.has(fieldId) && !STATIC_MOSQUE_FIELDS.includes(fieldId))
       .map(fieldId => createFieldRow(fieldId, values[fieldId], 'add-mosque-field')));
   });
 }
@@ -3370,7 +3375,7 @@ export async function submitPendingMosqueNode() {
   const { lat, lon } = pendingMosqueLatLng;
   const overlay = document.getElementById('add-mosque-overlay');
   const values = readFieldValues(overlay);
-  const fieldError = showFieldErrors(overlay, validateValues(MOSQUE_PRESET, values));
+  const fieldError = showFieldErrors(overlay, validateValues(MOSQUE_PRESET, values, 'point'));
   if (fieldError) {
     showToast(fieldError, 'error');
     return;
@@ -3379,7 +3384,7 @@ export async function submitPendingMosqueNode() {
   if (submitBtn) submitBtn.disabled = true;
 
   // The preset's addTags plus every filled-in field (presets.js).
-  const tags = tagsFromValues(MOSQUE_PRESET, values);
+  const tags = tagsFromValues(MOSQUE_PRESET, values, 'point');
   const wikidata = tags.wikidata || '';
   const source = (document.getElementById('add-mosque-source')?.value || '').trim();
   let comment = (document.getElementById('add-mosque-comment')?.value || '').trim();

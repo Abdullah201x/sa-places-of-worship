@@ -120,6 +120,12 @@ def set_review_mark(
                 INSERT INTO review_marks (osm_type, osm_id, osm_uid, status, version, created_at)
                 VALUES (%s, %s, %s, %s, %s, NOW())
                 ON CONFLICT (osm_type, osm_id, osm_uid) DO UPDATE SET
+                    -- A changed status/version is a new claim: the old changeset
+                    -- verification no longer vouches for it.
+                    verified_changeset = CASE
+                        WHEN review_marks.status IS DISTINCT FROM EXCLUDED.status
+                          OR review_marks.version IS DISTINCT FROM EXCLUDED.version
+                        THEN NULL ELSE review_marks.verified_changeset END,
                     status = EXCLUDED.status,
                     version = EXCLUDED.version,
                     created_at = NOW()

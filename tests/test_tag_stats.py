@@ -16,13 +16,18 @@ def test_props_to_tags():
         "name": "جامع الملك فهد",
         "name_en": "King Fahd Mosque",
         "name_original": "جامع الملك فهد",
+        "name_ar_original": "جامع الملك فهد",
+        "name_en_original": "King Fahd Mosque",
         "amenity": "place_of_worship",
         "religion": "muslim",
+        "religion_original": "muslim",
         "denomination": "sunni",
         "building": "mosque",
         "addr_city": "Riyadh",
+        "opening_hours": "24/7",
         "osm_id": 12345,
         "geom_type": "Polygon",
+        "region_code": "SA-01",
     }
     tags = props_to_tags(props)
     assert tags["name"] == "جامع الملك فهد"
@@ -33,8 +38,25 @@ def test_props_to_tags():
     assert tags["denomination"] == "sunni"
     assert tags["building"] == "mosque"
     assert tags["addr:city"] == "Riyadh"
+    assert tags["opening_hours"] == "24/7"
     assert "osm_id" not in tags
     assert "geom_type" not in tags
+    assert "region_code" not in tags
+
+
+def test_props_to_tags_ignores_synthetic_fallbacks():
+    """An untagged mosque (placeholder name, inferred religion) has no name/name:en/religion/denomination."""
+    props = {
+        "name": "Mosque",
+        "name_en": "Mosque",
+        "name_original": "",
+        "name_en_original": "",
+        "religion": "muslim",
+        "religion_original": "",
+        "denomination": "unknown",
+        "amenity": "place_of_worship",
+    }
+    assert props_to_tags(props) == {"amenity": "place_of_worship"}
 
 
 def test_compute_tag_stats():

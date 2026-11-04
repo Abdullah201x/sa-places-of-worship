@@ -60,17 +60,22 @@ export const ReviewMarks = {
     return mark;
   },
 
+  // Returns a promise that settles once the mark reached the server (never
+  // rejects), so callers can wait for it before asking /api/v1/edits to bind
+  // the changeset to this mark.
   set(props, status) {
     this._load()[this.keyOf(props)] = { status, version: props.version, at: Date.now() };
+    let synced = Promise.resolve();
     if (localStorage.getItem('osm_access_token')) {
       const type = osmTypeOf(props);
-      fetch(`/api/v1/reviews/${type}/${props.osm_id}`, {
+      synced = fetch(`/api/v1/reviews/${type}/${props.osm_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-Manara-CSRF': '1' },
         body: JSON.stringify({ status, version: props.version })
       }).catch(e => console.warn('Could not sync review mark to server:', e));
     }
     this._save();
+    return synced;
   },
 
   clear(props) {

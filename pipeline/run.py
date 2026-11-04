@@ -74,8 +74,9 @@ STEPS = [
     ["detect_geometry_anomalies.py"],
     ["import_wikidata_suggestions.py"],
     ["tag_stats.py"],
-    ["build_data_hub.py"],
+    # Overlays first: build_data_hub catalogues the .pmtiles they produce.
     ["build_overlays.py"],
+    ["build_data_hub.py"],
     ["validate_data.py"],
     ["load_db.py"],
 ]
@@ -242,6 +243,11 @@ def run_steps():
 # ---------------------------------------------------------------------------
 
 def precompress(path):
+    # PMTiles are read with HTTP Range requests and their tiles are already
+    # gzipped; a .br/.gz sibling would be served for byte ranges of the wrong
+    # (compressed) file, so never create one.
+    if path.endswith(".pmtiles"):
+        return
     with open(path, "rb") as f:
         data = f.read()
     with open(path + ".br", "wb") as f:

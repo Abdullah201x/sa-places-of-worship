@@ -8,15 +8,15 @@ export const REGIONS = [
   { code: 'SA-02', name_ar: 'منطقة مكة المكرمة', name_en: 'Makkah Region', center: [21.3891, 39.8579], zoom: 12 },
   { code: 'SA-03', name_ar: 'منطقة المدينة المنورة', name_en: 'Madinah Region', center: [24.5247, 39.5692], zoom: 12 },
   { code: 'SA-04', name_ar: 'المنطقة الشرقية', name_en: 'Eastern Province', center: [26.4207, 50.0888], zoom: 11 },
-  { code: 'SA-05', name_ar: 'منطقة عسير', name_en: 'Asir Region', center: [18.2164, 42.5053], zoom: 11 },
-  { code: 'SA-06', name_ar: 'منطقة القصيم', name_en: 'Al-Qassim Region', center: [26.3260, 43.9750], zoom: 11 },
+  { code: 'SA-05', name_ar: 'منطقة القصيم', name_en: 'Al-Qassim Region', center: [26.3260, 43.9750], zoom: 11 },
+  { code: 'SA-06', name_ar: 'منطقة حائل', name_en: "Ha'il Region", center: [27.5114, 41.7208], zoom: 11 },
   { code: 'SA-07', name_ar: 'منطقة تبوك', name_en: 'Tabuk Region', center: [28.3835, 36.5662], zoom: 11 },
-  { code: 'SA-08', name_ar: 'منطقة حائل', name_en: 'Hail Region', center: [27.5114, 41.7208], zoom: 11 },
-  { code: 'SA-09', name_ar: 'منطقة الجوف', name_en: 'Al-Jouf Region', center: [29.9539, 40.1970], zoom: 11 },
-  { code: 'SA-10', name_ar: 'منطقة جازان', name_en: 'Jazan Region', center: [16.8892, 42.5706], zoom: 11 },
-  { code: 'SA-11', name_ar: 'منطقة نجران', name_en: 'Najran Region', center: [17.5656, 44.2289], zoom: 11 },
-  { code: 'SA-12', name_ar: 'منطقة الباحة', name_en: 'Al-Baha Region', center: [20.0129, 41.4677], zoom: 11 },
-  { code: 'SA-13', name_ar: 'منطقة الحدود الشمالية', name_en: 'Northern Borders Region', center: [30.9753, 41.0381], zoom: 11 },
+  { code: 'SA-08', name_ar: 'منطقة الحدود الشمالية', name_en: 'Northern Borders Region', center: [30.9753, 41.0381], zoom: 11 },
+  { code: 'SA-09', name_ar: 'منطقة جازان', name_en: 'Jazan Region', center: [16.8892, 42.5706], zoom: 11 },
+  { code: 'SA-10', name_ar: 'منطقة نجران', name_en: 'Najran Region', center: [17.5656, 44.2289], zoom: 11 },
+  { code: 'SA-11', name_ar: 'منطقة الباحة', name_en: 'Al-Bahah Region', center: [20.0129, 41.4677], zoom: 11 },
+  { code: 'SA-12', name_ar: 'منطقة الجوف', name_en: 'Al-Jawf Region', center: [29.9539, 40.1970], zoom: 11 },
+  { code: 'SA-14', name_ar: 'منطقة عسير', name_en: "'Asir Region", center: [18.2164, 42.5053], zoom: 11 },
 ];
 
 export const QA_RULES = [

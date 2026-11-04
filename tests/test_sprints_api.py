@@ -68,8 +68,9 @@ def test_create_sprint_admin_only(client):
     assert res.status_code == 401
 
 
-def test_create_sprint_success(client):
+def test_create_sprint_success(client, monkeypatch):
     c, (conn, cur) = client
+    monkeypatch.setattr("app.routers.sprints.workload_tiles_for_area", lambda *a, **k: None)
 
     def override_require_admin():
         return {"osm_uid": 999999, "display_name": "AdminUser", "is_admin": True}
@@ -128,7 +129,6 @@ def test_get_sprint_tiles_and_etag(client):
 
     cur.fetchone.return_value = {"id": 1, "slug": "al-kharj-sprint"}
     cur.fetchall.side_effect = [
-        [],  # expired locks query
         [    # sprint tiles
             {
                 "tile_id": "2330:1225",
@@ -151,7 +151,7 @@ def test_get_sprint_tiles_and_etag(client):
     res = c.get("/api/v1/sprints/al-kharj-sprint/tiles")
     assert res.status_code == 200
     assert "ETag" in res.headers
-    assert res.headers["ETag"] == 'W/"3"'
+    assert res.headers["ETag"] == 'W/"1:1:3:0"'
     data = res.json()
     assert data["rev_max"] == 3
     assert len(data["tiles"]) == 1
@@ -159,7 +159,6 @@ def test_get_sprint_tiles_and_etag(client):
     # 304 Not Modified when matching If-None-Match
     cur.fetchone.return_value = {"id": 1, "slug": "al-kharj-sprint"}
     cur.fetchall.side_effect = [
-        [],
         [
             {
                 "tile_id": "2330:1225",
@@ -178,7 +177,7 @@ def test_get_sprint_tiles_and_etag(client):
             }
         ]
     ]
-    res304 = c.get("/api/v1/sprints/al-kharj-sprint/tiles", headers={"If-None-Match": 'W/"3"'})
+    res304 = c.get("/api/v1/sprints/al-kharj-sprint/tiles", headers={"If-None-Match": 'W/"1:1:3:0"'})
     assert res304.status_code == 304
 
 
@@ -452,3 +451,36 @@ def test_maproulette_export(client):
     feat = fc["features"][0]
     assert feat["properties"]["taskIdentifier"] == "al-kharj-sprint_2330_1225"
     assert feat["geometry"]["type"] == "Polygon"
+
+
+def test_every_region_code_is_a_real_iso_code():
+    from app.routers.sprints import REGION_BOUNDS
+    assert set(REGION_BOUNDS) == {f"SA-{n:02d}" for n in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14)}
+
+
+def test_region_sprint_uses_non_empty_clipped_tiles(client, monkeypatch):
+    """A province must not be tiled as its full bbox (up to 236k tiles): only cells with work are stored."""
+    c, (conn, cur) = client
+    app.dependency_overrides[require_admin] = lambda: {"osm_uid": 1, "display_name": "A", "is_admin": True}
+    tiles = [{"tile_id": f"{i}:1", "bbox": [0, 0, 1, 1], "workload": 3} for i in range(300)]
+    monkeypatch.setattr("app.routers.sprints.workload_tiles_for_area", lambda *a, **k: tiles)
+    cur.fetchone.side_effect = [None, {
+        "id": 1, "slug": "r", "title": {}, "instructions": {}, "theme": "worship", "area": {"region_code": "SA-04"},
+        "rule_ids": [], "gap_min_urgency": None, "hashtag": "#r", "starts_at": None, "ends_at": None,
+        "status": "active", "created_by": 1, "created_at": None, "updated_at": None,
+    }]
+    cur.fetchall.return_value = [{"state": "ready", "cnt": 300, "work_sum": 900}]
+    res = c.post("/api/v1/sprints", headers={"X-Manara-CSRF": "1"}, json={
+        "slug": "eastern", "title": {"en": "E"}, "hashtag": "#e", "area": {"region_code": "SA-04"}, "status": "active"})
+    assert res.status_code == 201
+    inserted = cur.executemany.call_args[0][1]
+    assert len(inserted) == 300
+    assert all(row[5] == 3 for row in inserted)  # initial workload set immediately
+
+
+def test_tile_actions_blocked_when_sprint_not_active(client):
+    c, (conn, cur) = client
+    app.dependency_overrides[get_current_user] = lambda: {"osm_uid": 5, "display_name": "m", "is_admin": False}
+    cur.fetchone.side_effect = [{"id": 1, "status": "closed"}]
+    res = c.put("/api/v1/sprints/x/tiles/1:1", headers={"X-Manara-CSRF": "1"}, json={"action": "lock"})
+    assert res.status_code == 409

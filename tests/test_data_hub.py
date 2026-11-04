@@ -225,3 +225,40 @@ def test_build_manifest(tmp_path):
     assert manifest_file.exists()
     loaded = json.loads(manifest_file.read_text(encoding="utf-8"))
     assert loaded["dataset_version"] == manifest["dataset_version"]
+
+
+def test_places_csv_fills_id_type_and_normalized_name(tmp_path):
+    geojson_path = tmp_path / "places.geojson"
+    geojson_path.write_text(json.dumps({"type": "FeatureCollection", "features": [{
+        "type": "Feature",
+        "properties": {"osm_id": 42, "geom_type": "Polygon", "name": "جامع الملك", "name_original": "جامع الملك",
+                       "name_en": "", "religion": "muslim", "denomination": "unknown"},
+        "geometry": {"type": "Point", "coordinates": [46.0, 24.0]},
+    }]}), encoding="utf-8")
+    csv_path = tmp_path / "places.csv"
+    generate_places_csv(str(geojson_path), str(csv_path))
+    import csv as _csv
+    row = next(_csv.DictReader(open(csv_path, encoding="utf-8-sig")))
+    assert row["id"] == "way/42"
+    assert row["osm_type"] == "way"
+    assert row["osm_id"] == "42"
+    assert row["name_norm"] != ""
+
+
+def test_publish_never_precompresses_pmtiles(tmp_path):
+    import run
+    f = tmp_path / "places.pmtiles"
+    f.write_bytes(b"PMTiles\x03" + b"\0" * 64)
+    run.precompress(str(f))
+    assert not (tmp_path / "places.pmtiles.br").exists()
+    assert not (tmp_path / "places.pmtiles.gz").exists()
+    g = tmp_path / "x.json"
+    g.write_text("{}" * 100)
+    run.precompress(str(g))
+    assert (tmp_path / "x.json.br").exists()
+
+
+def test_overlays_run_before_data_hub():
+    import run
+    names = [s[0] for s in run.STEPS]
+    assert names.index("build_overlays.py") < names.index("build_data_hub.py")

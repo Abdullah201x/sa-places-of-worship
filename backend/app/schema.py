@@ -154,7 +154,7 @@ def init_app_tables(conn):
             count INT NOT NULL,
             total_places INT NOT NULL,
             with_keys JSONB DEFAULT '{}'::jsonb,
-            UNIQUE (dataset_version, tag_key, tag_value)
+            UNIQUE NULLS NOT DISTINCT (dataset_version, tag_key, tag_value)
         );
 
         CREATE INDEX IF NOT EXISTS idx_tag_usage_key ON tag_usage_history (tag_key, tag_value);

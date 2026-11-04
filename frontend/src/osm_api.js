@@ -55,12 +55,11 @@ export const OsmApi = {
     return custom || DEFAULT_OSM_CLIENT_ID;
   },
 
-  // Same address with or without index.html, always with a trailing slash,
-  // so it matches the redirect URI registered for the application.
+  // Always the site root: it is the one redirect URI registered for the OSM
+  // application, whichever page (/tasks, /start ...) started the login. The
+  // page to come back to is kept in sessionStorage (see startLogin).
   redirectUri() {
-    let uri = window.location.origin + window.location.pathname.replace(/index\.html$/, '');
-    if (!uri.endsWith('/')) uri += '/';
-    return uri;
+    return window.location.origin + '/';
   },
 
   token() {
@@ -96,7 +95,7 @@ export const OsmApi = {
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   },
 
-  async startLogin() {
+  async startLogin({ returnHash } = {}) {
     if (window.location.protocol === 'file:') {
       showToast(t('authFileProtocol'), 'error');
       return false;
@@ -114,8 +113,9 @@ export const OsmApi = {
     const state = this._random(24);
     sessionStorage.setItem('osm_oauth_code_verifier', verifier);
     sessionStorage.setItem('osm_oauth_state', state);
-    // Restore the current view after the round trip through openstreetmap.org.
-    sessionStorage.setItem('osm_oauth_return_hash', window.location.hash);
+    // Come back to this exact page/view after the round trip through openstreetmap.org.
+    sessionStorage.setItem('osm_oauth_return_to',
+      window.location.pathname + window.location.search + (returnHash ?? window.location.hash));
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -137,9 +137,14 @@ export const OsmApi = {
     const state = params.get('state');
     if (!code || !state) return;
 
-    const returnHash = sessionStorage.getItem('osm_oauth_return_hash') || '';
-    sessionStorage.removeItem('osm_oauth_return_hash');
-    window.history.replaceState({}, document.title, window.location.pathname + returnHash);
+    const returnTo = sessionStorage.getItem('osm_oauth_return_to') || '';
+    sessionStorage.removeItem('osm_oauth_return_to');
+    // Same-origin paths only, never a protocol-relative or absolute URL.
+    const safeReturnTo = /^\/(?!\/)/.test(returnTo) ? returnTo : '';
+    const returnUrl = new URL(safeReturnTo || window.location.pathname, window.location.origin);
+    const leaveToOtherPage = returnUrl.pathname !== window.location.pathname;
+    window.history.replaceState({}, document.title,
+      leaveToOtherPage ? window.location.pathname : returnUrl.pathname + returnUrl.search + returnUrl.hash);
 
     const savedState = sessionStorage.getItem('osm_oauth_state');
     const verifier = sessionStorage.getItem('osm_oauth_code_verifier');
@@ -147,10 +152,12 @@ export const OsmApi = {
     sessionStorage.removeItem('osm_oauth_code_verifier');
     if (state !== savedState) {
       showToast(t('authStateMismatch'), 'error');
+      if (leaveToOtherPage) window.location.replace(returnUrl.pathname + returnUrl.search + returnUrl.hash);
       return;
     }
     if (!verifier) {
       showToast(t('authNoVerifier'), 'error');
+      if (leaveToOtherPage) window.location.replace(returnUrl.pathname + returnUrl.search + returnUrl.hash);
       return;
     }
 
@@ -187,6 +194,10 @@ export const OsmApi = {
     } catch (err) {
       console.error(err);
       showToast(t('authFailed', { msg: err.message }), 'error');
+    }
+    if (leaveToOtherPage) {
+      // Login started on another page (e.g. /tasks): the token is stored, go back there.
+      window.location.replace(returnUrl.pathname + returnUrl.search + returnUrl.hash);
     }
   },
 
@@ -253,6 +264,10 @@ export const OsmApi = {
     const res = await fetch(`${this.urls().api}/api/0.6/${path}`, { method, headers, body });
     if (res.status === 401 || res.status === 403) throw new Error('AUTH_EXPIRED');
     const text = await res.text();
+    if (res.status === 409 && /version mismatch/i.test(text)) {
+      // Someone edited the element between our GET and PUT.
+      throw new Error(`VERSION_CONFLICT ${method} ${path}`);
+    }
     if (!res.ok) throw new Error(`${method} ${path}: HTTP ${res.status} ${text}`.trim());
     return text;
   },
@@ -311,6 +326,21 @@ export const OsmApi = {
   // upgrade holds preset upgrade rules (presets.js), matched against the
   // element's current tags so a rule that no longer applies changes nothing.
   // Returns the resulting tags, or null when the edit would change nothing.
+  /**
+   * Merges the edits of several queued fixes for the SAME element into one
+   * edits object, so the element is fetched and uploaded exactly once.
+   */
+  mergeEdits(list) {
+    const merged = {};
+    list.forEach(e => {
+      if (e.upgrade && !merged.upgrade) merged.upgrade = e.upgrade;
+      if (e.set) merged.set = { ...(merged.set || {}), ...e.set };
+      if (e.setIfMissing) merged.setIfMissing = { ...e.setIfMissing, ...(merged.setIfMissing || {}) };
+      if (e.del) merged.del = [...new Set([...(merged.del || []), ...e.del])];
+    });
+    return merged;
+  },
+
   applyEditsToTags(tags, edits) {
     let result = { ...tags };
     if (edits.upgrade) result = upgradeTags(result, edits.upgrade).tags;
@@ -389,7 +419,6 @@ export const OsmApi = {
       changesetId = await this.openChangeset(comment, source);
       const nodeId = await this.createNode(changesetId, { lat, lon, tags });
       trackEvent('Node created', { type: 'mosque', nodeId });
-      this.reportEdit(changesetId);
       EditHistory.add({
         changesetId,
         timestamp: Date.now(),
@@ -406,7 +435,12 @@ export const OsmApi = {
       });
       return { changesetId, nodeId };
     } finally {
-      if (changesetId) await this.closeChangeset(changesetId);
+      if (changesetId) {
+        await this.closeChangeset(changesetId);
+        // The backend verifies against OSM that the changeset is closed, so
+        // report only after closing (reporting earlier was always rejected).
+        await this.reportEdit(changesetId);
+      }
     }
   },
 
@@ -417,25 +451,37 @@ export const OsmApi = {
    * with status "conflict" unless item.force is set; items the edit would
    * not change are skipped as "unchanged". The changeset is always closed.
    */
-  async applyEdits(items, { comment, source, onProgress } = {}) {
+  async applyEdits(items, { comment, source, onProgress, deferReport = false } = {}) {
     if (!this.canEdit()) throw new Error('NOT_AUTHENTICATED');
-    const results = [];
+    // Several queued fixes for one element (e.g. name:en + denomination) are
+    // uploaded together: after the first PUT the element's version moves on,
+    // so a second PUT built from the old snapshot would conflict with itself.
+    const results = items.map(item => ({ ...item, status: 'pending' }));
+    const groups = new Map();
+    items.forEach((item, i) => {
+      const key = `${item.type}/${item.id}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(i);
+    });
     let changesetId = null;
     try {
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        const result = { ...item, status: 'pending' };
-        results.push(result);
+        const group = groups.get(`${item.type}/${item.id}`);
+        if (group[0] !== i) continue; // filled in from the group's first item below
+        const result = results[i];
+        const edits = group.length > 1 ? this.mergeEdits(group.map(j => items[j].edits)) : item.edits;
+        const force = group.some(j => items[j].force);
         if (onProgress) onProgress({ current: i + 1, total: items.length, item });
         try {
           const element = await this.fetchElement(item.type, item.id);
           result.oldTags = element.tags;
-          if (item.expectedVersion && element.version !== item.expectedVersion && !item.force) {
+          if (item.expectedVersion && element.version !== item.expectedVersion && !force) {
             result.status = 'conflict';
             result.currentVersion = element.version;
             continue;
           }
-          const newTags = this.applyEditsToTags(element.tags, item.edits);
+          const newTags = this.applyEditsToTags(element.tags, edits);
           if (!newTags) {
             result.status = 'unchanged';
             continue;
@@ -446,31 +492,56 @@ export const OsmApi = {
           result.status = 'success';
         } catch (err) {
           if (err.message === 'AUTH_EXPIRED') throw err;
-          result.status = 'error';
-          result.error = err.message;
+          if (err.message.startsWith('VERSION_CONFLICT')) {
+            result.status = 'conflict';
+          } else {
+            result.status = 'error';
+            result.error = err.message;
+          }
         }
         // Be gentle with the API between elements.
         if (i < items.length - 1) await new Promise(r => setTimeout(r, 120));
       }
+      groups.forEach(group => {
+        const first = results[group[0]];
+        group.slice(1).forEach(j => {
+          const { status, oldTags, newTags, newVersion, currentVersion, error } = first;
+          Object.assign(results[j], { status, oldTags, newTags, newVersion, currentVersion, error });
+        });
+      });
     } finally {
       if (changesetId) await this.closeChangeset(changesetId);
     }
 
     if (changesetId) {
       trackEvent('Fix uploaded', { objects: results.filter(r => r.status === 'success').length });
-      this.reportEdit(changesetId);
+      // deferReport: the caller saves its review marks first, then calls reportEdit().
+      if (!deferReport) this.reportEdit(changesetId);
       EditHistory.add({
         changesetId,
         timestamp: Date.now(),
         user: this.userName(),
         environment: this.environment(),
         comment: this.truncateTag(comment),
-        items: results.filter(r => r.status === 'success').map(r => ({
-          ref: `${r.type}/${r.id}`, label: r.label || '', version: r.newVersion, summary: r.summary || ''
-        }))
+        items: this.historyItems(results)
       });
     }
     return { changesetId, results };
+  },
+
+  // One history row per element, joining the summaries of its merged fixes.
+  historyItems(results) {
+    const byRef = new Map();
+    results.filter(r => r.status === 'success').forEach(r => {
+      const ref = `${r.type}/${r.id}`;
+      const existing = byRef.get(ref);
+      if (existing) {
+        if (r.summary && !existing.summary.includes(r.summary)) existing.summary += `; ${r.summary}`;
+      } else {
+        byRef.set(ref, { ref, label: r.label || '', version: r.newVersion, summary: r.summary || '' });
+      }
+    });
+    return [...byRef.values()];
   },
 
   async reportEdit(changesetId) {

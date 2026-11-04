@@ -15,21 +15,24 @@ TileState = Literal[
     "ready", "mapping", "mapped", "validating", "validated", "invalidated", "skipped"
 ]
 
-# Standard region bounding boxes for Saudi Arabia: [min_lon, min_lat, max_lon, max_lat]
+# Fallback bounding boxes keyed by the real ISO 3166-2:SA codes (the same codes
+# pipeline/extract_regions.py stores in the `regions` table):
+# [min_lon, min_lat, max_lon, max_lat]. When the `regions` table is loaded its
+# geometry is used instead, so tiles follow the true province outline.
 REGION_BOUNDS: dict[str, list[float]] = {
     "SA-01": [44.0, 20.0, 48.5, 27.0],  # Riyadh
     "SA-02": [38.5, 19.5, 43.0, 23.5],  # Makkah
     "SA-03": [37.5, 22.5, 42.0, 26.5],  # Madinah
     "SA-04": [46.5, 19.0, 55.5, 29.5],  # Eastern Province
-    "SA-05": [41.5, 17.5, 44.5, 20.5],  # Asir
-    "SA-06": [42.5, 25.0, 45.0, 27.0],  # Al-Qassim
+    "SA-05": [42.5, 25.0, 45.0, 27.0],  # Al-Qassim
+    "SA-06": [39.5, 26.0, 43.5, 29.0],  # Ha'il
     "SA-07": [34.5, 26.5, 39.5, 29.5],  # Tabuk
-    "SA-08": [39.5, 26.0, 43.5, 29.0],  # Hail
-    "SA-09": [37.0, 28.5, 41.5, 32.2],  # Al-Jouf
-    "SA-10": [41.5, 16.2, 43.5, 18.0],  # Jazan
-    "SA-11": [43.5, 17.0, 48.0, 19.5],  # Najran
-    "SA-12": [41.0, 19.5, 42.0, 20.5],  # Al-Baha
-    "SA-13": [38.0, 29.0, 44.5, 32.2],  # Northern Borders
+    "SA-08": [38.0, 29.0, 44.5, 32.2],  # Northern Borders
+    "SA-09": [41.5, 16.2, 43.5, 18.0],  # Jazan
+    "SA-10": [43.5, 17.0, 48.0, 19.5],  # Najran
+    "SA-11": [41.0, 19.5, 42.0, 20.5],  # Al-Bahah
+    "SA-12": [37.0, 28.5, 41.5, 32.2],  # Al-Jawf
+    "SA-14": [41.5, 17.5, 44.5, 20.5],  # Asir
 }
 
 MAX_SPRINT_AREA_KM2 = 5000.0
@@ -90,49 +93,115 @@ def generate_tiles_for_bounds(min_lon: float, min_lat: float, max_lon: float, ma
     return tiles
 
 
+TILE_DEG = 0.02
+
+
+def workload_tiles_for_area(conn, area: dict, rule_ids: list[str], gap_min_urgency: int | None) -> list[dict] | None:
+    """Tiles that actually contain work, clipped to the real area.
+
+    Counts issues (matching rule_ids) and gap cells per 0.02 degree cell for the
+    places/gaps that fall inside the area (province geometry from the `regions`
+    table, or the drawn polygon). Only non-empty cells are returned, so a whole
+    province becomes a few hundred tiles instead of tens of thousands of empty
+    desert squares, and each tile already has its initial workload.
+
+    Returns None when the dataset tables are unavailable (fresh database), so
+    the caller can fall back to plain bounding-box tiles.
+    """
+    if "region_code" in area:
+        geom_sql = "(SELECT geom FROM regions WHERE code = %s)"
+        geom_param = area["region_code"]
+    else:
+        geom_sql = "ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)"
+        geom_param = json.dumps(area["polygon"])
+
+    query = f"""
+        WITH area AS (SELECT {geom_sql} AS g),
+        issue_cells AS (
+            SELECT floor(ST_X(p.geom) / {TILE_DEG})::int AS gx,
+                   floor(ST_Y(p.geom) / {TILE_DEG})::int AS gy,
+                   COUNT(*) AS n
+            FROM area a
+            JOIN places p ON p.geom && a.g AND ST_Intersects(p.geom, a.g)
+            JOIN issues i ON i.osm_type = p.osm_type AND i.osm_id = p.osm_id
+            WHERE (cardinality(%s::text[]) = 0 OR i.rule_id = ANY(%s::text[]))
+            GROUP BY 1, 2
+        ),
+        gap_cells AS (
+            SELECT floor(ST_X(gp.geom) / {TILE_DEG})::int AS gx,
+                   floor(ST_Y(gp.geom) / {TILE_DEG})::int AS gy,
+                   COUNT(*) AS n
+            FROM area a
+            JOIN gaps gp ON gp.geom && a.g AND ST_Intersects(gp.geom, a.g)
+            WHERE (%s::int IS NULL OR gp.urgency_score >= %s::int)
+            GROUP BY 1, 2
+        )
+        SELECT gx, gy, SUM(n)::int AS workload
+        FROM (SELECT * FROM issue_cells UNION ALL SELECT * FROM gap_cells) u
+        GROUP BY gx, gy
+        HAVING SUM(n) > 0
+        ORDER BY gx, gy
+        LIMIT %s;
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (geom_param, rule_ids, rule_ids, gap_min_urgency, gap_min_urgency, MAX_SPRINT_TILES + 1))
+            rows = cur.fetchall()
+    except Exception:
+        return None
+
+    tiles = []
+    for r in rows:
+        gx, gy, workload = (r["gx"], r["gy"], r["workload"]) if isinstance(r, dict) else (r[0], r[1], r[2])
+        tiles.append({
+            "tile_id": f"{gx}:{gy}",
+            "bbox": [round(gx * TILE_DEG, 6), round(gy * TILE_DEG, 6),
+                     round((gx + 1) * TILE_DEG, 6), round((gy + 1) * TILE_DEG, 6)],
+            "workload": int(workload),
+        })
+    return tiles
+
+
 def expire_stale_locks(conn, sprint_id: int | None = None):
-    """Reverts expired locks back to ready or mapped states and writes tile_events."""
+    """Reverts expired locks back to ready or mapped states and writes tile_events.
+
+    One atomic statement: rows are claimed with FOR UPDATE SKIP LOCKED, so two
+    concurrent requests never expire (and double-bump) the same tile.
+    """
     now = datetime.now(timezone.utc)
+    sprint_filter = "AND sprint_id = %s" if sprint_id is not None else ""
+    params: list = [now, now]
+    if sprint_id is not None:
+        params.append(sprint_id)
+    params.append(now)
     with conn.cursor() as cur:
-        query = """
-            SELECT sprint_id, tile_id, state, lock_uid, rev
-            FROM sprint_tiles
-            WHERE state IN ('mapping', 'validating')
-              AND lock_expires_at IS NOT NULL
-              AND lock_expires_at <= %s
-        """
-        params = [now]
-        if sprint_id is not None:
-            query += " AND sprint_id = %s"
-            params.append(sprint_id)
-
-        cur.execute(query, params)
-        expired = cur.fetchall()
-        for row in expired:
-            s_id = row["sprint_id"] if isinstance(row, dict) else row[0]
-            t_id = row["tile_id"] if isinstance(row, dict) else row[1]
-            old_st = row["state"] if isinstance(row, dict) else row[2]
-            uid = (row["lock_uid"] if isinstance(row, dict) else row[3]) or 0
-            rev = (row["rev"] if isinstance(row, dict) else row[4]) or 1
-
-            new_st = "ready" if old_st == "mapping" else "mapped"
-            cur.execute("""
-                UPDATE sprint_tiles
-                SET state = %s,
+        cur.execute(f"""
+            WITH claimed AS (
+                SELECT sprint_id, tile_id, state AS old_state, lock_uid
+                FROM sprint_tiles
+                WHERE state IN ('mapping', 'validating')
+                  AND lock_expires_at IS NOT NULL
+                  AND lock_expires_at <= %s
+                  {sprint_filter}
+                FOR UPDATE SKIP LOCKED
+            ),
+            expired AS (
+                UPDATE sprint_tiles st
+                SET state = CASE WHEN c.old_state = 'mapping' THEN 'ready' ELSE 'mapped' END,
                     lock_uid = NULL,
                     lock_display_name = NULL,
                     lock_kind = NULL,
                     lock_expires_at = NULL,
-                    rev = rev + 1,
+                    rev = st.rev + 1,
                     updated_at = %s
-                WHERE sprint_id = %s AND tile_id = %s;
-            """, (new_st, now, s_id, t_id))
-
-            cur.execute("""
-                INSERT INTO tile_events (
-                    sprint_id, tile_id, osm_uid, from_state, to_state, reason, created_at
-                ) VALUES (%s, %s, %s, %s, %s, 'lock_expired', %s);
-            """, (s_id, t_id, uid, old_st, new_st, now))
+                FROM claimed c
+                WHERE st.sprint_id = c.sprint_id AND st.tile_id = c.tile_id
+                RETURNING st.sprint_id, st.tile_id, c.old_state, c.lock_uid, st.state AS new_state
+            )
+            INSERT INTO tile_events (sprint_id, tile_id, osm_uid, from_state, to_state, reason, created_at)
+            SELECT sprint_id, tile_id, COALESCE(lock_uid, 0), old_state, new_state, 'lock_expired', %s
+            FROM expired;
+        """, params)
 
 
 def compute_sprint_progress(cur, sprint_id: int) -> dict:
@@ -234,7 +303,7 @@ def create_sprint(
 ):
     """
     Creates a new mapping sprint over a region or drawn polygon.
-    Generates 0.02° tiles (~2.2 km blocks) and initializes progress.
+    Generates 0.02° tiles (~2.2 km blocks) clipped to the area, keeping only cells with work.
     Admin only (MANARA_ADMIN_UIDS).
     """
     area_dict = payload.area
@@ -260,12 +329,15 @@ def create_sprint(
     if not (33.0 <= min_lon <= 56.5 and 15.5 <= min_lat <= 33.0 and 33.0 <= max_lon <= 56.5 and 15.5 <= max_lat <= 33.0):
         raise HTTPException(status_code=400, detail="Sprint area must be within Saudi Arabia boundary.")
 
-    # Calculate area and tile count
-    tiles = generate_tiles_for_bounds(min_lon, min_lat, max_lon, max_lat)
+    # Prefer tiles clipped to the real area that already carry workload.
+    tiles = workload_tiles_for_area(conn, area_dict, payload.rule_ids, payload.gap_min_urgency)
+    if not tiles:
+        # Dataset not loaded (or nothing to do yet): plain bounding-box tiles.
+        tiles = generate_tiles_for_bounds(min_lon, min_lat, max_lon, max_lat)
     if len(tiles) > MAX_SPRINT_TILES:
         raise HTTPException(
             status_code=400,
-            detail=f"Sprint covers {len(tiles)} tiles, exceeding maximum {MAX_SPRINT_TILES} tiles. Please select a smaller area."
+            detail=f"Sprint covers {len(tiles)}+ tiles, exceeding maximum {MAX_SPRINT_TILES} tiles. Please select a smaller area."
         )
 
     starts_at = payload.starts_at or datetime.now(timezone.utc)
@@ -313,7 +385,7 @@ def create_sprint(
                     t["bbox"],
                     "ready",
                     1,
-                    0,
+                    t.get("workload", 0),
                     False,
                     now
                 ))
@@ -413,7 +485,7 @@ def get_sprint_tiles(
 ):
     """
     Returns compact array of tiles for the sprint board.
-    Supports ETag caching via max rev (rev_max) for cheap 60s background polling.
+    Supports ETag caching via tile count + summed revs for cheap 60s background polling.
     """
     with conn.cursor() as cur:
         cur.execute("SELECT id FROM sprints WHERE slug = %s;", (slug,))
@@ -443,7 +515,11 @@ def get_sprint_tiles(
         tiles = [row_to_tile_dict(r) for r in rows]
         rev_max = max((t["rev"] for t in tiles), default=1)
 
-        etag = f'W/"{rev_max}"'
+        # max(rev) alone collides: tile A going 1 -> 2 leaves it at 2 while B is
+        # already 2. Count, sum of revs and pending flags change on every edit.
+        sum_rev = sum(t["rev"] for t in tiles)
+        pending = sum(1 for t in tiles if t["pending_refresh"])
+        etag = f'W/"{sprint_id}:{len(tiles)}:{sum_rev}:{pending}"'
         response.headers["ETag"] = etag
         response.headers["Cache-Control"] = "public, max-age=10, must-revalidate"
 
@@ -487,11 +563,17 @@ def update_tile_state(
     # Autocommit is on, so FOR UPDATE only holds its row lock inside a transaction block
     with conn.transaction():
         with conn.cursor() as cur:
-            cur.execute("SELECT id FROM sprints WHERE slug = %s;", (slug,))
+            cur.execute("SELECT id, status FROM sprints WHERE slug = %s;", (slug,))
             sprint_row = cur.fetchone()
             if not sprint_row:
                 raise HTTPException(status_code=404, detail="Sprint not found.")
             sprint_id = sprint_row["id"] if isinstance(sprint_row, dict) else sprint_row[0]
+            sprint_status = sprint_row.get("status", "active") if isinstance(sprint_row, dict) else "active"
+            if sprint_status != "active":
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Sprint is {sprint_status}; tiles can only be changed while it is active.",
+                )
 
             expire_stale_locks(conn, sprint_id)
 
@@ -545,9 +627,10 @@ def update_tile_state(
                         detail=f"Maximum {MAX_ACTIVE_LOCKS_PER_USER} simultaneous locks permitted per user.",
                     )
 
-                lock_kind = payload.kind or ("mapping" if current_state == "ready" else "validation")
+                lock_kind = payload.kind or ("validation" if current_state == "mapped" else "mapping")
 
-                if current_state == "ready":
+                # An invalidated tile goes back to being mapped again.
+                if current_state in ("ready", "invalidated"):
                     new_state = "mapping"
                 elif current_state == "mapped":
                     # Self-validation rejection check
@@ -560,7 +643,7 @@ def update_tile_state(
                 else:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Cannot lock tile in state '{current_state}'. Only 'ready' or 'mapped' tiles can be locked."
+                        detail=f"Cannot lock tile in state '{current_state}'. Only 'ready', 'invalidated' or 'mapped' tiles can be locked."
                     )
 
                 expires_at = now + timedelta(hours=LOCK_TTL_HOURS)

@@ -86,8 +86,7 @@ function checkAuthStatus() {
         </button>
       `;
       document.getElementById('btn-osm-login')?.addEventListener('click', () => {
-        sessionStorage.setItem('osm_oauth_return_hash', '#step-2');
-        OsmApi.startLogin();
+        OsmApi.startLogin({ returnHash: '#step-2' });
       });
     }
   }

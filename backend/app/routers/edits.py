@@ -42,6 +42,39 @@ def parse_osmchange_objects(xml_text: str) -> list[dict]:
     return objects
 
 
+def bind_verified_marks(cur, changeset_id: int, osm_uid: int, objects: list[dict]) -> int:
+    """Attach a verified changeset to the user's 'fixed' review marks.
+
+    A merged mosque (building + inner node) has one review mark keyed by the
+    building, while an edit may touch only its node (places.poi_node_id): such
+    node edits are bound to the parent place's mark as well.
+    """
+    if not objects:
+        return 0
+    types = [obj["type"] for obj in objects]
+    ids = [obj["id"] for obj in objects]
+    cur.execute("""
+        WITH touched AS (
+            SELECT * FROM unnest(%s::text[], %s::bigint[]) AS t(osm_type, osm_id)
+        ),
+        targets AS (
+            SELECT osm_type, osm_id FROM touched
+            UNION
+            SELECT p.osm_type, p.osm_id
+            FROM touched t
+            JOIN places p ON t.osm_type = 'node' AND p.poi_node_id = t.osm_id
+        )
+        UPDATE review_marks rm
+        SET verified_changeset = %s
+        FROM targets
+        WHERE rm.osm_uid = %s
+          AND rm.status = 'fixed'
+          AND rm.osm_type = targets.osm_type
+          AND rm.osm_id = targets.osm_id;
+    """, (types, ids, changeset_id, osm_uid))
+    return cur.rowcount
+
+
 @router.post("/edits")
 @limiter.limit("30/minute")
 async def report_and_verify_edit(
@@ -63,11 +96,19 @@ async def report_and_verify_edit(
         cur.execute("SELECT changeset_id, osm_uid, comment, verified_at, objects FROM edits WHERE changeset_id = %s;", (cid,))
         existing = cur.fetchone()
         if existing:
+            # A repeated report still (re)binds marks: the first report may have
+            # arrived before the mapper's 'fixed' mark existed.
+            rebound = 0
+            if existing["osm_uid"] == user["osm_uid"]:
+                with conn.transaction():
+                    with conn.cursor() as bind_cur:
+                        rebound = bind_verified_marks(bind_cur, cid, user["osm_uid"], existing["objects"] or [])
             return {
                 "status": "ok",
                 "changeset_id": existing["changeset_id"],
                 "already_verified": True,
                 "objects_count": len(existing["objects"] or []),
+                "verified_marks_updated": rebound,
             }
 
     # 2. Fetch changeset metadata from OSM API once
@@ -158,20 +199,7 @@ async def report_and_verify_edit(
             """, (cid, user["osm_uid"], json.dumps(objects), comment))
 
             # 4. Batch bind verified_changeset to user's 'fixed' marks for touched objects
-            updated_marks_count = 0
-            if objects:
-                types = [obj["type"] for obj in objects]
-                ids = [obj["id"] for obj in objects]
-                cur.execute("""
-                    UPDATE review_marks
-                    SET verified_changeset = %s
-                    WHERE osm_uid = %s
-                      AND status = 'fixed'
-                      AND (osm_type, osm_id) IN (
-                          SELECT * FROM unnest(%s::text[], %s::bigint[])
-                      );
-                """, (cid, user["osm_uid"], types, ids))
-                updated_marks_count = cur.rowcount
+            updated_marks_count = bind_verified_marks(cur, cid, user["osm_uid"], objects)
 
     return {
         "status": "ok",

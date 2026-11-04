@@ -145,3 +145,11 @@ describe('outdated tags on published places', () => {
     ]);
   });
 });
+
+describe('geometry-aware fields', () => {
+  it('never puts building=* on a point', () => {
+    const values = { 'name:ar': 'مسجد', building: true };
+    expect(tagsFromValues(MOSQUE_PRESET, values, 'point').building).toBeUndefined();
+    expect(tagsFromValues(MOSQUE_PRESET, values, 'area').building).toBe('mosque');
+  });
+});

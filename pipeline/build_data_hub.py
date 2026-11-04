@@ -15,11 +15,13 @@ import json
 import os
 import sys
 
-from common import BASE_DIR, configure_utf8_output, read_summary
+from common import BASE_DIR, configure_utf8_output, normalize_arabic, read_summary, write_json
 
 configure_utf8_output()
 
 DATA_DIR = os.environ.get("MANARA_DATA_DIR", BASE_DIR)
+
+_OSM_TYPE_BY_GEOM = {"Point": "node", "Polygon": "way", "MultiPolygon": "relation", "Relation": "relation"}
 
 
 def sha256_file(filepath):
@@ -46,12 +48,16 @@ def write_places_csv_features(features, csv_path):
             props = feat.get("properties", {})
             geom = feat.get("geometry", {})
             coords = geom.get("coordinates", [None, None])
+            osm_type = props.get("osm_type") or _OSM_TYPE_BY_GEOM.get(props.get("geom_type", ""), "")
+            osm_id = props.get("osm_id", "")
+            feat_id = feat.get("id") or props.get("id") or (f"{osm_type}/{osm_id}" if osm_type and osm_id != "" else "")
+            raw_name = props.get("name_original", "")
             writer.writerow([
-                feat.get("id", ""),
-                props.get("osm_type", ""),
-                props.get("osm_id", ""),
+                feat_id,
+                osm_type,
+                osm_id,
                 props.get("name", ""),
-                props.get("name_norm", ""),
+                normalize_arabic(raw_name) if raw_name else "",
                 props.get("name_en", ""),
                 props.get("religion", ""),
                 props.get("denomination", ""),
@@ -224,8 +230,7 @@ def stamp_region_codes(data_dir=DATA_DIR):
         else:
             props.pop("region_code", None)
 
-    with open(places_path, "w", encoding="utf-8") as f:
-        json.dump(places_data, f, ensure_ascii=False, separators=(",", ":"))
+    write_json(places_path, places_data)
     return stamped
 
 
@@ -271,8 +276,7 @@ def generate_regional_exports(data_dir=DATA_DIR):
             geo_full = os.path.join(by_region_dir, geo_fn)
             csv_full = os.path.join(by_region_dir, csv_fn)
 
-            with open(geo_full, "w", encoding="utf-8") as out:
-                json.dump({"type": "FeatureCollection", "features": feats}, out, ensure_ascii=False)
+            write_json(geo_full, {"type": "FeatureCollection", "features": feats})
             write_places_csv_features(feats, csv_full)
 
             files_list.append({
@@ -322,19 +326,18 @@ def generate_regional_exports(data_dir=DATA_DIR):
             json_full = os.path.join(by_region_dir, json_fn)
             csv_full = os.path.join(by_region_dir, csv_fn)
 
-            with open(json_full, "w", encoding="utf-8") as out:
-                json.dump({
+            write_json(json_full, {
                     "grid_size": grid_size,
                     "fields": ["grid_x", "grid_y", "road_length_m", "gap_score", "urgency_score"],
                     "cells": reg_cells
-                }, out)
+                })
             write_gaps_csv_cells(reg_cells, grid_size, csv_full)
 
             files_list.append({
                 "id": f"gaps-{code}-json",
                 "scope": code,
                 "layer": "gaps",
-                "format": "geojson",
+                "format": "json",
                 "path": json_rel,
                 "bytes": os.path.getsize(json_full),
                 "sha256": sha256_file(json_full),
@@ -374,8 +377,7 @@ def generate_regional_exports(data_dir=DATA_DIR):
             geo_full = os.path.join(by_region_dir, geo_fn)
             csv_full = os.path.join(by_region_dir, csv_fn)
 
-            with open(geo_full, "w", encoding="utf-8") as out:
-                json.dump({"type": "FeatureCollection", "features": feats}, out, ensure_ascii=False)
+            write_json(geo_full, {"type": "FeatureCollection", "features": feats})
             write_suggestions_csv_features(feats, csv_full)
 
             files_list.append({
@@ -499,7 +501,7 @@ def build_manifest(data_dir=DATA_DIR):
             "id": "gaps-sa-json",
             "scope": "SA",
             "layer": "gaps",
-            "format": "geojson",
+            "format": "json",
             "filename": "worship_gaps_sa.json",
             "features": gaps_count or summary.get("datasets", {}).get("gaps", {}).get("count", 0),
         },
@@ -598,8 +600,7 @@ def build_manifest(data_dir=DATA_DIR):
     }
 
     manifest_path = os.path.join(data_dir, "manifest.json")
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, ensure_ascii=False, indent=2)
+    write_json(manifest_path, manifest)
 
     print(f"[OK] Generated {manifest_path} with {len(files_list)} catalogued files.")
     return manifest

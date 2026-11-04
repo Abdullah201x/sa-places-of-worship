@@ -380,8 +380,10 @@ export const FocusMode = {
       return;
     }
 
-    // For deterministic tag fixes like building_yes
-    if (focusRuleId === 'building_yes' || focusRuleId === 'missing_amenity' || focusRuleId === 'outdated_tags') {
+    // Deterministic tag fixes can be queued with one key. building=yes ->
+    // building=mosque is not one of them: the footprint must be confirmed on
+    // imagery, so it goes through the edit dialog (tag diff, explicit upload).
+    if (focusRuleId === 'missing_amenity' || focusRuleId === 'outdated_tags') {
       const item = createBatchEditItem(props, focusRuleId);
       if (!item) return;
 

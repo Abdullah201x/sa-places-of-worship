@@ -39,3 +39,14 @@ describe('Command Palette Item Filtering', () => {
     expect(satellite.some(i => i.type === 'action' && i.id === 'toggle_satellite')).toBe(true);
   });
 });
+
+describe('region codes', () => {
+  it('uses the real ISO 3166-2:SA codes (SA-01..SA-12 and SA-14)', () => {
+    expect(REGIONS.map(r => r.code)).toEqual(
+      ['SA-01', 'SA-02', 'SA-03', 'SA-04', 'SA-05', 'SA-06', 'SA-07', 'SA-08', 'SA-09', 'SA-10', 'SA-11', 'SA-12', 'SA-14']);
+    const byCode = Object.fromEntries(REGIONS.map(r => [r.code, r.name_en]));
+    expect(byCode['SA-05']).toMatch(/Qassim/);
+    expect(byCode['SA-06']).toMatch(/Ha'il/);
+    expect(byCode['SA-14']).toMatch(/Asir/);
+  });
+});

@@ -138,7 +138,7 @@ export function applyUploadedTagsToPlace(placeKey, result) {
   const f = findPlaceByKey(placeKey);
   if (!f) return;
   const props = f.properties;
-  ReviewMarks.set(props, 'fixed');
+  const markSynced = ReviewMarks.set(props, 'fixed');
   const tags = result.newTags || {};
   if (tags.amenity !== undefined) props.amenity = tags.amenity;
   if (tags.religion !== undefined) props.religion = tags.religion;
@@ -151,6 +151,7 @@ export function applyUploadedTagsToPlace(placeKey, result) {
   } else {
     props._editedNodeVersion = result.newVersion;
   }
+  return markSynced;
 }
 
 export function refreshAfterEdits() {
@@ -526,15 +527,17 @@ export function handleEditError(err) {
 
 export async function uploadSingle(item, comment, source) {
   try {
-    let { changesetId, results } = await OsmApi.applyEdits([item], { comment, source });
+    let { changesetId, results } = await OsmApi.applyEdits([item], { comment, source, deferReport: true });
     let r = results[0];
     if (r.status === 'conflict') {
       if (!window.confirm(t('editConflict', { v: r.currentVersion }))) return false;
-      ({ changesetId, results } = await OsmApi.applyEdits([{ ...item, force: true }], { comment, source }));
+      ({ changesetId, results } = await OsmApi.applyEdits([{ ...item, force: true }], { comment, source, deferReport: true }));
       r = results[0];
     }
     if (r.status === 'success') {
-      applyUploadedTagsToPlace(item.placeKey, r);
+      // Mark first, report second: /api/v1/edits binds the changeset to the mark.
+      await applyUploadedTagsToPlace(item.placeKey, r);
+      if (changesetId) OsmApi.reportEdit(changesetId);
       refreshAfterEdits();
       showToast(t('editSuccess'), 'success', { link: { href: OsmApi.changesetUrl(changesetId), text: t('editViewChangeset') } });
       return true;
@@ -542,6 +545,7 @@ export async function uploadSingle(item, comment, source) {
     if (r.status === 'unchanged') {
       const f = findPlaceByKey(item.placeKey);
       if (f) ReviewMarks.set(f.properties, 'fixed');
+      if (changesetId) OsmApi.reportEdit(changesetId);
       refreshAfterEdits();
       showToast(t('editUnchanged'));
       return true;
@@ -730,20 +734,25 @@ export function openBatchDialog() {
           const { changesetId, results } = await OsmApi.applyEdits(items, {
             comment: comment.area.value,
             source: source.value,
+            deferReport: true,
             onProgress: ({ current, total }) => {
               bar.style.width = `${Math.round(current / total * 100)}%`;
               progressText.textContent = t('batchProgress', { current: fmtNum(current), total: fmtNum(total) });
             }
           });
           const counts = { success: 0, unchanged: 0, conflict: 0, error: 0 };
+          const markSyncs = [];
           results.forEach(r => {
             counts[r.status] = (counts[r.status] || 0) + 1;
-            if (r.status === 'success') applyUploadedTagsToPlace(r.placeKey, r);
+            if (r.status === 'success') markSyncs.push(applyUploadedTagsToPlace(r.placeKey, r));
             if (r.status === 'unchanged') {
               const f = findPlaceByKey(r.placeKey);
               if (f) ReviewMarks.set(f.properties, 'fixed');
             }
           });
+          // Marks reach the server before the changeset is reported for binding.
+          await Promise.all(markSyncs);
+          if (changesetId) OsmApi.reportEdit(changesetId);
           // Keep only what still needs attention.
           EditBatch.replace(items.filter((_, i) => ['conflict', 'error'].includes(results[i].status)));
           refreshAfterEdits();
