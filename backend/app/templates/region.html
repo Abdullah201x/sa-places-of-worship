@@ -6,23 +6,7 @@
 
 {% block json_ld %}
 <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "AdministrativeArea",
-  "name": "{{ region.name }}",
-  "alternateName": "{{ region.name_en }}",
-  "identifier": "{{ region.code }}",
-  "url": "{{ canonical_url }}",
-  "containsPlace": [
-    {% for place in top_places[:10] %}
-    {
-      "@type": "Mosque",
-      "name": "{{ place.name }}",
-      "url": "https://manara.saudiosm.org/place/{{ place.osm_type }}/{{ place.osm_id }}"
-    }{% if not loop.last %},{% endif %}
-    {% endfor %}
-  ]
-}
+{{ json_ld | tojson | safe }}
 </script>
 {% endblock %}
 

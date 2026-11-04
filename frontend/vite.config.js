@@ -101,9 +101,14 @@ function serveData(req, res, next) {
 
 // Clean URLs for the content pages, as Caddy's try_files does in production.
 const PAGES = new Set(['/about', '/privacy', '/community', '/tags', '/guides', '/start', '/tasks', '/data', '/mapgl']);
+const WORKSPACES = new Set(['/qa', '/changes']);
 function cleanUrls(req, res, next) {
   const [pathname, query] = req.url.split('?');
-  if (PAGES.has(pathname)) req.url = `${pathname}.html${query ? `?${query}` : ''}`;
+  if (PAGES.has(pathname)) {
+    req.url = `${pathname}.html${query ? `?${query}` : ''}`;
+  } else if (WORKSPACES.has(pathname)) {
+    req.url = `/index.html${query ? `?${query}` : ''}`;
+  }
   next();
 }
 

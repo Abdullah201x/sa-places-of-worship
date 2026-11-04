@@ -1,16 +1,17 @@
 import json
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.auth import get_current_user, verify_csrf
 from app.database import get_db
+from app.limiter import limiter
 
 OSM_USER_AGENT = "Manara/1.0 (+https://manara.saudiosm.org)"
 OSM_CHANGESET_BASE = "https://api.openstreetmap.org/api/0.6/changeset"
 
-MAX_CHANGESET_XML_BYTES = 5 * 1024 * 1024  # 5 MB safety limit
+MAX_CHANGESET_XML_BYTES = 2 * 1024 * 1024  # 2 MB safety limit
 
 router = APIRouter(prefix="/api/v1", tags=["edits"])
 
@@ -42,7 +43,9 @@ def parse_osmchange_objects(xml_text: str) -> list[dict]:
 
 
 @router.post("/edits")
+@limiter.limit("30/minute")
 async def report_and_verify_edit(
+    request: Request,
     payload: EditReportRequest,
     _csrf: None = Depends(verify_csrf),
     user: dict = Depends(get_current_user),
@@ -113,21 +116,29 @@ async def report_and_verify_edit(
                     detail="Changeset must contain the hashtag #sa-worship-map in comment or tags.",
                 )
 
-            # Fetch touched objects (one download read)
-            dl_res = await client.get(
+            # Fetch touched objects (streaming with 2 MiB safety cap)
+            async with client.stream(
+                "GET",
                 download_url,
                 headers={"User-Agent": OSM_USER_AGENT},
-            )
-            if dl_res.status_code != 200:
-                # Don't store the edit with no objects: it would count as already
-                # verified and its marks would never be bound on a retry.
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Could not download changeset contents (HTTP {dl_res.status_code}). Please try again.",
-                )
-            objects = []
-            if len(dl_res.content) <= MAX_CHANGESET_XML_BYTES:
-                objects = parse_osmchange_objects(dl_res.text)
+            ) as dl_res:
+                if dl_res.status_code != 200:
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=f"Could not download changeset contents (HTTP {dl_res.status_code}). Please try again.",
+                    )
+                content_chunks = []
+                total_bytes = 0
+                async for chunk in dl_res.aiter_bytes():
+                    total_bytes += len(chunk)
+                    if total_bytes > MAX_CHANGESET_XML_BYTES:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail="Changeset XML exceeds maximum allowed size (2 MiB).",
+                        )
+                    content_chunks.append(chunk)
+                xml_text = b"".join(content_chunks).decode("utf-8", errors="replace")
+                objects = parse_osmchange_objects(xml_text)
 
     except HTTPException:
         raise
@@ -169,4 +180,3 @@ async def report_and_verify_edit(
         "objects_count": len(objects),
         "verified_marks_updated": updated_marks_count,
     }
-

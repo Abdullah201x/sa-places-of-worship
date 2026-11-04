@@ -26,8 +26,26 @@ const GAP_COLOR = ['interpolate', ['linear'], ['coalesce', ['get', 'urgency'], 0
 
 const circleRadius = (...stops) => ['interpolate', ['linear'], ['zoom'], ...stops];
 
+// Wikidata suggestions are private to allowlisted OSM users (see suggestions_access.js), so the
+// source and layer are built separately and only added when the backend says the viewer may see them.
+export function suggestionsSource(origin) {
+  return { type: 'vector', url: `pmtiles://${origin}/data/suggestions.pmtiles`, attribution: '' };
+}
+
+export const SUGGESTIONS_LAYER = {
+  id: 'suggestions', type: 'circle', source: 'suggestions', 'source-layer': 'suggestions',
+  layout: { visibility: 'none' },
+  paint: {
+    'circle-color': '#f59e0b',
+    'circle-stroke-color': '#ffffff',
+    'circle-stroke-width': 1,
+    'circle-radius': circleRadius(5, 2, 10, 4, 14, 7),
+  },
+};
+
 // origin is passed in so the helper stays testable; pmtiles:// needs an absolute URL.
-export function buildStyle({ origin, basemap = 'light' }) {
+// suggestions=false leaves the private suggestions overlay out entirely, so no request is made for it.
+export function buildStyle({ origin, basemap = 'light', suggestions = true }) {
   const sources = {};
   const layers = [];
 
@@ -40,6 +58,10 @@ export function buildStyle({ origin, basemap = 'light' }) {
   }
 
   for (const id of OVERLAY_IDS) {
+    if (id === 'suggestions') {
+      if (suggestions) sources.suggestions = suggestionsSource(origin);
+      continue;
+    }
     sources[id] = {
       type: 'vector',
       url: `pmtiles://${origin}/data/${id}.pmtiles`,
@@ -56,16 +78,7 @@ export function buildStyle({ origin, basemap = 'light' }) {
         'circle-radius': circleRadius(5, 1.5, 8, 3, 10, 5, 12, 9, 14, 18, 17, 60),
       },
     },
-    {
-      id: 'suggestions', type: 'circle', source: 'suggestions', 'source-layer': 'suggestions',
-      layout: { visibility: 'none' },
-      paint: {
-        'circle-color': '#f59e0b',
-        'circle-stroke-color': '#ffffff',
-        'circle-stroke-width': 1,
-        'circle-radius': circleRadius(5, 2, 10, 4, 14, 7),
-      },
-    },
+    ...(suggestions ? [SUGGESTIONS_LAYER] : []),
     {
       id: 'places', type: 'circle', source: 'places', 'source-layer': 'places',
       paint: {

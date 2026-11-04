@@ -83,6 +83,18 @@
 		header @pmtiles Content-Encoding identity
 		@unversioned not query v=*
 		header @unversioned Cache-Control "no-cache"
+		# Wikidata mosques missing from OSM are private to the OSM users listed in
+		# MANARA_SUGGESTIONS_ALLOWLIST. Anything with "suggest" in its cleaned path
+		# (suggested_mosques_*.geojson/.csv, by-region/suggested_*, suggestions.pmtiles)
+		# is first checked against the backend with the visitor's session cookie: 2xx
+		# serves the file, anything else is returned to the visitor as is. Declared
+		# after the cache headers above so it wins: the files must never be
+		# stored publicly or reused after logout.
+		@private path *suggest*
+		forward_auth @private {$MANARA_API_URL:http://manara-api:8010} {
+			uri /api/v1/access/suggestions
+		}
+		header @private Cache-Control "private, no-cache"
 		file_server {
 			precompressed br gzip
 		}
@@ -95,6 +107,8 @@
 		header @assets Cache-Control "public, max-age=31536000, immutable"
 		@pages not path /assets/*
 		header @pages Cache-Control "no-cache"
+		@workspaces path /qa /changes
+		rewrite @workspaces /index.html
 		try_files {path} {path}.html
 		file_server {
 			precompressed br gzip

@@ -129,6 +129,10 @@ export function closeChangesWorkspace() {
 
   document.getElementById('tab-workspace-changes')?.classList.remove('active');
   document.getElementById('tab-workspace-map')?.classList.add('active');
+
+  if (typeof window !== 'undefined' && window.location?.pathname === '/changes') {
+    window.history.replaceState(null, '', '/' + window.location.search + window.location.hash);
+  }
 }
 
 export function toggleChangesWorkspace() {

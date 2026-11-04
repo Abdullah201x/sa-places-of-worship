@@ -18,6 +18,7 @@ import { MOSQUE_PRESET, tagsFromValues, validateValues } from './presets.js';
 import { evaluateRules } from './validator.js';
 import { DATA_AGE_OK_MS, DATA_AGE_WARN_MS, ageLevel, clockOffset, formatAge } from './timeago.js';
 import { trackEvent } from './analytics.js';
+import { canViewSuggestions, checkSuggestionsAccess } from './suggestions_access.js';
 export let map;
 export let heatmapLayer = null;
 export let markerClusterLayer = null;
@@ -407,6 +408,7 @@ export const suggestionsByQid = {};
 export let currentSuggestionFilter = 'all'; // 'all' | 'named' | 'unnamed'
 
 export function setSuggestionsVisible(visible) {
+  if (visible && !canViewSuggestions()) return;
   const toggle = document.getElementById('suggestions-toggle');
   const subcontrols = document.getElementById('suggestions-subcontrols');
 
@@ -874,18 +876,27 @@ export function setupAppShell() {
       tabMap.classList.add('active');
       tabQa?.classList.remove('active');
       tabChanges?.classList.remove('active');
+      if (window.location.pathname === '/qa' || window.location.pathname === '/changes') {
+        history.replaceState(null, '', '/' + window.location.search + window.location.hash);
+      }
     });
   }
   if (tabQa) {
     tabQa.addEventListener('click', () => {
       closeChangesWorkspace();
       openQAWorkspace();
+      if (window.location.pathname !== '/qa') {
+        history.replaceState(null, '', '/qa' + window.location.search + window.location.hash);
+      }
     });
   }
   if (tabChanges) {
     tabChanges.addEventListener('click', () => {
       closeQAWorkspace();
       openChangesWorkspace();
+      if (window.location.pathname !== '/changes') {
+        history.replaceState(null, '', '/changes' + window.location.search + window.location.hash);
+      }
     });
   }
 
@@ -1577,6 +1588,16 @@ export function initializeDashboard(poiData, gapData, boundaryData, sizeData, an
   hideLoadingOverlay();
   updateUserWidgetUI();
   Permalink.apply();
+
+  // Route to QA or Changes workspace if pathname or query param requests it
+  const currentPath = window.location.pathname.replace(/\/$/, '');
+  const urlParams = new URLSearchParams(window.location.search);
+  const wsParam = urlParams.get('workspace');
+  if (currentPath === '/qa' || wsParam === 'qa') {
+    openQAWorkspace();
+  } else if (currentPath === '/changes' || wsParam === 'changes') {
+    openChangesWorkspace();
+  }
 }
 
 // Set the date-range slider bounds/values to the real data span and update their labels.
@@ -2876,6 +2897,12 @@ export function setupEventListeners() {
   }
 
   // 7a. Suggested Additions (Wikidata mosques missing in OSM) Toggle & Chips
+  // The section is hidden in the HTML and only revealed for allowlisted OSM users.
+  const suggestionsSection = document.getElementById('suggestions-section');
+  checkSuggestionsAccess().then(ok => {
+    if (ok && suggestionsSection) suggestionsSection.style.display = '';
+  });
+
   const suggestionsToggle = document.getElementById('suggestions-toggle');
   if (suggestionsToggle) {
     suggestionsToggle.addEventListener('change', (e) => {

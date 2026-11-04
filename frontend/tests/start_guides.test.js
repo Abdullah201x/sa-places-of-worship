@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ArabicText } from '../src/arabic.js';
+import { filterEasyQueue } from '../src/start.js';
 
 describe('Beginner Onboarding (/start) Easy Queue Filter', () => {
   const samplePlaces = [
@@ -34,16 +35,6 @@ describe('Beginner Onboarding (/start) Easy Queue Filter', () => {
       }
     }
   ];
-
-  function filterEasyQueue(places) {
-    return places.filter(f => {
-      const p = f.properties || {};
-      const arName = (p.name_original || p['name:ar'] || p.name || '').trim();
-      const enName = (p.name_en_original || p['name:en'] || p.name_en || '').trim();
-      if (!arName || ArabicText.isGenericMosqueName(arName)) return false;
-      return !enName || enName.toLowerCase() === 'mosque' || enName === arName;
-    });
-  }
 
   it('filters only named mosques lacking English transliteration', () => {
     const queue = filterEasyQueue(samplePlaces);

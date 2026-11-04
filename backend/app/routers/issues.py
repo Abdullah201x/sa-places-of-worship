@@ -22,9 +22,28 @@ RULE_SEVERITIES = {
 }
 
 
+RuleId = Literal[
+    "missing_amenity",
+    "missing_name",
+    "missing_name_en",
+    "missing_denom",
+    "size_too_small",
+    "size_too_large",
+    "stale_data",
+    "building_yes",
+    "mapped_as_node",
+    "ml_geometry_anomaly",
+    "duplicate_poi",
+    "outdated_tags",
+    "qibla_deviation",
+]
+
+KNOWN_RULE_IDS = frozenset(RULE_SEVERITIES.keys())
+
+
 @router.get("/issues")
 def get_issues(
-    rule_id: str | None = Query(None, description="Filter by rule ID"),
+    rule_id: RuleId | None = Query(None, description="Filter by rule ID"),
     region_code: str | None = Query(None, description="Filter by region code, e.g. SA-01"),
     severity: Literal["high", "medium", "low"] | None = Query(None, description="Filter by severity"),
     status: Literal["all", "unreviewed", "fixed", "skipped"] = Query("all", description="Review status"),
@@ -114,8 +133,8 @@ def get_issues(
 
         query = f"""
         SELECT
-            '{assigned_rule}' AS rule_id,
-            '{assigned_sev}' AS severity,
+            %s::text AS rule_id,
+            %s::text AS severity,
             p.osm_type,
             p.osm_id,
             p.name,
@@ -145,6 +164,7 @@ def get_issues(
         LIMIT %s OFFSET %s;
         """
         params = (
+            assigned_rule, assigned_sev,
             caller_uid, caller_uid,
             region_code, region_code,
             status, status, status, status,

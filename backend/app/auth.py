@@ -37,6 +37,26 @@ def get_admin_uids() -> set[int]:
     return uids
 
 
+def get_suggestions_allowlist() -> frozenset[int]:
+    """
+    OSM numeric user ids allowed to see Wikidata mosques that are missing from OSM
+    (the "suggestions" layer). Comma-separated MANARA_SUGGESTIONS_ALLOWLIST; unset or
+    empty means nobody. Read on every call so a redeploy is the only step to change it.
+    Non-numeric entries are ignored: usernames are mutable, only the uid is trusted.
+    Deliberately separate from MANARA_ADMIN_UIDS, so being an admin does not grant it.
+    """
+    uids = set()
+    for part in os.environ.get("MANARA_SUGGESTIONS_ALLOWLIST", "").split(","):
+        part = part.strip()
+        if part.isdigit():
+            uids.add(int(part))
+    return frozenset(uids)
+
+
+def can_view_suggestions(user: dict | None) -> bool:
+    return bool(user) and user.get("osm_uid") in get_suggestions_allowlist()
+
+
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -77,8 +97,7 @@ def clear_session_cookie(response: Response, request: Request):
 def verify_csrf(request: Request):
     """
     Enforce CSRF protection on state-changing requests.
-    Requires Origin matching allowed host and header X-Manara-CSRF: 1.
-    Falls back to Referer validation when Origin header is omitted.
+    Requires header X-Manara-CSRF: 1 AND Origin matching allowed host (or Referer check when Origin omitted).
     """
     csrf_header = request.headers.get("x-manara-csrf")
     if csrf_header not in ("1", "true", "True"):
@@ -107,7 +126,13 @@ def verify_csrf(request: Request):
 
 
 def get_token_from_request(request: Request) -> str | None:
-    return request.cookies.get(SESSION_COOKIE_SECURE) or request.cookies.get(SESSION_COOKIE_DEV)
+    is_https = is_request_https(request)
+    if is_https:
+        return request.cookies.get(SESSION_COOKIE_SECURE)
+    dev_mode = os.environ.get("MANARA_DEV_MODE", "0").lower() in ("1", "true")
+    if dev_mode or request.url.scheme == "http":
+        return request.cookies.get(SESSION_COOKIE_SECURE) or request.cookies.get(SESSION_COOKIE_DEV)
+    return request.cookies.get(SESSION_COOKIE_SECURE)
 
 
 def get_current_user(request: Request, conn=Depends(get_db)) -> dict:
@@ -139,6 +164,7 @@ def get_current_user(request: Request, conn=Depends(get_db)) -> dict:
             )
 
         user = dict(row)
+        user["is_admin"] = bool(user.get("is_admin")) or (user["osm_uid"] in get_admin_uids())
 
         # Update last_seen_at and slide expiration if last seen > 1 hour ago
         last_seen = user.get("last_seen_at")
@@ -161,10 +187,20 @@ def get_optional_user(request: Request, conn=Depends(get_db)) -> dict | None:
 
 
 def require_admin(user: dict = Depends(get_current_user)) -> dict:
-    if not user.get("is_admin"):
+    admin_uids = get_admin_uids()
+    is_admin = bool(user.get("is_admin")) or (user.get("osm_uid") in admin_uids)
+    if not is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin privileges required.",
         )
     return user
 
+
+def require_suggestions_access(user: dict = Depends(get_current_user)) -> dict:
+    if not can_view_suggestions(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not on the Wikidata suggestions allowlist.",
+        )
+    return user

@@ -75,9 +75,15 @@ def test_get_changes_endpoint(client):
     assert "ETag" in res.headers
 
 
-def test_triage_unauthenticated(client):
+def test_triage_csrf_required(client):
     c, _ = client
     res = c.post("/api/v1/changes/999/triage", json={"status": "reviewed"})
+    assert res.status_code == 403
+
+
+def test_triage_unauthenticated(client):
+    c, _ = client
+    res = c.post("/api/v1/changes/999/triage", json={"status": "reviewed"}, headers={"X-Manara-CSRF": "1"})
     assert res.status_code == 401
 
 
@@ -90,7 +96,7 @@ def test_triage_authenticated_not_found(client):
     ]
 
     c.cookies.set("manara_session", "valid_token")
-    res = c.post("/api/v1/changes/999999/triage", json={"status": "reviewed", "note": "Checked in JOSM"})
+    res = c.post("/api/v1/changes/999999/triage", json={"status": "reviewed", "note": "Checked in JOSM"}, headers={"X-Manara-CSRF": "1"})
     assert res.status_code == 404
 
 
@@ -109,7 +115,7 @@ def test_triage_authenticated_success(client):
     ]
 
     c.cookies.set("manara_session", "valid_token")
-    res = c.post("/api/v1/changes/777/triage", json={"status": "reviewed", "note": "Approved place"})
+    res = c.post("/api/v1/changes/777/triage", json={"status": "reviewed", "note": "Approved place"}, headers={"X-Manara-CSRF": "1"})
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "ok"

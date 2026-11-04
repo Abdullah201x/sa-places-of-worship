@@ -1,12 +1,13 @@
+import os
 from datetime import datetime, timezone
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
+import httpx
 from pydantic import BaseModel, Field
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from app.auth import (
+    can_view_suggestions,
+    SESSION_DURATION_DAYS,
     clear_session_cookie,
     generate_session_token,
     get_admin_uids,
@@ -17,12 +18,12 @@ from app.auth import (
     verify_csrf,
 )
 from app.database import get_db
+from app.limiter import limiter
 
 OSM_USER_AGENT = "Manara/1.0 (+https://manara.saudiosm.org)"
 OSM_USER_DETAILS_URL = "https://api.openstreetmap.org/api/0.6/user/details.json"
 
 router = APIRouter(tags=["auth"])
-limiter = Limiter(key_func=get_remote_address)
 
 
 class SessionRequest(BaseModel):
@@ -181,6 +182,8 @@ def logout(
 @router.get("/api/v1/me")
 def get_me(user: dict = Depends(get_current_user)):
     """Return the profile of the currently authenticated mapper."""
+    admin_uids = get_admin_uids()
+    is_admin = bool(user.get("is_admin")) or (user["osm_uid"] in admin_uids)
     return {
         "osm_uid": user["osm_uid"],
         "display_name": user["display_name"],
@@ -188,7 +191,8 @@ def get_me(user: dict = Depends(get_current_user)):
         "osm_changesets": user["osm_changesets"],
         "osm_account_created": user["osm_account_created"].isoformat() if user.get("osm_account_created") else None,
         "leaderboard_opt_in": user["leaderboard_opt_in"],
-        "is_admin": user["is_admin"],
+        "is_admin": is_admin,
+        "can_view_suggestions": can_view_suggestions(user),
     }
 
 
@@ -232,4 +236,3 @@ def delete_me(
 
     clear_session_cookie(response, request)
     return {"status": "ok", "deleted": True}
-

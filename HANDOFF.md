@@ -194,6 +194,7 @@ See `VPS_HARDWARE_ANALYSIS.md`.
 ### Tables (PostGIS DB, created by an Alembic migration in `backend/`)
 - `users(osm_uid BIGINT PK, display_name TEXT, avatar_url TEXT, osm_changesets INT, osm_account_created TIMESTAMPTZ, created_at, last_login_at, leaderboard_opt_in BOOLEAN DEFAULT FALSE, is_admin BOOLEAN DEFAULT FALSE)`
   - `is_admin` comes from the env allowlist `MANARA_ADMIN_UIDS`.
+  - **Wikidata suggestions (mosques missing from OSM) are private.** Only OSM uids in `MANARA_SUGGESTIONS_ALLOWLIST` (comma-separated numeric uids, set on `manara-api`; empty = nobody; admins are *not* implied) can see them. Enforced in three places: `/api/v1/suggestions` (401/403), Caddy `forward_auth` on every `/data/*suggest*` file (geojson, csv, `by-region/`, `suggestions.pmtiles`) via `GET /api/v1/access/suggestions`, and the UI (`frontend/src/suggestions_access.js` hides the controls and the map never requests the tiles). `GET /api/v1/me` returns `can_view_suggestions`. Aggregate counts (`/stats`, `/meta`, `summary.json`, community dashboard, region pages) are still public. `suggested_mosques_sa.geojson` is also tracked in git and baked into the web image, so it is private only while the repo is.
 - `sessions(token_hash TEXT PK, osm_uid BIGINT REFERENCES users, created_at, expires_at, last_seen_at)`
 - `review_marks(osm_type, osm_id, osm_uid, status, version, verified_changeset BIGINT NULL, created_at, PRIMARY KEY (osm_type, osm_id, osm_uid))`
   - One row **per user**; shared visibility is decided at query time (below).

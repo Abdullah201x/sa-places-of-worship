@@ -78,7 +78,7 @@ export function isQAWorkspaceOpen() {
   return qaActive;
 }
 
-export function openQAWorkspace() {
+export function openQAWorkspace(options = {}) {
   const ws = document.getElementById('qa-workspace');
   if (!ws) return;
   qaActive = true;
@@ -86,8 +86,23 @@ export function openQAWorkspace() {
 
   const tabQa = document.getElementById('tab-workspace-qa');
   const tabMap = document.getElementById('tab-workspace-map');
+  const tabChanges = document.getElementById('tab-workspace-changes');
   tabQa?.classList.add('active');
   tabMap?.classList.remove('active');
+  tabChanges?.classList.remove('active');
+
+  const searchParams = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
+  const rule = options.rule || searchParams?.get('rule');
+  const region = options.region || searchParams?.get('region');
+
+  const selRule = document.getElementById('qa-filter-rule');
+  if (selRule && rule) {
+    selRule.value = rule;
+  }
+  const selRegion = document.getElementById('qa-filter-region');
+  if (selRegion && region) {
+    selRegion.value = region;
+  }
 
   loadQAIssues();
 }
@@ -102,6 +117,10 @@ export function closeQAWorkspace() {
   const tabMap = document.getElementById('tab-workspace-map');
   tabMap?.classList.add('active');
   tabQa?.classList.remove('active');
+
+  if (typeof window !== 'undefined' && window.location?.pathname === '/qa') {
+    window.history.replaceState(null, '', '/' + window.location.search + window.location.hash);
+  }
 }
 
 export function toggleQAWorkspace() {

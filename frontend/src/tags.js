@@ -385,8 +385,9 @@ function setupSearchAndFilters() {
 function handleUrlHash() {
   const hash = window.location.hash.replace('#', '');
   if (!hash) return;
-  const targetId = `tag-${hash.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-  const el = document.getElementById(targetId);
+  const cleanHash = hash.replace(/^(tag-)+/, '');
+  const targetId = `tag-${cleanHash.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  const el = document.getElementById(targetId) || document.getElementById(hash);
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el.classList.add('highlight');

@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
-from app.auth import get_current_user, get_optional_user
+from app.auth import get_current_user, get_optional_user, verify_csrf
 from app.database import get_db
 
 router = APIRouter(prefix="/api/v1", tags=["changes"])
@@ -132,6 +132,7 @@ def get_changes(
 def triage_change(
     change_id: int,
     body: TriageRequest,
+    _csrf: None = Depends(verify_csrf),
     user=Depends(get_current_user),
     conn=Depends(get_db),
 ):

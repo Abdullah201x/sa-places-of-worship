@@ -75,6 +75,8 @@
   margin-block-end: 4px;
 }
 
+.mapgl-panel label[hidden] { display: none; }
+
 .mapgl-panel label {
   display: flex;
   align-items: center;

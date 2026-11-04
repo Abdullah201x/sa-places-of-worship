@@ -1,10 +1,11 @@
 import os
 from typing import Literal
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
 from pydantic import BaseModel, Field
 
 from app.auth import get_current_user, get_optional_user, require_admin, verify_csrf
 from app.database import get_db
+from app.limiter import limiter
 
 router = APIRouter(prefix="/api/v1", tags=["reviews"])
 
@@ -102,7 +103,9 @@ def get_reviews(
 
 
 @router.put("/reviews/{osm_type}/{osm_id}")
+@limiter.limit("60/minute")
 def set_review_mark(
+    request: Request,
     payload: ReviewMarkRequest,
     osm_type: str = Path(..., pattern="^(node|way|relation)$"),
     osm_id: int = Path(..., gt=0),

@@ -17,7 +17,9 @@ import { initAnalytics } from './analytics.js';
 import {
   SA_CENTER, SA_ZOOM, OVERLAY_IDS, CLICK_LAYERS, LAYER_KEYS,
   buildStyle, basemapLayerIds, parseMapHash, formatMapHash, popupRows, popupLinks,
+  suggestionsSource, SUGGESTIONS_LAYER,
 } from './map_gl_view.js';
+import { checkSuggestionsAccess } from './suggestions_access.js';
 
 addTranslations({
   glTitle: ['الخريطة (MapLibre، تجريبية) | منارة', 'Map (MapLibre preview) | Manara'],
@@ -51,7 +53,8 @@ maplibregl.setWorkerUrl(workerUrl);
 const start = parseMapHash(window.location.hash);
 const map = new maplibregl.Map({
   container: 'map',
-  style: buildStyle({ origin: window.location.origin, basemap: initialBasemap }),
+  // Suggestions are added below, once the backend confirms this viewer is allowed to see them.
+  style: buildStyle({ origin: window.location.origin, basemap: initialBasemap, suggestions: false }),
   center: start ? [start.lon, start.lat] : SA_CENTER,
   zoom: start ? start.zoom : SA_ZOOM,
   maxZoom: 19,
@@ -82,6 +85,25 @@ function setLayerVisible(id, visible) {
   const box = toggles.find(b => b.dataset.layer === id);
   if (box) box.checked = visible;
 }
+// Wikidata suggestions are private to allowlisted OSM users: the checkbox is hidden in the HTML
+// and the source/layer only exist once the backend says yes, so nobody else requests the tiles.
+const suggestionsToggle = toggles.find(b => b.dataset.layer === 'suggestions');
+let mapLoaded = false;
+map.once('load', () => { mapLoaded = true; });
+checkSuggestionsAccess().then(ok => {
+  if (!ok) return;
+  const add = () => {
+    if (map.getSource('suggestions')) return;
+    map.addSource('suggestions', suggestionsSource(window.location.origin));
+    map.addLayer(SUGGESTIONS_LAYER, 'places');
+    if (suggestionsToggle) {
+      suggestionsToggle.closest('label').hidden = false;
+      setLayerVisible('suggestions', suggestionsToggle.checked);
+    }
+  };
+  if (mapLoaded) add(); else map.once('load', add);
+});
+
 // The style starts with suggestions hidden; sync every checkbox to what the style says.
 map.on('load', () => toggles.forEach(b => setLayerVisible(b.dataset.layer, b.checked)));
 toggles.forEach(b => b.addEventListener('change', () => setLayerVisible(b.dataset.layer, b.checked)));
@@ -100,7 +122,7 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) && e.target.type !== 'checkbox') return;
   const id = LAYER_KEYS[shortcutKey(e)];
-  if (!id) return;
+  if (!id || !map.getLayer(id)) return;
   const box = toggles.find(b => b.dataset.layer === id);
   setLayerVisible(id, !box.checked);
 });

@@ -81,7 +81,12 @@ def test_health_endpoints_accept_head(client):
     assert client.head("/api/healthz/freshness").status_code in (200, 503)
 
 
-def test_suggestions_bbox_validation(client):
+def test_suggestions_bbox_validation(client, monkeypatch):
+    # The endpoint is allowlist-only (see tests/test_suggestions_access.py); sign in as an allowed user.
+    from app.auth import get_current_user
+    monkeypatch.setenv("MANARA_SUGGESTIONS_ALLOWLIST", "42")
+    app.dependency_overrides[get_current_user] = lambda: {"osm_uid": 42}
+
     # Missing bbox parameter
     res = client.get("/api/v1/suggestions")
     assert res.status_code == 422
@@ -164,4 +169,39 @@ def test_get_issues_endpoint():
         assert data["issues"][0]["osm_id"] == 12345
         assert data["issues"][0]["coordinates"] == [46.7, 24.7]
     app.dependency_overrides.clear()
+
+
+def test_issues_rejects_sql_injection_payload():
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+    def override_get_db():
+        yield mock_conn
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        with TestClient(app, raise_server_exceptions=False) as c:
+            res = c.get("/api/v1/issues?rule_id=';DROP TABLE places;--")
+            assert res.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_rate_limiting_active():
+    from app.limiter import limiter
+    try:
+        with TestClient(app, raise_server_exceptions=False) as c:
+            responses = [
+                c.post("/api/v1/transliterate", json={"name": "مسجد الهدى"})
+                for _ in range(35)
+            ]
+            status_codes = [r.status_code for r in responses]
+            assert 429 in status_codes
+    finally:
+        limiter._limiter.storage.reset()
+
+
+
+
 

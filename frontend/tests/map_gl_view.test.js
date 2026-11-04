@@ -36,6 +36,15 @@ describe('buildStyle', () => {
     expect(style.sources.places.attribution).toContain('OpenStreetMap');
   });
 
+  it('leaves the private suggestions overlay out when the viewer may not see it', () => {
+    const open = buildStyle({ origin: 'https://manara.example', suggestions: false });
+    expect(open.sources.suggestions).toBeUndefined();
+    expect(open.layers.find(l => l.id === 'suggestions')).toBeUndefined();
+    expect(JSON.stringify(open)).not.toContain('suggestions.pmtiles');
+    expect(open.sources.places).toBeDefined();
+    expect(open.sources.gaps).toBeDefined();
+  });
+
   it('only requests origins the CSP allows', () => {
     const urls = Object.values(style.sources).flatMap(s => s.tiles || []);
     expect(urls.length).toBeGreaterThan(0);

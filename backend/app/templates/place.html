@@ -10,25 +10,7 @@
 
 {% block json_ld %}
 <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Mosque",
-  "name": "{{ place.name or 'مسجد' }}",
-  {% if place.name_en %}
-  "alternateName": "{{ place.name_en }}",
-  {% endif %}
-  "url": "{{ canonical_url }}",
-  "geo": {
-    "@type": "GeoCoordinates",
-    "latitude": {{ lat }},
-    "longitude": {{ lon }}
-  },
-  "address": {
-    "@type": "PostalAddress",
-    "addressCountry": "SA"{% if region_name %},
-    "addressRegion": "{{ region_name }}"{% endif %}
-  }
-}
+{{ json_ld | tojson | safe }}
 </script>
 {% endblock %}
 

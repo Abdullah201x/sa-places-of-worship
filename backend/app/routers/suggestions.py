@@ -1,17 +1,35 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from app.auth import require_suggestions_access
 from app.database import get_db
+from app.limiter import limiter
 
 router = APIRouter(prefix="/api/v1", tags=["suggestions"])
 
 MAX_BBOX_SPAN = 3.0  # Max degrees span in either direction
 
 
+@router.get("/access/suggestions", status_code=204)
+@limiter.exempt
+def check_suggestions_access(response: Response, _user: dict = Depends(require_suggestions_access)):
+    """
+    Auth subrequest for Caddy's forward_auth (deploy/Caddyfile.container). Every request
+    for the private Wikidata-suggestion files under /data/ is answered here first:
+    204 lets the file through, 401/403 is returned to the visitor instead.
+    Exempt from the default rate limit because one map view issues many tile requests.
+    """
+    response.headers["Cache-Control"] = "no-store"
+
+
 @router.get("/suggestions")
 def get_suggestions(
+    response: Response,
     bbox: str = Query(..., description="minLon,minLat,maxLon,maxLat bounding box"),
     limit: int = Query(100, ge=1, le=500, description="Max suggestions to return (1-500)"),
+    _user: dict = Depends(require_suggestions_access),
     conn=Depends(get_db)
 ):
+    """Wikidata mosques missing from OSM. Only for OSM users on MANARA_SUGGESTIONS_ALLOWLIST."""
+    response.headers["Cache-Control"] = "private, no-store"
     try:
         parts = [float(x.strip()) for x in bbox.split(",")]
         if len(parts) != 4:

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.auth import get_current_user, get_optional_user, require_admin, verify_csrf
 from app.database import get_db
+from app.limiter import limiter
 
 router = APIRouter(prefix="/api/v1/sprints", tags=["sprints"])
 
@@ -458,7 +459,9 @@ def get_sprint_tiles(
 
 
 @router.put("/{slug}/tiles/{tile_id}")
+@limiter.limit("60/minute")
 def update_tile_state(
+    request: Request,
     slug: str,
     tile_id: str,
     payload: TileActionRequest,

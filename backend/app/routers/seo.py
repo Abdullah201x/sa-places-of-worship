@@ -67,6 +67,23 @@ def get_region_page(
 
     canonical_url = f"https://manara.saudiosm.org/region/{region['code']}"
 
+    json_ld = {
+        "@context": "https://schema.org",
+        "@type": "AdministrativeArea",
+        "name": region["name"],
+        "alternateName": region.get("name_en") or "",
+        "identifier": region["code"],
+        "url": canonical_url,
+        "containsPlace": [
+            {
+                "@type": "Mosque",
+                "name": p.get("name") or "مسجد",
+                "url": f"https://manara.saudiosm.org/place/{p['osm_type']}/{p['osm_id']}",
+            }
+            for p in top_places[:10]
+        ],
+    }
+
     return templates.TemplateResponse(
         request=request,
         name="region.html",
@@ -77,6 +94,7 @@ def get_region_page(
             "center_lat": round(region["center_lat"] or 24.5, 4),
             "center_lon": round(region["center_lon"] or 45.0, 4),
             "canonical_url": canonical_url,
+            "json_ld": json_ld,
             "indexable": True,
         },
         headers={"Cache-Control": "public, max-age=3600"},
@@ -124,6 +142,26 @@ def get_place_page(
     canonical_url = f"https://manara.saudiosm.org/place/{place['osm_type']}/{place['osm_id']}"
     indexable = is_named_place(place.get("name"))
 
+    json_ld = {
+        "@context": "https://schema.org",
+        "@type": "Mosque",
+        "name": place.get("name") or "مسجد",
+        "url": canonical_url,
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": place.get("lat") or 0.0,
+            "longitude": place.get("lon") or 0.0,
+        },
+        "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "SA",
+        },
+    }
+    if place.get("name_en"):
+        json_ld["alternateName"] = place["name_en"]
+    if place.get("region_name"):
+        json_ld["address"]["addressRegion"] = place["region_name"]
+
     return templates.TemplateResponse(
         request=request,
         name="place.html",
@@ -133,6 +171,7 @@ def get_place_page(
             "lat": place.get("lat") or 0.0,
             "lon": place.get("lon") or 0.0,
             "canonical_url": canonical_url,
+            "json_ld": json_ld,
             "indexable": indexable,
         },
         headers={"Cache-Control": "public, max-age=3600"},
