@@ -1496,6 +1496,24 @@ export function renderDataUpdatedLabel() {
 
 export let dataLoadedPromise = null;
 
+export function refreshSummary() {
+  return fetch(`${DATA_BASE}summary.json`, { cache: 'no-store' })
+    .then(r => {
+      if (!r.ok) return null;
+      clockSkewMs = clockOffset(r.headers.get('Date'), Date.now());
+      return r.json();
+    })
+    .then(summary => {
+      if (!summary || !summary.updated_at) return;
+      dataSummary = summary;
+      dataVersion = summary.updated_at;
+      const pbfTime = Date.parse(dataSummary.pbf_timestamp || dataSummary.published_at || dataSummary.updated_at || '');
+      if (pbfTime) LocalPatches.prune(pbfTime);
+      renderDataUpdatedLabel();
+    })
+    .catch(() => {});
+}
+
 export function loadData() {
   dataLoadedPromise = fetch(`${DATA_BASE}summary.json`, { cache: 'no-store' })
     .then(r => {
@@ -1511,6 +1529,12 @@ export function loadData() {
       renderDataUpdatedLabel();
       // Keep the age current while the page stays open.
       setInterval(renderDataUpdatedLabel, 30 * 1000);
+      setInterval(refreshSummary, 15 * 60 * 1000);
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') refreshSummary();
+        });
+      }
       return Promise.all([
         fetchJson('places_of_worship_sa.geojson'),
         fetchJson('worship_gaps_sa.json'),

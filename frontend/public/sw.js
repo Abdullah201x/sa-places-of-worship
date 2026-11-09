@@ -1,5 +1,5 @@
 // Manara PWA Service Worker (Field Surveyor Offline Support)
-const CACHE_NAME = 'manara-shell-v1';
+const CACHE_NAME = 'manara-shell-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.webmanifest',
@@ -35,12 +35,24 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Network-first for dynamic API routes & OSM replication
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/') || url.hostname.includes('openstreetmap.org')) {
+  // Network-first for dynamic API routes, summary metadata & OSM replication
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/auth/') ||
+    url.pathname.endsWith('/summary.json') ||
+    url.pathname.endsWith('/manifest.json') ||
+    url.hostname.includes('openstreetmap.org')
+  ) {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(event.request);
-      })
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const toCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, toCache));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
