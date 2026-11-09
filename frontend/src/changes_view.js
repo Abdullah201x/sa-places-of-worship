@@ -390,9 +390,16 @@ function inspectSelectedChange() {
 function triageSelectedChange(status) {
   const ch = changesFiltered[changesSelectedIdx];
   if (!ch) return;
+  const previous = ch.triage_status;
   ch.triage_status = status;
   if (changesCallbacks.onTriageChange) {
-    changesCallbacks.onTriageChange(ch, status);
+    // Optimistic update; roll back if the server refuses the decision.
+    Promise.resolve(changesCallbacks.onTriageChange(ch, status)).then(saved => {
+      if (saved === false) {
+        ch.triage_status = previous;
+        renderChangesTable();
+      }
+    });
   }
   updateChangesSelection();
   renderChangesTable();

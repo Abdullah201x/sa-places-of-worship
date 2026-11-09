@@ -123,6 +123,38 @@ def test_triage_authenticated_success(client):
     assert data["triage"]["osm_uid"] == 445566
 
 
+def test_triage_rejected_when_owned_by_another_mapper(client):
+    c, (conn, cur) = client
+    cur.fetchone.side_effect = [
+        {"osm_uid": 2, "osm_username": "other_mapper"},  # user session
+        {"id": 777},  # change_events lookup
+        None,  # upsert returned no row: existing decision belongs to someone else
+    ]
+
+    c.cookies.set("manara_session", "valid_token")
+    res = c.post("/api/v1/changes/777/triage", json={"status": "flagged"}, headers={"X-Manara-CSRF": "1"})
+    assert res.status_code == 403
+    assert "another mapper" in res.json()["detail"]
+
+
+def test_triage_passes_identity_and_admin_flag_to_the_ownership_check(client):
+    c, (conn, cur) = client
+    cur.fetchone.side_effect = [
+        {"osm_uid": 5, "osm_username": "plain_mapper", "is_admin": False},
+        {"id": 1},
+        {"change_id": 1, "status": "reviewed", "osm_uid": 5, "note": "", "triaged_at": datetime.now(timezone.utc)},
+    ]
+    c.cookies.set("manara_session", "valid_token")
+    res = c.post("/api/v1/changes/1/triage", json={"status": "reviewed"}, headers={"X-Manara-CSRF": "1"})
+    assert res.status_code == 200
+
+    upsert_params = [call.args[1] for call in cur.execute.call_args_list
+                     if "INSERT INTO change_triage" in str(call.args[0])][0]
+    # (change_id, status, uid, note, uid for the owner check, is_admin)
+    assert upsert_params[2] == 5 and upsert_params[4] == 5
+    assert upsert_params[5] is False
+
+
 def test_freshness_endpoint(client):
     c, (conn, cur) = client
     now = datetime.now(timezone.utc)

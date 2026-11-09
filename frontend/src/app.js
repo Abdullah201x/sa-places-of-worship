@@ -933,14 +933,26 @@ export function setupAppShell() {
         }
       }
     },
+    // Resolves true when the server saved the decision, false when it refused
+    // (the view then rolls back its optimistic update).
     onTriageChange: async (ch, status) => {
+      const ar = currentLang === 'ar';
+      let message = ar ? 'تعذر حفظ المراجعة. حاول مجدداً.' : 'Could not save the triage decision. Try again.';
       try {
-        await fetch(`/api/v1/changes/${ch.id}/triage`, {
+        const res = await fetch(`/api/v1/changes/${ch.id}/triage`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Manara-CSRF': '1' },
           body: JSON.stringify({ status }),
         });
-      } catch (_) {}
+        if (res.ok) return true;
+        if (res.status === 401) {
+          message = ar ? 'سجّل الدخول عبر OpenStreetMap لحفظ المراجعة.' : 'Log in with OpenStreetMap to save triage decisions.';
+        } else if (res.status === 403) {
+          message = ar ? 'راجع مُحرر آخر هذا التغيير مسبقاً.' : 'Another mapper already triaged this change.';
+        }
+      } catch (_) { /* network error: keep the generic message */ }
+      showToast(message, 'warning');
+      return false;
     },
   });
 

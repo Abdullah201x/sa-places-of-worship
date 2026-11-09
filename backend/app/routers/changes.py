@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Literal
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 
 from app.auth import get_current_user, get_optional_user, verify_csrf
@@ -14,6 +14,25 @@ class TriageRequest(BaseModel):
         ..., description="Triage decision: reviewed, flagged, or reverted"
     )
     note: str = Field("", max_length=500, description="Optional triage note")
+
+
+# Params: change_id, status, uid, note, uid (owner check), is_admin.
+# The ownership test is in the WHERE clause so it is atomic: no row comes back when
+# the existing decision belongs to someone else. A NULL owner (that mapper deleted
+# their account) can be taken over.
+TRIAGE_UPSERT_SQL = """
+INSERT INTO change_triage (change_id, status, osm_uid, note, triaged_at)
+VALUES (%s, %s, %s, %s, NOW())
+ON CONFLICT (change_id) DO UPDATE SET
+    status = EXCLUDED.status,
+    osm_uid = EXCLUDED.osm_uid,
+    note = EXCLUDED.note,
+    triaged_at = NOW()
+WHERE change_triage.osm_uid IS NULL
+   OR change_triage.osm_uid = %s
+   OR %s
+RETURNING change_id, status, osm_uid, note, triaged_at;
+"""
 
 
 @router.get("/changes")
@@ -138,7 +157,8 @@ def triage_change(
 ):
     """
     Record a triage decision for a change event (reviewed, flagged, or reverted).
-    Requires authenticated OSM user.
+    Requires an authenticated OSM user. Once someone has triaged a change, only
+    that mapper (or an admin) can change the decision.
     """
     with conn.transaction():
         with conn.cursor() as cur:
@@ -146,17 +166,17 @@ def triage_change(
             if not cur.fetchone():
                 raise HTTPException(status_code=404, detail="Change event not found.")
 
-            cur.execute("""
-            INSERT INTO change_triage (change_id, status, osm_uid, note, triaged_at)
-            VALUES (%s, %s, %s, %s, NOW())
-            ON CONFLICT (change_id) DO UPDATE SET
-                status = EXCLUDED.status,
-                osm_uid = EXCLUDED.osm_uid,
-                note = EXCLUDED.note,
-                triaged_at = NOW()
-            RETURNING change_id, status, osm_uid, note, triaged_at;
-            """, (change_id, body.status, user["osm_uid"], body.note))
+            cur.execute(TRIAGE_UPSERT_SQL, (
+                change_id, body.status, user["osm_uid"], body.note,
+                user["osm_uid"], bool(user.get("is_admin")),
+            ))
             row = cur.fetchone()
+
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This change was already triaged by another mapper.",
+        )
 
     triaged_data = dict(row)
     if isinstance(triaged_data.get("triaged_at"), datetime):

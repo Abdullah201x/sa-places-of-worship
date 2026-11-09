@@ -96,6 +96,19 @@ Notes:
 - The ML anomaly flag is the Isolation Forest verdict only; Qibla deviation is
   a separate check with its own (adjustable) threshold.
 
+## Running the backend (API)
+
+Requires Python 3.12 and a PostgreSQL/PostGIS database (see `.env.example` for the settings).
+
+```bash
+pip install -r backend/requirements.txt     # exact, pinned versions
+cd backend && uvicorn app.main:app --reload --port 8010
+```
+
+`backend/requirements.in` lists the direct dependencies; `backend/requirements.txt` is the
+fully pinned lock generated from it. To change or upgrade dependencies, edit the `.in` file and run
+`uv pip compile backend/requirements.in -o backend/requirements.txt --universal --python-version 3.12`.
+
 ## Running the front-end
 
 Requires Node.js 20+.
