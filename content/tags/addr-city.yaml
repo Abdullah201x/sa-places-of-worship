@@ -1,0 +1,24 @@
+key: addr:city
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: اسم المدينة أو القرية
+  en: City or town name
+saudi_notes:
+  ar: 'يحدد المدينة أو المحافظة أو المركز التي يقع فيها المسجد (مثال: الرياض، جدة، مكة المكرمة، الدمام، أبها).'
+  en: 'Specifies the official city, municipality, or town name where the mosque is located (e.g. Riyadh, Jeddah, Makkah, Dammam).'
+examples:
+  good:
+  - tags:
+      addr:city: الرياض
+  bad:
+  - tags:
+      addr:city: منطقة الرياض
+    why:
+      ar: يُكتب اسم المدينة فقط، بينما المنطقة الإدارية توثق عبر addr:province أو حدود المناطق الإدارية.
+      en: Specify the city name only. Province/region belongs to administrative boundaries or addr:province.
+rules: []
+wiki: https://wiki.openstreetmap.org/wiki/Key:addr:city

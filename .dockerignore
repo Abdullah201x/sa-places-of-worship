@@ -1,0 +1,31 @@
+# The root image only needs frontend/, deploy/, content/, and the core dataset files.
+.git
+.github
+.claude
+.pytest_cache
+.env
+**/__pycache__
+**/node_modules
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+poc_satellite_output
+Training results
+scratch
+test-results
+by-region
+docs
+scripts
+tests
+*.pbf
+*.pem
+*.csv
+*.db
+*.pmtiles
+*.pt
+*.onnx
+*.zip
+*.bak
+ai_detected_mosques_sa.geojson
+active_learning_feedback.json
+ai_site_reviews.json

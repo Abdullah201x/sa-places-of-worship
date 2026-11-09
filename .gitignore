@@ -1,0 +1,72 @@
+# Large OSM source extract (download separately)
+*.osm.pbf
+
+# Generated data (rebuild via the Python pipeline). The core JSON/GeoJSON
+# datasets stay tracked because the Docker image bakes them in as a fallback;
+# the data-hub exports below are published by the pipeline container only.
+manifest.json
+/*.csv
+*.pmtiles
+by-region/
+worship_gaps_sa.geojson
+
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Partial writes from common.write_json
+.tmp_*.json
+.pytest_cache/
+
+# Local SSL certificates (from the old serve_ssl.py dev server)
+cert.pem
+key.pem
+
+# SQLite database
+*.db
+*.sqlite
+*.db-wal
+*.db-shm
+
+scratch/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Binaries
+*.exe
+.agent/**/bin/
+
+# Deployment secrets (commit only the .example template)
+.env
+.env.*
+!.env.example
+deploy/.env
+
+# Playwright output
+test-results/
+frontend/test-results/
+frontend/playwright-report/
+
+# Local scratch prompts, chat logs and AI-assistant tooling
+docs/local_notes/
+handover.md
+design prompt.md
+an idea.md
+*.bak
+.agent/
+.claude/
+
+# Satellite AI Datasets, Caches, & Model Weights (10k+ tiles & 100MB+ weights)
+poc_satellite_output/
+Training results/
+*.pt
+*.onnx
+*.zip
+ai_detected_mosques_sa.geojson
+active_learning_feedback.json
+ai_site_reviews.json

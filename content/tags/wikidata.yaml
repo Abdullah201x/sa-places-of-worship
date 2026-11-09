@@ -1,0 +1,24 @@
+key: wikidata
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: معرّف ويكي بيانات (Wikidata QID)
+  en: Wikidata identifier
+saudi_notes:
+  ar: 'يربط المسجد بكيانه في قاعدة بيانات ويكي بيانات (مثال: Q42236 للمسجد النبوي الشريف، Q42885 للمسجد الحرام). يُستخدم لربط المقالات الموسوعية والبيانات المفتوحة والصور.'
+  en: 'Links the place of worship to its corresponding entity in Wikidata (e.g. Q42236 for Al-Masjid an-Nabawi, Q42885 for Al-Masjid al-Haram).'
+examples:
+  good:
+  - tags:
+      wikidata: Q42236
+  bad:
+  - tags:
+      wikidata: https://www.wikidata.org/wiki/Q42236
+    why:
+      ar: يُكتب المعرّف بصيغة Q متبوعاً بأرقام فقط دون رابط URL كامل.
+      en: The identifier should only be the QID without a full URL prefix.
+rules: []
+wiki: https://wiki.openstreetmap.org/wiki/Key:wikidata

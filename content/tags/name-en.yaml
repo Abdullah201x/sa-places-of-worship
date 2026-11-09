@@ -1,0 +1,39 @@
+key: name:en
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: الاسم بالإنجليزية
+  en: English name
+saudi_notes:
+  ar: 'الاسم المترجم صوتياً أو المترجم بالإنجليزية. لا تكرر الكلمات العربية بحروف
+    عربية في هذا الوسم، ولا تضع مجرد كلمة Mosque بل اكتب الاسم الصوتي للمسجد (مثل:
+    Bilal bin Rabah Mosque).'
+  en: Transliterated or translated English name. Never duplicate Arabic script into
+    name:en, and avoid generic placeholder Mosque; provide the romanized specific
+    name (e.g., Bilal bin Rabah Mosque).
+examples:
+  good:
+  - tags:
+      name: جامع الإمام البخاري
+      name:en: Imam Al-Bukhari Grand Mosque
+  bad:
+  - tags:
+      name: جامع الإمام البخاري
+      name:en: جامع الإمام البخاري
+    why:
+      ar: نسخ الاسم العربي بالحروف العربية داخل name:en
+      en: Arabic script copied into name:en
+  - tags:
+      name: جامع الإمام البخاري
+      name:en: Mosque
+    why:
+      ar: استخدام وسم Mosque العام دون اسم المسجد الفعلي
+      en: Generic placeholder Mosque without specific name
+rules:
+- missing_name_en
+tools:
+- transliterate
+wiki: https://wiki.openstreetmap.org/wiki/Key:name:en

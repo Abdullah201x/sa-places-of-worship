@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>دليل وسوم المساجد | منارة: خريطة بيوت الله</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕌%3C/text%3E%3C/svg%3E">
+  <link rel="canonical" href="https://manara.saudiosm.org/tags">
+  <meta name="description" content="دليل وسوم المساجد وخريطة بيوت الله في المملكة العربية السعودية: المرجع المعتمد لقواعد الوسم والأمثلة وإحصاءات الاستخدام لخريطة الشارع المفتوحة.">
+</head>
+<body data-title-key="tagsTitle">
+  <header class="page-header">
+    <nav style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <a href="/"><span data-lang="ar">← العودة إلى الخريطة</span><span data-lang="en">← Back to Map</span></a>
+      <a href="/qa"><span data-lang="ar">الجودة</span><span data-lang="en">QA</span></a>
+      <a href="/changes"><span data-lang="ar">التعديلات</span><span data-lang="en">Changes</span></a>
+      <a href="/community"><span data-lang="ar">المجتمع</span><span data-lang="en">Community</span></a>
+    </nav>
+    <button type="button" id="btn-toggle-lang" lang="en">English</button>
+  </header>
+
+  <main>
+    <section class="tag-hero">
+      <h1 data-lang="ar">دليل وسوم المساجد في السعودية</h1>
+      <h1 data-lang="en">Saudi Places of Worship Tag Directory</h1>
+      <p data-lang="ar">
+        المرجع المعتمد لوسوم خريطة الشارع المفتوحة في المملكة العربية السعودية، يربط الوسوم بقواعد الجودة، الأمثلة العملية، وإحصاءات الاستخدام الحية.
+      </p>
+      <p data-lang="en">
+        The authoritative reference for OpenStreetMap mosque tags in Saudi Arabia, connecting tags with QA rules, practical examples, and live usage stats.
+      </p>
+
+      <div class="tag-stats-ribbon">
+        <div class="ribbon-card">
+          <div class="ribbon-val" id="ribbon-total-places">14,022</div>
+          <div class="ribbon-label">
+            <span data-lang="ar">مساجد ومصليات مفحوصة</span>
+            <span data-lang="en">Places of Worship Analyzed</span>
+          </div>
+        </div>
+        <div class="ribbon-card">
+          <div class="ribbon-val" id="ribbon-cataloged-tags">13</div>
+          <div class="ribbon-label">
+            <span data-lang="ar">وسوم موثقة بالدليل</span>
+            <span data-lang="en">Cataloged Tag Entries</span>
+          </div>
+        </div>
+        <div class="ribbon-card">
+          <div class="ribbon-val">100%</div>
+          <div class="ribbon-label">
+            <span data-lang="ar">تغطية لقواعد فحص الجودة</span>
+            <span data-lang="en">QA Rules Covered</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tag-search-bar">
+        <div class="search-input-wrapper">
+          <input type="search" id="tag-search-input" placeholder="ابحث في الوسوم، المفاتيح، أو القواعد... (اضغط / للتركيز)" autocomplete="off" />
+          <span class="search-shortcut-hint">/</span>
+        </div>
+        <div class="tag-filters">
+          <button type="button" class="filter-btn active" data-filter="all">
+            <span data-lang="ar">الكل</span><span data-lang="en">All</span>
+          </button>
+          <button type="button" class="filter-btn" data-filter="approved">
+            <span data-lang="ar">المعتمدة</span><span data-lang="en">Approved</span>
+          </button>
+          <button type="button" class="filter-btn" data-filter="discouraged">
+            <span data-lang="ar">غير المحبذة</span><span data-lang="en">Discouraged</span>
+          </button>
+          <button type="button" class="filter-btn" data-filter="worship">
+            <span data-lang="ar">الوسوم الأساسية</span><span data-lang="en">Core Worship</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tags-grid" class="tags-grid">
+      <!-- Tag cards rendered dynamically by /src/tags.js -->
+    </section>
+  </main>
+
+  <script type="module" src="/src/tags.js"></script>
+</body>
+</html>

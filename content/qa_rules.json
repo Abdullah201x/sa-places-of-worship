@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Canonical definition of Manara's 13 quality-assurance rules across pipeline, database, API, and frontend.",
+  "thresholds": {
+    "size_min_m2": 50.0,
+    "size_max_m2": 10000.0,
+    "qibla_dev_deg": 20.0,
+    "stale_data_years": 5,
+    "ml_anomaly_score": -0.1
+  },
+  "generic_mosque_names": [
+    "مسجد",
+    "الجامع",
+    "جامع",
+    "المسجد",
+    "مصلى",
+    "المصلى",
+    "مصلي",
+    "المصلي",
+    "محراب",
+    "جمعه",
+    "بدون اسم",
+    "بلا اسم",
+    "mosque",
+    "masjid",
+    "musalla",
+    "jami",
+    "jame",
+    "prayer room",
+    "unnamed",
+    "no name",
+    "place of worship"
+  ],
+  "rules": [
+    {
+      "id": "missing_amenity",
+      "severity": "high",
+      "weight": 1.0,
+      "title_ar": "مبنى مسجد بدون تصنيف (amenity=place_of_worship)",
+      "title_en": "Building marked as mosque but missing amenity=place_of_worship",
+      "description_ar": "المعلم موسوم كـ building=mosque ولكنه يفتقر إلى الوسم الأساسي لدور العبادة amenity=place_of_worship.",
+      "description_en": "Element tagged as building=mosque but missing the primary place-of-worship tag amenity=place_of_worship.",
+      "suggested_fix": {
+        "amenity": "place_of_worship"
+      }
+    },
+    {
+      "id": "missing_name",
+      "severity": "medium",
+      "weight": 0.8,
+      "title_ar": "اسم المسجد مفقود أو افتراضي (مثال: \"مسجد\")",
+      "title_en": "Mosque name is missing or set to a generic default",
+      "description_ar": "المسجد لا يحمل اسماً خاصاً أو يحمل اسماً عاماً مجرداً مثل \"مسجد\" أو \"جامع\".",
+      "description_en": "The mosque has no specific name or only carries a generic default like 'Mosque' or 'Grand Mosque'."
+    },
+    {
+      "id": "missing_name_en",
+      "severity": "medium",
+      "weight": 0.7,
+      "title_ar": "الاسم بالإنجليزية مفقود أو مطابق للاسم العربي",
+      "title_en": "English name translation (name:en) is missing or identical to the Arabic name",
+      "description_ar": "يحمل المسجد اسماً عربياً صالحاً ولكنه يفتقر إلى اسم إنجليزي أو كُتب الاسم العربي نفسه في حقل الإنجليزية.",
+      "description_en": "The mosque has a valid Arabic name but lacks an English translation (name:en) or repeats the Arabic script."
+    },
+    {
+      "id": "missing_denom",
+      "severity": "medium",
+      "weight": 0.6,
+      "title_ar": "المذهب غير محدد (سني/شيعي)",
+      "title_en": "Denomination is unknown or unspecified",
+      "description_ar": "المسجد موسوم بالإسلام ولكن حقل المذهب (denomination) مفقود أو غير معروف.",
+      "description_en": "The mosque is tagged with religion=muslim but denomination is unknown or missing."
+    },
+    {
+      "id": "building_yes",
+      "severity": "medium",
+      "weight": 0.7,
+      "title_ar": "مبنى مسجد مصنف كـ building=yes بدلاً من building=mosque",
+      "title_en": "Mosque building tagged as building=yes instead of building=mosque",
+      "description_ar": "مبنى دار العبادة موسوم بالوسم العام building=yes بدلاً من الوسم التخصصي building=mosque.",
+      "description_en": "The building is tagged with the generic building=yes instead of the specific building=mosque.",
+      "suggested_fix": {
+        "building": "mosque"
+      }
+    },
+    {
+      "id": "size_too_small",
+      "severity": "low",
+      "weight": 0.4,
+      "title_ar": "مبنى المسجد أصغر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى",
+      "title_en": "Mosque building footprint looks too small — verify the building outline",
+      "description_ar": "مساحة مسقط المبنى أقل من 50 متراً مربعاً، مما يشير لاحتمال رسم غير دقيق للحدود.",
+      "description_en": "The building footprint area is under 50 m², indicating a potentially inaccurate outline."
+    },
+    {
+      "id": "size_too_large",
+      "severity": "low",
+      "weight": 0.4,
+      "title_ar": "مبنى المسجد أكبر من المعتاد بشكل ملحوظ — تحقق من حدود المبنى",
+      "title_en": "Mosque building footprint looks too large — verify the building outline",
+      "description_ar": "مساحة مسقط المبنى تتجاوز 10,000 متر مربع، تحقق من عدم شمول فناء خارجي أو سور كمبنى مسقوف.",
+      "description_en": "The footprint exceeds 10,000 m², verify that outer courtyards or perimeter walls are not tagged as building."
+    },
+    {
+      "id": "mapped_as_node",
+      "severity": "low",
+      "weight": 0.5,
+      "title_ar": "مرسوم كنقطة وليس كمساحة (مبنى) — يفضّل رسم حدود المبنى",
+      "title_en": "Mapped as a single node instead of an area — ideally traced as a building outline",
+      "description_ar": "المسجد ممثل بنقطة مفردة (node) بدلاً من مساحة محددة المعالم (building polygon).",
+      "description_en": "The mosque is mapped as a single point instead of a traced building polygon outline."
+    },
+    {
+      "id": "duplicate_poi",
+      "severity": "high",
+      "weight": 0.9,
+      "title_ar": "مكرر: المبنى ونقطة داخله كلاهما موسوم كدار عبادة — يُفضّل نقل الوسوم إلى المبنى وحذف النقطة",
+      "title_en": "Mapped twice: both the building and a point inside it are tagged as the place of worship",
+      "description_ar": "يوجد مبنى ونقطة داخلية كلاهما يحمل وسم دار العبادة لنفس المسجد.",
+      "description_en": "Both a building outline and an internal node are tagged as places of worship for the same mosque."
+    },
+    {
+      "id": "stale_data",
+      "severity": "low",
+      "weight": 0.3,
+      "title_ar": "لم يتم تعديل هذا العنصر منذ إضافته لأول مرة (بيانات قديمة)",
+      "title_en": "This entry has never been revisited since it was first mapped",
+      "description_ar": "العنصر لا يزال في نسخته الأولى (version 1) ولم يُراجع منذ أكثر من 5 سنوات.",
+      "description_en": "The element remains at version 1 and has not been updated or verified in over 5 years."
+    },
+    {
+      "id": "outdated_tags",
+      "severity": "low",
+      "weight": 0.4,
+      "title_ar": "وسوم قديمة أو بصيغة غير معتمدة",
+      "title_en": "Outdated or non-standard tags",
+      "description_ar": "يحتوي العنصر على وسوم قديمة مثل amenity=mosque أو قيم عربية للمذهب تحتاج إلى توحيد.",
+      "description_en": "The element contains legacy tags like amenity=mosque or non-standard values requiring standardization."
+    },
+    {
+      "id": "ml_geometry_anomaly",
+      "severity": "high",
+      "weight": 0.8,
+      "title_ar": "🤖 شذوذ هندسي (ذكاء اصطناعي)",
+      "title_en": "🤖 ML Geometry Anomaly",
+      "description_ar": "اكتشف نموذج الذكاء الاصطناعي شذوذاً في هندسة المبنى أو استقامته أو توازيه.",
+      "description_en": "Machine learning model detected an anomaly in building geometry, compactness, or edge alignment."
+    },
+    {
+      "id": "qibla_deviation",
+      "severity": "high",
+      "weight": 0.9,
+      "title_ar": "🕋 انحراف حاد عن القبلة",
+      "title_en": "🕋 Severe Qibla deviation",
+      "description_ar": "انحراف محور المبنى عن اتجاه القبلة المحسوب يتجاوز 20 درجة.",
+      "description_en": "Building orientation deviates by 20 degrees or more from the calculated Qibla azimuth."
+    }
+  ]
+}

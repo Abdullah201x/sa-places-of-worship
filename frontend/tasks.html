@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حملات التخطيط والتحرير | منارة: خريطة بيوت الله</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎯%3C/text%3E%3C/svg%3E">
+  <link rel="canonical" href="https://manara.saudiosm.org/tasks">
+  <meta name="description" content="حملات التخطيط وتنسيق التحرير لمساجد المملكة العربية السعودية في خريطة الشارع المفتوحة: تقسيم المربعات، قفل المهام، والتحقق المتبادل.">
+</head>
+<body data-title-key="tasksTitle">
+  <header class="page-header">
+    <nav style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <a href="/"><span data-lang="ar">← العودة إلى الخريطة</span><span data-lang="en">← Back to Map</span></a>
+      <a href="/qa"><span data-lang="ar">الجودة</span><span data-lang="en">QA</span></a>
+      <a href="/changes"><span data-lang="ar">التعديلات</span><span data-lang="en">Changes</span></a>
+      <a href="/tasks" style="color: var(--color-primary); font-weight: 700;"><span data-lang="ar">الحملات</span><span data-lang="en">Tasks</span></a>
+      <a href="/tags"><span data-lang="ar">دليل الوسوم</span><span data-lang="en">Tags</span></a>
+      <a href="/community"><span data-lang="ar">المجتمع</span><span data-lang="en">Community</span></a>
+    </nav>
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <div id="user-auth-widget" class="user-auth-widget"></div>
+      <button type="button" id="btn-toggle-lang" lang="en">English</button>
+    </div>
+  </header>
+
+  <main class="tasks-container">
+    <!-- View 1: Sprints Overview List -->
+    <section id="sprints-list-view">
+      <div class="tasks-hero">
+        <h1 data-lang="ar">حملات تحسين وتوثيق المساجد</h1>
+        <h1 data-lang="en">Mosque Mapping Sprints & Task Tracker</h1>
+        <p data-lang="ar">
+          نسق جهود المجتمع الجغرافي عبر حملات مركزة ومقسمة إلى مربعات (Tiles)، مع إمكانية القفل، التحرير المباشر في iD و JOSM، والتحقق المتبادل.
+        </p>
+        <p data-lang="en">
+          Coordinate community mapping via focused area sprints divided into tiles with locking, live editing in iD & JOSM, and peer validation.
+        </p>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 1.3rem; margin: 0;">
+          <span data-lang="ar">الحملات الجارية والنشطة</span>
+          <span data-lang="en">Active Sprints</span>
+        </h2>
+      </div>
+
+      <div id="sprints-grid" class="sprints-grid">
+        <!-- Rendered by /src/tasks.js -->
+      </div>
+    </section>
+
+    <!-- View 2: Sprint Board / Tile Grid View -->
+    <section id="sprint-board-view" style="display: none;">
+      <div id="demo-mode-banner" class="demo-mode-banner" style="display: none;"></div>
+      <div class="board-header">
+        <div class="board-top-row">
+          <div>
+            <a href="/tasks" class="board-nav-back">
+              <span data-lang="ar">← العودة إلى قائمة الحملات</span>
+              <span data-lang="en">← Back to Sprints</span>
+            </a>
+            <h2 class="board-title" id="board-sprint-title">Sprint Title</h2>
+          </div>
+          <div class="board-actions">
+            <span class="sprint-hashtag" id="board-sprint-hashtag">#hashtag</span>
+            <a href="#" id="btn-export-maproulette" target="_blank" rel="noopener noreferrer" class="btn-open-sprint" style="width: auto; padding: 6px 12px; font-size: 0.85rem;">
+              🗺️ <span data-lang="ar">تصدير كـ MapRoulette</span><span data-lang="en">MapRoulette Export</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="board-progress-stats">
+          <div class="stat-pill-item">
+            <span class="stat-pill-val" id="stat-total-tiles" style="color: var(--color-primary);">0</span>
+            <span class="stat-pill-lbl" data-lang="ar">إجمالي المربعات</span>
+            <span class="stat-pill-lbl" data-lang="en">Total Tiles</span>
+          </div>
+          <div class="stat-pill-item">
+            <span class="stat-pill-val" id="stat-validated-tiles" style="color: var(--color-emerald);">0</span>
+            <span class="stat-pill-lbl" data-lang="ar">المعتمدة</span>
+            <span class="stat-pill-lbl" data-lang="en">Validated</span>
+          </div>
+          <div class="stat-pill-item">
+            <span class="stat-pill-val" id="stat-workload-tiles" style="color: var(--color-amber);">0</span>
+            <span class="stat-pill-lbl" data-lang="ar">الأعمال المتبقية</span>
+            <span class="stat-pill-lbl" data-lang="en">Workload Left</span>
+          </div>
+          <div class="stat-pill-item">
+            <span class="stat-pill-val" id="stat-pct-tiles" style="color: var(--color-purple);">0%</span>
+            <span class="stat-pill-lbl" data-lang="ar">نسبة الإنجاز</span>
+            <span class="stat-pill-lbl" data-lang="en">Completion</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="board-view-controls">
+        <div class="view-switch-group">
+          <button type="button" class="view-switch-btn active" id="btn-view-map">
+            🗺️ <span data-lang="ar">الخريطة</span><span data-lang="en">Map</span>
+          </button>
+          <button type="button" class="view-switch-btn" id="btn-view-split">
+            ◫ <span data-lang="ar">مدمج</span><span data-lang="en">Split</span>
+          </button>
+          <button type="button" class="view-switch-btn" id="btn-view-grid">
+            ⊞ <span data-lang="ar">الشبكة</span><span data-lang="en">Grid</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="board-layout view-mode-map" id="board-layout-container">
+        <!-- Center/Left: Spatial Map & Grid Container -->
+        <div class="board-visual-area">
+          <div id="board-map-view" class="board-map-container">
+            <div id="sprint-leaflet-map" style="width: 100%; height: 100%; min-height: 540px;"></div>
+          </div>
+          <div id="board-grid-view" class="tile-grid-view" style="display: none;">
+            <div id="tile-grid-matrix" class="tile-grid-matrix">
+              <!-- Tiles rendered by /src/tasks.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Inspector Panel -->
+        <aside class="board-inspector">
+          <div id="board-inspector-body">
+            <div style="text-align: center; color: var(--color-text-muted); padding: 40px 10px;">
+              <p data-lang="ar">اختر مربعاً من اللوحة للبدء، أو اضغط <strong>N</strong> للانتقال إلى المربع الجاهز التالي.</p>
+              <p data-lang="en">Select a tile from the grid or press <strong>N</strong> for next ready tile.</p>
+            </div>
+          </div>
+
+          <div class="shortcuts-hint-bar">
+            <span><span class="kbd-badge">N</span> <span data-lang="ar">التالي</span><span data-lang="en">Next</span></span>
+            <span><span class="kbd-badge">L</span> <span data-lang="ar">قفل</span><span data-lang="en">Lock</span></span>
+            <span><span class="kbd-badge">D</span> <span data-lang="ar">تم</span><span data-lang="en">Done</span></span>
+            <span><span class="kbd-badge">A</span> <span data-lang="ar">اعتماد</span><span data-lang="en">Approve</span></span>
+            <span><span class="kbd-badge">X</span> <span data-lang="ar">تصحيح</span><span data-lang="en">Invalidate</span></span>
+            <span><span class="kbd-badge">S</span> <span data-lang="ar">تخطي</span><span data-lang="en">Skip</span></span>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- Invalidation Reason Modal -->
+  <div id="invalidate-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <h3 data-lang="ar">طلب تصحيح المربع</h3>
+      <h3 data-lang="en">Invalidate Tile</h3>
+      <p style="color: var(--color-text-muted); font-size: 0.9rem;" data-lang="ar">
+        اذكر سبب الرفض أو النواقص التي تتطلب تصحيحاً من الرسام:
+      </p>
+      <p style="color: var(--color-text-muted); font-size: 0.9rem;" data-lang="en">
+        State the reason or missing items requiring correction by the mapper:
+      </p>
+      <textarea id="invalidate-reason-input" placeholder="مثال: ينقص وسم رسم حدود مبنى المسجد في الزاوية الشمالية..."></textarea>
+      <div class="modal-actions">
+        <button type="button" id="btn-cancel-invalidate" class="tile-action-btn secondary">
+          <span data-lang="ar">إلغاء</span><span data-lang="en">Cancel</span>
+        </button>
+        <button type="button" id="btn-confirm-invalidate" class="tile-action-btn danger">
+          <span data-lang="ar">تأكيد الرفض</span><span data-lang="en">Confirm</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/tasks.js"></script>
+</body>
+</html>
