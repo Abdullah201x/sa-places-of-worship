@@ -6,7 +6,7 @@ RUN git clone --depth 1 https://github.com/felt/tippecanoe.git /tmp/tippecanoe \
     && make -j$(nproc) \
     && make install
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 ENV PYTHONUNBUFFERED=1 \
     MANARA_STATE_DIR=/state \
