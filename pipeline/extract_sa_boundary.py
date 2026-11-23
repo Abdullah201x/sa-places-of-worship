@@ -64,7 +64,10 @@ def main():
     print("Pass 2: Extracting way coordinates...")
     coord_collector = WayCoordinateCollector(collector.way_ids)
     # Enable location caching so nodes in ways have coordinates
-    coord_collector.apply_file(pbf_path, locations=True)
+    # IdFilter drops the other ~4M ways in C++ (after node locations are
+    # stored), so the Python callback only runs for the boundary ways.
+    coord_collector.apply_file(pbf_path, locations=True,
+                               filters=[osmium.filter.IdFilter(collector.way_ids).enable_for(osmium.osm.WAY)])
     
     print(f"Extracted {len(coord_collector.lines)} line segments.")
     

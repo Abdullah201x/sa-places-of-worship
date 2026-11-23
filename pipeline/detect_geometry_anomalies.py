@@ -20,7 +20,7 @@ from shapely.geometry import Point, Polygon
 from sklearn.ensemble import IsolationForest
 
 from common import (BASE_DIR, axis_deviation, calculate_qibla_azimuth, configure_utf8_output,
-                    find_pbf, is_worship_tagged, load_boundary, ring_centroid, to_metres,
+                    find_pbf, is_worship_tagged, load_boundary, ring_centroid, to_metres, worship_tag_filter,
                     update_summary, write_json)
 
 configure_utf8_output()
@@ -224,6 +224,12 @@ def train_anomaly_detector(records, contamination=0.015):
     """
     print(f"\n[ML Step 1/3] Preparing feature matrix for {len(records):,} mosques...")
 
+    # IsolationForest's subsampling depends on row order even with a fixed
+    # random_state, and libosmium's emit order for multipolygon areas is not
+    # stable (it shifts when filters are added). Sort so scores depend only on
+    # the data.
+    records.sort(key=lambda r: r["osm_id"])
+
     # Build the 2D feature array X for scikit-learn
     # We use log-transforms on area and perimeter because building sizes span multiple orders of magnitude
     feature_matrix = []
@@ -325,7 +331,7 @@ def main():
     print("\nScanning building footprints inside Saudi Arabia...")
     t0 = time.time()
     extractor = MosqueFeatureExtractor(boundary_prep, boundary_poly.bounds)
-    extractor.apply_file(pbf_path, locations=True)
+    extractor.apply_file(pbf_path, locations=True, filters=[worship_tag_filter()])
     t_extract = time.time() - t0
     print(f"Extracted features for {len(extractor.records):,} mosque footprints in {t_extract:.1f}s.")
 

@@ -5,7 +5,7 @@ import time
 import osmium
 from shapely.geometry import Point, Polygon
 
-from common import (BASE_DIR, find_pbf, is_worship_tagged, load_boundary, ring_centroid,
+from common import (BASE_DIR, find_pbf, is_worship_tagged, worship_tag_filter, load_boundary, ring_centroid,
                     to_metres, update_summary, write_json)
 
 # Default thresholds used only for the console summary below; the actual
@@ -100,7 +100,7 @@ def main():
     start_time = time.time()
 
     extractor = MosqueSizeExtractor(boundary_prep, bounds)
-    extractor.apply_file(pbf_path, locations=True)
+    extractor.apply_file(pbf_path, locations=True, filters=[worship_tag_filter()])
 
     duration = time.time() - start_time
     print(f"Scan completed in {duration:.2f} seconds.")

@@ -6,7 +6,7 @@ import osmium
 from shapely.geometry import MultiPolygon, Point, Polygon
 from shapely.strtree import STRtree
 
-from common import (BASE_DIR, configure_utf8_output, find_pbf, is_worship_tagged,
+from common import (BASE_DIR, configure_utf8_output, find_pbf, is_worship_tagged, worship_tag_filter,
                     load_boundary, ring_centroid, update_summary, write_json)
 
 configure_utf8_output()
@@ -239,7 +239,7 @@ def main():
     print("Scanning PBF and extracting places of worship inside Saudi Arabia...")
     start_time = time.time()
     extractor = PlacesOfWorshipExtractor(boundary_prep, bounds)
-    extractor.apply_file(pbf_path, locations=True)
+    extractor.apply_file(pbf_path, locations=True, filters=[worship_tag_filter()])
     print(f"Extraction completed in {time.time() - start_time:.2f} seconds "
           f"({len(extractor.nodes)} nodes, {len(extractor.ways)} ways, {len(extractor.relations)} relations).")
 

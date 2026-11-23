@@ -35,6 +35,21 @@ M_PER_DEG_LON = 111_320.0 * math.cos(REF_LAT_RAD)
 from worship_tags import is_worship_tagged
 
 
+def worship_tag_filter():
+    """libosmium (C++) pre-filter matching is_worship_tagged(): an object
+    passes if it has any of these tags. Pass it as
+    apply_file(..., filters=[worship_tag_filter()]) so the Python callbacks
+    only see the few thousand worship-tagged objects instead of all ~4M ways
+    of the GCC extract. pyosmium runs the node-location and multipolygon
+    handlers before the filters, so untagged member nodes and ways still
+    contribute geometry. Keep in sync with worship_tags.is_worship_tagged.
+    """
+    import osmium
+    return osmium.filter.TagFilter(("amenity", "place_of_worship"),
+                                   ("amenity", "mosque"),
+                                   ("building", "mosque"))
+
+
 def configure_utf8_output():
     """Arabic console output on Windows terminals."""
     if sys.platform == "win32":

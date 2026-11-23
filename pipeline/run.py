@@ -43,6 +43,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 import brotli
 import osmium
@@ -268,6 +269,22 @@ def precompress(path):
         f.write(data)
 
 
+# Brotli quality 11 is slow (~1.7 s/MB) and ~85 MB is published per run, so
+# files are compressed in parallel: the brotli and zlib modules release the
+# GIL. Output is identical to compressing one by one. Each worker holds one
+# file plus its compressed copy (largest published file is ~20 MB), well
+# inside the pipeline container's 1.5 GiB, but the pool is capped anyway.
+PRECOMPRESS_WORKERS = int(os.environ.get("MANARA_PRECOMPRESS_WORKERS", "0")) or min(4, os.cpu_count() or 1)
+
+
+def precompress_all(paths):
+    # Largest first so the long files don't start last and stretch the tail.
+    paths = sorted(paths, key=os.path.getsize, reverse=True)
+    with ThreadPoolExecutor(max_workers=PRECOMPRESS_WORKERS) as pool:
+        for _ in pool.map(precompress, paths):  # re-raises the first failure
+            pass
+
+
 def publish():
     with open(os.path.join(WORK_DIR, "summary.json"), encoding="utf-8") as f:
         updated_at = json.load(f)["updated_at"]
@@ -276,12 +293,13 @@ def publish():
     staging = target + ".staging"
     shutil.rmtree(staging, ignore_errors=True)
     os.makedirs(staging)
+    to_compress = []
     for name in PUBLISHED_FILES:
         src = os.path.join(WORK_DIR, name)
         if os.path.exists(src):
             dest = os.path.join(staging, name)
             shutil.copy2(src, dest)
-            precompress(dest)
+            to_compress.append(dest)
 
     reg_src = os.path.join(WORK_DIR, "by-region")
     if os.path.exists(reg_src):
@@ -290,7 +308,8 @@ def publish():
         for root, _, files in os.walk(reg_dest):
             for fname in files:
                 if not (fname.endswith(".br") or fname.endswith(".gz")):
-                    precompress(os.path.join(root, fname))
+                    to_compress.append(os.path.join(root, fname))
+    precompress_all(to_compress)
 
     os.replace(staging, target)
 

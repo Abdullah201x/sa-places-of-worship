@@ -87,7 +87,10 @@ def main():
 
     print("Pass 2: Extracting way coordinates...")
     way_collector = RegionWayCollector(rel_collector.all_way_ids)
-    way_collector.apply_file(pbf_path, locations=True)
+    # IdFilter drops the other ~4M ways in C++ (after node locations are
+    # stored), so the Python callback only runs for the region outer ways.
+    way_collector.apply_file(pbf_path, locations=True,
+                             filters=[osmium.filter.IdFilter(rel_collector.all_way_ids).enable_for(osmium.osm.WAY)])
     print(f"Resolved {len(way_collector.way_lines)} / {len(rel_collector.all_way_ids)} outer ways.")
 
     features = []
