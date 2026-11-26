@@ -74,6 +74,7 @@ def init_db(conn):
         ALTER TABLE places ADD COLUMN IF NOT EXISTS name_original TEXT DEFAULT '';
         ALTER TABLE places ADD COLUMN IF NOT EXISTS name_en_original TEXT DEFAULT '';
         CREATE INDEX IF NOT EXISTS idx_places_osm ON places (osm_type, osm_id);
+        CREATE INDEX IF NOT EXISTS idx_places_poi_node_id ON places (poi_node_id);
         CREATE INDEX IF NOT EXISTS idx_places_geom ON places USING GIST (geom);
         CREATE INDEX IF NOT EXISTS idx_places_name_norm_trgm ON places USING GIN (name_norm gin_trgm_ops);
         CREATE INDEX IF NOT EXISTS idx_places_name_en_trgm ON places USING GIN (name_en gin_trgm_ops);
@@ -510,6 +511,35 @@ def load_staging_data(conn, data_dir=BASE_DIR):
         print(f"  [OK] Regional history stats recorded for version {version}.")
 
 
+# Keep live rows for one extra snapshot (see docs/live-gap-updates-plan.md, Phase 3).
+# No-op when live_places has no osm_timestamp yet (migration 004 pending) or when
+# no previous snapshot has a pbf_timestamp.
+PRUNE_LIVE_SQL = """
+DO $$
+DECLARE
+    prev TIMESTAMPTZ;
+BEGIN
+    IF to_regclass('public.live_places') IS NULL THEN
+        RETURN;
+    END IF;
+    SELECT pbf_timestamp INTO prev FROM dataset_versions
+    WHERE pbf_timestamp IS NOT NULL
+    ORDER BY pbf_timestamp DESC OFFSET 1 LIMIT 1;
+    IF prev IS NULL THEN
+        RETURN;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema = 'public' AND table_name = 'live_places'
+                 AND column_name = 'osm_timestamp') THEN
+        DELETE FROM live_places WHERE osm_timestamp IS NOT NULL AND osm_timestamp < prev;
+    END IF;
+    IF to_regclass('public.live_pending') IS NOT NULL THEN
+        DELETE FROM live_pending WHERE seen_at < prev;
+    END IF;
+END $$;
+"""
+
+
 def swap_staging_to_production(conn):
     """Atomically swaps staging tables into production in a single transaction."""
     print("Performing atomic table swap to production...")
@@ -544,6 +574,9 @@ def swap_staging_to_production(conn):
             DROP TABLE IF EXISTS regions_old CASCADE;
             DROP TABLE IF EXISTS issues_old CASCADE;
             """)
+            # Live rows are kept for one extra snapshot: anything older than the previous
+            # snapshot's pbf_timestamp is already reflected in `places` (or was dropped).
+            cur.execute(PRUNE_LIVE_SQL)
     with conn.cursor() as cur:
         try:
             cur.execute("ANALYZE places, gaps, regions, issues, suggestions;")

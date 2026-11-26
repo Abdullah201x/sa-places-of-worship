@@ -77,3 +77,59 @@ export function invertedMask(geometry) {
     geometry: { type: 'Polygon', coordinates: [world, ...polygons.map(p => p[0])] },
   };
 }
+
+// One worship_gaps_sa.json row [gx, gy, road_length_m, gap_score, urgency_score, rx, ry]
+// as a cell object. rx/ry (0-99) place the road-weighted point the pipeline measures
+// from inside the cell; files without them fall back to the cell centre.
+export function parseGapCell(cell, g) {
+  const [gx, gy, roadLength, score, urgency, rx, ry] = cell;
+  const hasRep = rx !== undefined && ry !== undefined;
+  return {
+    gx, gy,
+    lat: (gy + 0.5) * g,
+    lon: (gx + 0.5) * g,
+    rep_lat: (gy + (hasRep ? ry / 99 : 0.5)) * g,
+    rep_lon: (gx + (hasRep ? rx / 99 : 0.5)) * g,
+    road_length_m: roadLength,
+    gap_score: score,
+    urgency_score: urgency !== undefined ? urgency : score
+  };
+}
+
+// A cell with a mosque closer than this is not a gap (calculate_gaps.py MIN_GAP_DISTANCE_M).
+export const GAP_COVERAGE_RADIUS_M = 750;
+const M_PER_DEG_LAT = 110574; // pipeline/common.py
+const M_PER_DEG_LON_EQ = 111320;
+
+// Cells (as built by parseGapGrid: gx, gy, rep_lat, rep_lon) not within `radiusM` of
+// any of `points` ({lon, lat}). Distance is the pipeline's own: each point is
+// projected with its own cos(lat) (calculate_gaps.py), measured from the cell's
+// road-weighted point, so it matches what the daily build will decide. Returns a new
+// array; `cells` is not modified.
+export function filterCoveredGaps(cells, points, radiusM = GAP_COVERAGE_RADIUS_M, gridSize = 0.004) {
+  if (!points || !points.length) return cells.slice();
+  const index = new Map();
+  cells.forEach((c, i) => index.set(c.gx + ',' + c.gy, i));
+  const r2 = radiusM * radiusM;
+  const covered = new Set();
+  for (const p of points) {
+    const px = p.lon * (M_PER_DEG_LON_EQ * Math.cos(p.lat * Math.PI / 180));
+    const py = p.lat * M_PER_DEG_LAT;
+    // 750 m is ~1.9 cells; +1 for the point's offset inside its cell and the
+    // pipeline's lon skew (<= ~800 m reach) gives +-3.
+    const gx = Math.floor(p.lon / gridSize);
+    const gy = Math.floor(p.lat / gridSize);
+    for (let dx = -3; dx <= 3; dx++) {
+      for (let dy = -3; dy <= 3; dy++) {
+        const i = index.get((gx + dx) + ',' + (gy + dy));
+        if (i === undefined || covered.has(i)) continue;
+        const c = cells[i];
+        const cx = c.rep_lon * (M_PER_DEG_LON_EQ * Math.cos(c.rep_lat * Math.PI / 180));
+        const cy = c.rep_lat * M_PER_DEG_LAT;
+        const ddx = cx - px, ddy = cy - py;
+        if (ddx * ddx + ddy * ddy < r2) covered.add(i);
+      }
+    }
+  }
+  return cells.filter((_, i) => !covered.has(i));
+}

@@ -27,6 +27,23 @@ def get_metadata(conn=Depends(get_db)):
         cur.execute("SELECT COUNT(*) FROM suggestions;")
         suggestions_count = cur.fetchone()["count"]
 
+        live_places = None
+        try:
+            cur.execute("""
+            SELECT COUNT(*) AS count,
+                   COUNT(*) FILTER (WHERE deleted) AS tombstones,
+                   MIN(osm_timestamp) AS oldest
+            FROM live_places;
+            """)
+            lp = cur.fetchone()
+            live_places = {
+                "count": lp["count"],
+                "tombstones": lp["tombstones"],
+                "oldest_osm_timestamp": lp["oldest"].isoformat() if lp["oldest"] else None,
+            }
+        except Exception:
+            conn.rollback()
+
         pbf_ts = row.get("pbf_timestamp") if isinstance(row, dict) else None
         return {
             "version": row["version"],
@@ -38,5 +55,6 @@ def get_metadata(conn=Depends(get_db)):
                 "gaps": gaps_count,
                 "suggestions": suggestions_count,
             },
+            "live_places": live_places,
             "summary": row["metadata"],
         }

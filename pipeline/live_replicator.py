@@ -33,6 +33,8 @@ configure_utf8_output()
 
 DEFAULT_REPLICATION_URL = "https://planet.openstreetmap.org/replication/minute"
 USER_AGENT = "Manara/1.0 (+https://manara.saudiosm.org)"
+KNOWN_RELOAD_CHECK_SECONDS = 600  # how often to check for a daily dataset swap
+BULK_CREATE_WARN = 50  # worship creates in one changeset worth a log line
 
 # Saudi Arabia approximate bounding box for fast pre-filtering
 SA_BBOX = (34.5, 16.0, 55.7, 32.2)  # min_lon, min_lat, max_lon, max_lat
@@ -92,9 +94,11 @@ def load_known_places(conn) -> dict[tuple[str, int], dict[str, Any]]:
     known: dict[tuple[str, int], dict[str, Any]] = {}
     with conn.cursor() as cur:
         for table in ("places", "live_places"):
+            # Tombstones are not active places.
+            where = "geom IS NOT NULL" + (" AND NOT COALESCE(deleted, FALSE)" if table == "live_places" else "")
             try:
                 cur.execute(
-                    f"SELECT osm_type, osm_id, ST_Y(geom) AS lat, ST_X(geom) AS lon, region_code, tags FROM {table} WHERE geom IS NOT NULL;"
+                    f"SELECT osm_type, osm_id, ST_Y(geom) AS lat, ST_X(geom) AS lon, region_code, tags FROM {table} WHERE {where};"
                 )
                 for row in cur.fetchall():
                     if isinstance(row, dict):
@@ -282,6 +286,8 @@ def parse_osc_stream(
                 "tags": tags,
                 "tag_diff": tag_diff,
                 "flags": flags,
+                "version": version,
+                "timestamp": elem.attrib.get("timestamp"),
             })
 
     return events
@@ -330,21 +336,9 @@ def record_live_events(conn, seq: int, osm_timestamp: str, events: list[dict[str
                 """
                 cur.execute(insert_sql, params)
 
-                # Maintain live_places for fast lookups and freshness if requested
+                # Maintain live_places (the single write path is the SQL function)
                 if sync_live_places:
-                    if ev["kind"] == "deleted":
-                        cur.execute("DELETE FROM live_places WHERE osm_type = %s AND osm_id = %s;", (ev["osm_type"], ev["osm_id"]))
-                    elif lat is not None and lon is not None and is_worship_tagged(ev.get("tags") or {}):
-                        cur.execute("""
-                        INSERT INTO live_places (osm_type, osm_id, version, geom, region_code, tags, seen_at)
-                        VALUES (%s, %s, %s, ST_SetSRID(ST_Point(%s, %s), 4326), %s, %s::jsonb, NOW())
-                        ON CONFLICT (osm_type, osm_id) DO UPDATE SET
-                            version = EXCLUDED.version,
-                            geom = EXCLUDED.geom,
-                            region_code = EXCLUDED.region_code,
-                            tags = EXCLUDED.tags,
-                            seen_at = NOW();
-                        """, (ev["osm_type"], ev["osm_id"], ev.get("version_after"), lon, lat, ev.get("region_code"), import_json(ev.get("tags") or {})))
+                    sync_live_place(cur, ev, osm_timestamp)
 
             # Update replication_state
             cur.execute("""
@@ -355,6 +349,63 @@ def record_live_events(conn, seq: int, osm_timestamp: str, events: list[dict[str
                 osm_timestamp = EXCLUDED.osm_timestamp,
                 processed_at = NOW();
             """, (seq, osm_timestamp))
+
+
+def sync_live_place(cur, ev: dict[str, Any], osm_timestamp: str) -> None:
+    """Write one event through manara_upsert_live_place.
+
+    A worship-tagged, located create/modify is an upsert. A delete, or a modify that
+    stripped the worship tags, is a tombstone (the SQL function ignores objects it
+    does not know). The function also applies the region check and version guard.
+    """
+    tags = ev.get("tags") or {}
+    deleted = ev["kind"] == "deleted" or not is_worship_tagged(tags)
+    if deleted and ev["kind"] == "created":
+        return
+    lat, lon = (None, None) if deleted else (ev.get("lat"), ev.get("lon"))
+    if not deleted and (lat is None or lon is None):
+        return
+    cur.execute(
+        "SELECT manara_upsert_live_place(%s, %s::bigint, %s::int, %s::double precision, "
+        "%s::double precision, %s::jsonb, %s::boolean, %s::timestamptz, 'replication', %s::bigint);",
+        (ev["osm_type"], ev["osm_id"], ev.get("version"), lon, lat,
+         import_json({} if deleted else tags), deleted,
+         ev.get("timestamp") or osm_timestamp, ev.get("changeset_id")),
+    )
+
+
+def record_live_pending(conn, pending: list[dict[str, Any]]) -> None:
+    """Park worship-tagged ways/relations that could not be placed from the diff.
+    Locating them needs node positions we only get from the daily build."""
+    with conn.cursor() as cur:
+        for p in pending:
+            cur.execute("""
+            INSERT INTO live_pending (osm_type, osm_id, version, tags, node_refs, seen_at)
+            VALUES (%s, %s, %s, %s::jsonb, %s::bigint[], NOW())
+            ON CONFLICT (osm_type, osm_id) DO UPDATE SET
+                version = EXCLUDED.version, tags = EXCLUDED.tags,
+                node_refs = EXCLUDED.node_refs, seen_at = NOW();
+            """, (p["osm_type"], p["osm_id"], p["version"], import_json(p["tags"]), p["node_refs"]))
+
+
+def warn_bulk_creates(events: list[dict[str, Any]]) -> None:
+    """Log changesets that create many worship places (possible vandalism)."""
+    counts: dict[Any, int] = {}
+    for ev in events:
+        if ev["kind"] == "created" and ev.get("changeset_id"):
+            counts[ev["changeset_id"]] = counts.get(ev["changeset_id"], 0) + 1
+    for cs, n in counts.items():
+        if n > BULK_CREATE_WARN:
+            print(f"[WARN] Changeset {cs} created {n} worship places in one diff.")
+
+
+def latest_dataset_version(conn):
+    with conn.cursor() as cur:
+        cur.execute("SELECT version FROM dataset_versions ORDER BY published_at DESC LIMIT 1;")
+        row = cur.fetchone()
+    if not row:
+        return None
+    return row["version"] if isinstance(row, dict) else row[0]
 
 
 def fetch_replication_state(base_url: str = DEFAULT_REPLICATION_URL) -> dict[str, Any]:
@@ -411,8 +462,14 @@ def run_replication_step(conn, known_places: dict, base_url: str = DEFAULT_REPLI
 
     target_seq = current_seq + 1
     xml_bytes = fetch_diff_bytes(base_url, target_seq)
-    events = parse_osc_stream(xml_bytes, known_places=known_places)
-    record_live_events(conn, target_seq, remote_ts or datetime.now(timezone.utc).isoformat(), events)
+    sync = os.environ.get("MANARA_LIVE_PLACES_SYNC") == "1"
+    pending: list[dict[str, Any]] | None = [] if sync else None
+    events = parse_osc_stream(xml_bytes, known_places=known_places, pending=pending)
+    record_live_events(conn, target_seq, remote_ts or datetime.now(timezone.utc).isoformat(), events,
+                       sync_live_places=sync)
+    if pending:
+        record_live_pending(conn, pending)
+    warn_bulk_creates(events)
 
     # Update cache with newly processed events
     for ev in events:
@@ -453,6 +510,8 @@ def main():
         print("Loading known places cache into memory...")
         known = load_known_places(conn)
         print(f"Known places loaded: {len(known)} entries (~{len(known)*300//1024} KB).")
+        dataset_version = latest_dataset_version(conn)
+        last_version_check = time.monotonic()
 
         if args.once:
             run_replication_step(conn, known)
@@ -463,6 +522,16 @@ def main():
         while True:
             try:
                 processed = run_replication_step(conn, known)
+                if time.monotonic() - last_version_check >= KNOWN_RELOAD_CHECK_SECONDS:
+                    last_version_check = time.monotonic()
+                    current_version = latest_dataset_version(conn)
+                    if current_version != dataset_version:
+                        # A daily swap replaced `places`: refresh the cache in place.
+                        fresh = load_known_places(conn)
+                        known.clear()
+                        known.update(fresh)
+                        dataset_version = current_version
+                        print(f"[RELOAD] Dataset {current_version}: known places reloaded ({len(known)} entries).")
                 consecutive_errors = 0
                 time.sleep(args.interval if processed == 0 else 5)
             except KeyboardInterrupt:

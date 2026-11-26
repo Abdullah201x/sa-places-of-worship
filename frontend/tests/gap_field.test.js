@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { gapScoreToColor, interpolateGapScore, gapPixel, worldPixel, invertedMask, GAP_GRADIENT_STOPS } from '../src/gap_field.js';
+import { gapScoreToColor, interpolateGapScore, gapPixel, worldPixel, invertedMask, GAP_GRADIENT_STOPS, filterCoveredGaps, parseGapCell } from '../src/gap_field.js';
+import golden from './gap_coverage_golden.json';
 import { wantsGl } from '../src/map_kit.js';
 
 describe('gapScoreToColor', () => {
@@ -88,5 +89,59 @@ describe('wantsGl', () => {
     expect(wantsGl('?foo=1&map=gl')).toBe(true);
     expect(wantsGl('?map=leaflet')).toBe(false);
     expect(wantsGl('?foo=1&map=leaflet')).toBe(false);
+  });
+});
+
+describe('parseGapCell', () => {
+  const g = 0.004;
+  it('places the road-weighted point from rx/ry', () => {
+    const c = parseGapCell([10, 20, 100, 5, 40, 0, 99], g);
+    expect(c.rep_lon).toBeCloseTo(10 * g);
+    expect(c.rep_lat).toBeCloseTo(21 * g);
+    expect(c.lon).toBeCloseTo(10.5 * g);
+  });
+
+  it('falls back to the cell centre for old 5-field files', () => {
+    const c = parseGapCell([10, 20, 100, 5, 40], g);
+    expect(c.rep_lon).toBeCloseTo(10.5 * g);
+    expect(c.rep_lat).toBeCloseTo(20.5 * g);
+    expect(parseGapCell([10, 20, 100, 5], g).urgency_score).toBe(5);
+  });
+});
+
+describe('filterCoveredGaps', () => {
+  const G = 0.004;
+  const cellAt = (lon, lat) => parseGapCell([Math.floor(lon / G), Math.floor(lat / G), 1, 1, 1,
+    Math.round(99 * (lon / G - Math.floor(lon / G))), Math.round(99 * (lat / G - Math.floor(lat / G)))], G);
+
+  // A mosque `d` metres due east of the cell's road-weighted point.
+  const mosqueEast = (cell, d) => {
+    const lat = cell.rep_lat;
+    return { lat, lon: cell.rep_lon + d / (111320 * Math.cos(lat * Math.PI / 180)) };
+  };
+
+  it.each([17.0, 32.0])('clears at 749 m and keeps at 751 m (%s N)', lat => {
+    const cell = cellAt(42.5, lat);
+    expect(filterCoveredGaps([cell], [mosqueEast(cell, 749)])).toHaveLength(0);
+    expect(filterCoveredGaps([cell], [mosqueEast(cell, 751)])).toHaveLength(1);
+  });
+
+  it('does nothing without points and never modifies its input', () => {
+    const cells = [cellAt(42.5, 17.0), cellAt(42.6, 17.1)];
+    const snapshot = JSON.stringify(cells);
+    const out = filterCoveredGaps(cells, []);
+    expect(out).toEqual(cells);
+    expect(out).not.toBe(cells);
+    filterCoveredGaps(cells, [mosqueEast(cells[0], 10)]);
+    expect(JSON.stringify(cells)).toBe(snapshot);
+  });
+
+  it('matches the pipeline distance rule (golden fixture from the Python formula)', () => {
+    for (const c of golden.cases) {
+      const cells = c.cells.map(row => parseGapCell(row, golden.grid_size));
+      const points = c.points.map(([lon, lat]) => ({ lon, lat }));
+      const kept = filterCoveredGaps(cells, points, 750, golden.grid_size).map(x => [x.gx, x.gy]);
+      expect(kept).toEqual(c.kept);
+    }
   });
 });

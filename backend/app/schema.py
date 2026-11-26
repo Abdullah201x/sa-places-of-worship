@@ -141,6 +141,10 @@ def init_app_tables(conn):
             region_code TEXT,
             tags JSONB DEFAULT '{}'::jsonb,
             seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            osm_timestamp TIMESTAMPTZ,
+            deleted BOOLEAN NOT NULL DEFAULT FALSE,
+            source TEXT NOT NULL DEFAULT 'replication',
+            changeset_id BIGINT,
             PRIMARY KEY (osm_type, osm_id)
         );
 

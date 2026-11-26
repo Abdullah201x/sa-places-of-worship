@@ -101,6 +101,16 @@ class DrivableRoadExtractor(osmium.SimpleHandler):
                 np.where(residential, seg_len, 0.0)[keep])
 
 
+def rep_offsets(rep_lon, rep_lat, gx, gy, grid_size):
+    """Where a cell's road-weighted point sits inside the cell, as integers 0-99
+    across the cell (rx, ry). The client measures mosque distance from this point,
+    not the cell centre (half a cell diagonal is ~300 m). Rebuild with
+    (gx + rx / 99) * grid_size."""
+    rx = min(99, max(0, round(99 * (rep_lon - gx * grid_size) / grid_size)))
+    ry = min(99, max(0, round(99 * (rep_lat - gy * grid_size) / grid_size)))
+    return rx, ry
+
+
 def main():
     pbf_path = find_pbf(BASE_DIR)
     worship_path = os.path.join(BASE_DIR, "places_of_worship_sa.geojson")
@@ -225,11 +235,14 @@ def main():
             else:
                 urgency_score = min(25.0, round(gap_score * 0.4, 1))
 
+            rx, ry = rep_offsets(*candidate_points[i], key[0], key[1], GRID_SIZE)
+
             gap_cells.append([
                 key[0], key[1],
                 round(road_length_m),
                 round(gap_score, 3),
-                urgency_score
+                urgency_score,
+                rx, ry,
             ])
 
     print(f"Detected {len(gap_cells)} coverage gap areas across Saudi Arabia.")
@@ -238,7 +251,7 @@ def main():
     # index (cell (gx, gy) spans [gx*grid_size, (gx+1)*grid_size) in lon/lat).
     write_json(output_path, {
         "grid_size": GRID_SIZE,
-        "fields": ["gx", "gy", "road_length_m", "gap_score", "urgency_score"],
+        "fields": ["gx", "gy", "road_length_m", "gap_score", "urgency_score", "rx", "ry"],
         "cells": gap_cells,
     })
     if os.path.exists(legacy_output_path):

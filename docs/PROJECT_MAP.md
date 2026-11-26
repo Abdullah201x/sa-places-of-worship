@@ -38,6 +38,7 @@ Quick "where is X?" index for Manara. Check here before running broad file searc
 - `frontend/src/osm_api.js`, `frontend/src/editing.js`, `frontend/src/exporters.js`, `frontend/src/osmose.js` — OSM OAuth/API 0.6 editing & exports
 - `frontend/src/i18n.js`, `frontend/src/translations.js`, `frontend/src/translations_static.js`, `frontend/src/arabic.js` — Arabic/English i18n & normalization
 - `frontend/src/field_mode.js`, `frontend/src/focus_mode.js`, `frontend/src/gap_field.js`, `frontend/src/tasks_view.js`, `frontend/src/data_view.js`, `frontend/src/changes_view.js`, `frontend/src/ai_detections.js` — mode views
+- `frontend/src/live_places.js` — live mosque delta merge (`/api/v1/places/live`), `LocalAdds`; plan in `docs/live-gap-updates-plan.md` (SQL write path: `backend/migrations/004_live_places_v2.sql`; replicator sync flag `MANARA_LIVE_PLACES_SYNC=1`)
 - `frontend/src/styles/` — CSS modules (`tokens.css`, `index.css`, `mapgl.css`, etc.)
 - `frontend/tests/` — Vitest unit tests; `frontend/e2e/` — Playwright smoke tests
 

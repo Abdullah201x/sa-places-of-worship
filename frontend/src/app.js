@@ -1,6 +1,6 @@
 import { escapeHtml } from './escape.js';
 import { kit } from './map_kit.js';
-import { worldPixel } from './gap_field.js';
+import { worldPixel, filterCoveredGaps, parseGapCell, GAP_COVERAGE_RADIUS_M } from './gap_field.js';
 import { safeUrl, showToast, showLoadingText, openModal, closeModal } from './ui.js';
 // The other map modules (editing, review, exporters) still import these from app.js.
 export { safeUrl, showToast, showLoadingText, openModal, closeModal };
@@ -15,6 +15,7 @@ import { OsmApi, EditHistory } from './osm_api.js';
 import { renderQuickFixes, setupEditing, createFieldRow, readFieldValues, showFieldErrors, openEditDialog, LocalPatches } from './editing.js';
 import { FocusMode } from './focus_mode.js';
 import { MOSQUE_PRESET, presetFieldIds, tagsFromValues, validateValues } from './presets.js';
+import { tagsToPlaceProps, liveFeatureToPlace, mergeLivePlaces, livePoints, LocalAdds } from './live_places.js';
 import { evaluateRules } from './validator.js';
 import { DATA_AGE_OK_MS, DATA_AGE_WARN_MS, ageLevel, clockOffset, formatAge } from './timeago.js';
 import { trackEvent } from './analytics.js';
@@ -98,6 +99,7 @@ export let pendingAnomalyData = null;
 export let allPlaces = [];
 export let filteredPlaces = [];
 export let allGaps = [];
+let staticGaps = []; // the parsed gap file, never mutated: allGaps is filtered from it
 export let filteredGaps = [];
 
 // Filter States
@@ -1508,7 +1510,7 @@ export function refreshSummary() {
       dataSummary = summary;
       dataVersion = summary.updated_at;
       const pbfTime = Date.parse(dataSummary.pbf_timestamp || dataSummary.published_at || dataSummary.updated_at || '');
-      if (pbfTime) LocalPatches.prune(pbfTime);
+      if (pbfTime) { LocalPatches.prune(pbfTime); LocalAdds.prune(pbfTime); }
       renderDataUpdatedLabel();
     })
     .catch(() => {});
@@ -1525,7 +1527,7 @@ export function loadData() {
       dataSummary = summary || {};
       if (dataSummary.updated_at) dataVersion = dataSummary.updated_at;
       const pbfTime = Date.parse(dataSummary.pbf_timestamp || dataSummary.published_at || dataSummary.updated_at || '');
-      if (pbfTime) LocalPatches.prune(pbfTime);
+      if (pbfTime) { LocalPatches.prune(pbfTime); LocalAdds.prune(pbfTime); }
       renderDataUpdatedLabel();
       // Keep the age current while the page stays open.
       setInterval(renderDataUpdatedLabel, 30 * 1000);
@@ -1557,6 +1559,7 @@ export function loadData() {
     return OsmApi.checkAuth().then(isAuthenticated => {
       isOsmAnonymized = !isAuthenticated;
       initializeDashboard(poiData, gapData, boundaryData, sizeData, anomalyData);
+      startLiveUpdates();
       return allPlaces;
     });
   })
@@ -1603,7 +1606,8 @@ export function initializeDashboard(poiData, gapData, boundaryData, sizeData, an
   filteredPlaces = [...allPlaces];
   updateImprovementIssueCounts();
 
-  allGaps = parseGapGrid(gapData);
+  staticGaps = parseGapGrid(gapData);
+  allGaps = staticGaps;
   filteredGaps = [...allGaps];
 
   // Reconfigure Esri Satellite as a BoundaryCanvas layer restricted to the Saudi Arabia boundary
@@ -1642,6 +1646,82 @@ export function initializeDashboard(poiData, gapData, boundaryData, sizeData, an
     openQAWorkspace();
   } else if (currentPath === '/changes' || wsParam === 'changes') {
     openChangesWorkspace();
+  }
+}
+
+// === Live mosque updates (docs/live-gap-updates-plan.md) ===
+// The static files are rebuilt daily. New/changed/deleted mosques since then come
+// from GET /api/v1/places/live; every path goes through applyLiveDelta.
+let liveEtag = null;
+let liveUpdatesStarted = false;
+
+// Widen the date slider when live mosques are newer than the snapshot, so the
+// date filter does not hide them.
+function extendDateRange(features) {
+  let maxDay = DATA_MAX_DAY;
+  features.forEach(f => {
+    const d = dayIndex(f.properties.edited_at);
+    if (Number.isFinite(d) && d > maxDay) maxDay = d;
+  });
+  if (maxDay <= DATA_MAX_DAY) return;
+  const atEnd = currentDateTo === null || currentDateTo >= DATA_MAX_DAY;
+  DATA_MAX_DAY = maxDay;
+  if (atEnd) currentDateTo = maxDay;
+  const fromSlider = document.getElementById('slider-date-from');
+  const toSlider = document.getElementById('slider-date-to');
+  if (fromSlider) fromSlider.max = maxDay;
+  if (toSlider) {
+    toSlider.max = maxDay;
+    if (atEnd) toSlider.value = maxDay;
+  }
+  const toLabel = document.getElementById('date-to-val');
+  if (toLabel && currentDateTo !== null) toLabel.innerText = formatDay(currentDateTo);
+}
+
+// Merge a live delta into the map data and clear the gap cells the live mosques
+// cover. `delta.features` are either server features ({properties.tags}) or ready
+// place features. Returns true when anything changed.
+export function applyLiveDelta(delta) {
+  const features = ((delta && delta.features) || []).map(f => (f.properties && f.properties.tags ? liveFeatureToPlace(f) : f));
+  if (!mergeLivePlaces(allPlaces, { features, removed: (delta && delta.removed) || [] })) return false;
+  extendDateRange(features);
+  allGaps = filterCoveredGaps(staticGaps, livePoints(allPlaces), GAP_COVERAGE_RADIUS_M, GAP_GRID_SIZE_DEG);
+  filterData();
+  return true;
+}
+
+// Best-effort: static and preview deployments have no API and simply answer 404.
+export async function fetchLiveDelta() {
+  const since = dataSummary.pbf_timestamp || dataSummary.published_at;
+  const url = '/api/v1/places/live' + (since ? `?since=${encodeURIComponent(since)}` : '');
+  try {
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: liveEtag ? { 'If-None-Match': liveEtag } : {},
+    });
+    if (res.status === 304 || !res.ok) return false;
+    const delta = await res.json();
+    liveEtag = res.headers.get('ETag');
+    return applyLiveDelta(delta);
+  } catch (_) {
+    return false;
+  }
+}
+
+function startLiveUpdates() {
+  if (liveUpdatesStarted) return;
+  liveUpdatesStarted = true;
+  // The uploader's own mosques survive a reload even when the backend is down.
+  const local = LocalAdds.asDelta();
+  if (local.features.length) applyLiveDelta(local);
+  fetchLiveDelta();
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') fetchLiveDelta();
+    });
+    setInterval(() => {
+      if (document.visibilityState === 'visible') fetchLiveDelta();
+    }, 5 * 60 * 1000);
   }
 }
 
@@ -1706,17 +1786,7 @@ export let GAP_GRID_SIZE_DEG = 0.004; // overridden by worship_gaps_sa.json's gr
 export function parseGapGrid(gapData) {
   if (gapData.grid_size) GAP_GRID_SIZE_DEG = gapData.grid_size;
   const g = GAP_GRID_SIZE_DEG;
-  return (gapData.cells || []).map(cell => {
-    const [gx, gy, roadLength, score, urgency] = cell;
-    return {
-      gx, gy,
-      lat: (gy + 0.5) * g,
-      lon: (gx + 0.5) * g,
-      road_length_m: roadLength,
-      gap_score: score,
-      urgency_score: urgency !== undefined ? urgency : score
-    };
-  });
+  return (gapData.cells || []).map(cell => parseGapCell(cell, g));
 }
 
 // Builds a sparse Map<"x,y", gap_score> from the gap grid's own cell
@@ -3621,27 +3691,16 @@ export async function submitPendingMosqueNode() {
       link: { href: nodeUrl, text: t('addMosqueViewNode') }
     });
 
-    // Create GeoJSON feature and add to memory datasets immediately
+    // Create the place feature and add it to the live layer immediately (this also
+    // clears the gap cells it covers); LocalAdds keeps it across reloads.
     const newFeature = {
       type: 'Feature',
       properties: {
+        ...tagsToPlaceProps({ ...tags, religion: tags.religion || 'muslim' }),
         osm_id: nodeId,
+        osm_type: 'node',
         changeset_id: changesetId,
         geom_type: 'Point',
-        name: tags.name || tags['name:ar'] || 'مسجد',
-        name_en: tags['name:en'] || '',
-        name_ar: tags['name:ar'] || '',
-        name_original: tags.name || '',
-        name_ar_original: tags['name:ar'] || '',
-        name_en_original: tags['name:en'] || '',
-        religion: 'muslim',
-        denomination: tags.denomination || 'unknown',
-        building: tags.building || '',
-        amenity: 'place_of_worship',
-        wheelchair: tags.wheelchair || '',
-        female: tags['female:prayer_room'] || '',
-        capacity: tags.capacity || '',
-        wikidata: tags.wikidata || '',
         version: 1,
         edited_at: new Date().toISOString(),
         last_edited_by: OsmApi.userName() || 'You',
@@ -3653,13 +3712,8 @@ export async function submitPendingMosqueNode() {
       }
     };
 
-    allPlaces.push(newFeature);
-    filteredPlaces.push(newFeature);
-
-    if (markerClusterLayer) {
-      const marker = getPlaceMarker(newFeature);
-      markerClusterLayer.addLayer(marker);
-    }
+    LocalAdds.add(nodeId, lat, lon, tags);
+    applyLiveDelta({ features: [newFeature], removed: [] });
 
     // If added from a Wikidata suggestion, remove suggestion marker
     const qidMatch = wikidata.match(/Q[0-9]+/i);
@@ -3671,8 +3725,6 @@ export async function submitPendingMosqueNode() {
     }
 
     closeAddMosqueComposer();
-    updateStats();
-    updateDashboardUI();
     showDetails(newFeature.properties, lat, lon);
 
   } catch (err) {

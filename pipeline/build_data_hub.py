@@ -378,7 +378,7 @@ def generate_regional_exports(data_dir=DATA_DIR):
             write_json(json_full, {
                     "grid_size": grid_size,
                     "fields": ["grid_x", "grid_y", "road_length_m", "gap_score", "urgency_score"],
-                    "cells": reg_cells
+                    "cells": [cell[:5] for cell in reg_cells]
                 })
             write_gaps_csv_cells(reg_cells, grid_size, csv_full)
 

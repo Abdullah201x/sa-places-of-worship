@@ -35,6 +35,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
+  // Live mosque delta: always the network, never cached (a stale delta would
+  // resurrect deleted mosques or hide new ones; LocalAdds covers offline uploaders).
+  if (url.pathname === '/api/v1/places/live') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   // Network-first for dynamic API routes, summary metadata & OSM replication
   if (
     url.pathname.startsWith('/api/') ||
