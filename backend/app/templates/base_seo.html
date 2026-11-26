@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}منارة: خارطة أماكن العبادة بالمملكة{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕌%3C/text%3E%3C/svg%3E">
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% if not indexable %}
+  <meta name="robots" content="noindex, follow">
+  {% endif %}
+  <meta name="description" content="{% block description %}خارطة تفاعلية مفتوحة لأماكن العبادة في المملكة العربية السعودية مبنية على بيانات OpenStreetMap.{% endblock %}">
+
+  <!-- OpenGraph -->
+  <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
+  <meta property="og:description" content="{% block og_desc %}{{ self.description() }}{% endblock %}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="منارة | Manara">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{ self.title() }}">
+  <meta name="twitter:description" content="{{ self.description() }}">
+
+  <!-- Fonts & Styles -->
+  <style>
+    :root {
+      --bg-dark: #0a0b10;
+      --panel-bg: rgba(13, 15, 23, 0.85);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --color-primary: #00f2fe;
+      --color-emerald: #10b981;
+      --color-amber: #f59e0b;
+      --color-text: #f1f5f9;
+      --color-text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-dark);
+      color: var(--color-text);
+      line-height: 1.8;
+    }
+    header.seo-header {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 20px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--panel-border);
+    }
+    header.seo-header a {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    main.seo-main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 8px;
+      line-height: 1.3;
+    }
+    .subtitle {
+      color: var(--color-text-muted);
+      font-size: 15px;
+      margin: 0 0 24px;
+    }
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .stat-val {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--color-primary);
+      display: block;
+    }
+    .stat-lbl {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+    a.btn {
+      display: inline-block;
+      background: rgba(0, 242, 254, 0.12);
+      border: 1px solid rgba(0, 242, 254, 0.35);
+      color: var(--color-primary);
+      text-decoration: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-weight: 600;
+      font-size: 13px;
+      margin-inline-end: 8px;
+      margin-bottom: 8px;
+    }
+    a.btn:hover {
+      background: rgba(0, 242, 254, 0.22);
+    }
+    table.seo-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    table.seo-table th, table.seo-table td {
+      padding: 8px 12px;
+      text-align: start;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    table.seo-table th {
+      color: var(--color-text-muted);
+    }
+    footer.seo-footer {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      border-top: 1px solid var(--panel-border);
+      font-size: 13px;
+      color: var(--color-text-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    footer.seo-footer a {
+      color: var(--color-primary);
+      text-decoration: none;
+    }
+    code {
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  </style>
+
+  {% block json_ld %}{% endblock %}
+</head>
+<body>
+  <header class="seo-header">
+    <a href="/">→ العودة إلى الخارطة التفاعلية</a>
+    <div>
+      <a href="/community" style="margin-inline-end: 14px;">إحصاءات المجتمع</a>
+      <a href="/about">عن المشروع</a>
+    </div>
+  </header>
+
+  <main class="seo-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="seo-footer">
+    <div>
+      بيانات الخارطة © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">المساهمون في OpenStreetMap</a> بموجب رخصة ODbL.
+    </div>
+    <div>
+      <a href="https://github.com/Abdullah201x/sa-places-of-worship" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>
+

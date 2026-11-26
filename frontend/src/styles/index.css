@@ -1,0 +1,11 @@
+/* ==========================================================================
+   Manara - Core App Stylesheet
+   Decomposed into modular domain stylesheets bundled automatically by Vite.
+   ========================================================================== */
+@import './tokens.css';
+@import './topbar.css';
+@import './sidebar.css';
+@import './details.css';
+@import './workspaces.css';
+@import './modals.css';
+@import './mobile.css';

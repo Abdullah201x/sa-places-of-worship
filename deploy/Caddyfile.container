@@ -1,0 +1,121 @@
+# Caddy inside Manara's container (root Dockerfile), deployed by Coolify's
+# Dockerfile build pack. It listens on plain HTTP :80 only: Coolify's Traefik
+# owns ports 80/443 on the VPS, terminates TLS for manara.saudiosm.org and
+# forwards here.
+#
+# Files baked into the image:
+#   /srv/manara/dist  built frontend (frontend/dist), with .br/.gz copies
+#   /srv/manara/data  published datasets, with .br/.gz copies
+
+{
+	admin off
+	auto_https off
+	servers {
+		# Traefik sits in front on the private Docker network: trust its
+		# X-Forwarded-For so {client_ip} is the visitor, not Traefik.
+		trusted_proxies static private_ranges
+		client_ip_headers X-Forwarded-For
+	}
+}
+
+:80 {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		# Everything the app loads is self-hosted. External hosts: Esri/CARTO
+		# tiles, the OSM API and OAuth token endpoint (prod + dev), and JOSM
+		# Remote Control on the mapper's own machine. frontend/vite.config.js
+		# reads this line so `npm run preview` enforces the same policy.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self'; connect-src 'self' https://*.basemaps.cartocdn.com https://api.openstreetmap.org https://www.openstreetmap.org https://master.apis.dev.openstreetmap.org https://server.arcgisonline.com http://127.0.0.1:8111 https://osmose.openstreetmap.fr https://overpass-api.de; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		-Server
+	}
+
+	# Container health check (Dockerfile HEALTHCHECK).
+	handle /healthz {
+		respond 200
+	}
+
+	# Umami, same-origin so ad blockers leave it alone. Only the tracker
+	# script and its collect endpoint are proxied, never the dashboard: the
+	# shared instance's login (and rahmahealth.net's stats) must not be
+	# reachable on this domain. Manara is its own website there. The request
+	# re-enters through Traefik, which replaces X-Forwarded-For, so the visitor
+	# IP travels in the headers Umami checks first (as rahmahealth.net's proxy
+	# does); the IP is used for the country and not stored.
+	@umami path /stats/script.js /stats/api/send
+	handle @umami {
+		uri strip_prefix /stats
+		reverse_proxy https://analytics.rahmahealth.net {
+			header_up Host analytics.rahmahealth.net
+			header_up CF-Connecting-IP {client_ip}
+			header_up True-Client-IP {client_ip}
+			header_up -Cookie
+		}
+	}
+
+	# FastAPI data, auth, and SEO services
+	@backend path /api/* /auth/* /region/* /place/* /sitemap.xml
+	handle @backend {
+		reverse_proxy {$MANARA_API_URL:http://manara-api:8010} {
+			header_up Host {host}
+			header_up X-Real-IP {client_ip}
+		}
+	}
+
+	# Datasets: file?v=<timestamp> is cached permanently, summary.json revalidates.
+	# Serves from live pipeline updates (/srv/manara/published/current) when
+	# present, falling back to the baked-in dataset (/srv/manara/data).
+	handle_path /data/* {
+		@live file {
+			root /srv/manara/published/current
+		}
+		root * /srv/manara/data
+		root @live /srv/manara/published/current
+		@geojson path *.geojson
+		header @geojson Content-Type "application/geo+json; charset=utf-8"
+		@versioned query v=*
+		header @versioned Cache-Control "public, max-age=31536000, immutable"
+		# PMTiles are fetched with Range requests and their tiles are already gzipped: the
+		# catch-all encode below must not recompress them (it would corrupt the byte ranges).
+		@pmtiles path *.pmtiles
+		header @pmtiles Content-Encoding identity
+		@unversioned not query v=*
+		header @unversioned Cache-Control "no-cache"
+		# Wikidata mosques missing from OSM are private to the OSM users listed in
+		# MANARA_SUGGESTIONS_ALLOWLIST. Anything with "suggest" in its cleaned path
+		# (suggested_mosques_*.geojson/.csv, by-region/suggested_*, suggestions.pmtiles)
+		# is first checked against the backend with the visitor's session cookie: 2xx
+		# serves the file, anything else is returned to the visitor as is. Declared
+		# after the cache headers above so it wins: the files must never be
+		# stored publicly or reused after logout.
+		@private path *suggest*
+		forward_auth @private {$MANARA_API_URL:http://manara-api:8010} {
+			uri /api/v1/access/suggestions
+		}
+		header @private Cache-Control "private, no-cache"
+		file_server {
+			precompressed br gzip
+		}
+	}
+
+	# Frontend: Hashed assets cached permanently, HTML pages revalidate
+	handle {
+		root * /srv/manara/dist
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /assets/*
+		header @pages Cache-Control "no-cache"
+		@workspaces path /qa /changes
+		rewrite @workspaces /index.html
+		redir /mapgl / 301
+		try_files {path} {path}.html
+		file_server {
+			precompressed br gzip
+		}
+	}
+
+	# Anything without a precompressed copy (small files, proxied responses).
+	encode zstd gzip
+}

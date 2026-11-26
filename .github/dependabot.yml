@@ -1,0 +1,51 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      frontend-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      backend-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /pipeline
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      pipeline-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directories: [/, /backend, /pipeline]
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      docker-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      actions-dependencies:
+        patterns:
+          - "*"

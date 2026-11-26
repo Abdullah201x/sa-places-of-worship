@@ -1,0 +1,26 @@
+key: female
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: مصلى النساء
+  en: Women's prayer space
+saudi_notes:
+  ar: 'يوضح توفر قسم مخصص لصلاة النساء في المسجد. الوسم المعتمد في المنارة ومجتمع الخريطة السعودي هو female:prayer_room=yes|no. كما تُقبل الوسوم المرادفة female=yes|dedicated|no و worship:female=yes بسلاسة.'
+  en: 'Indicates availability of a women''s prayer area. The primary standard tag used in Manara presets and Saudi OSM community is female:prayer_room=yes|no. Equivalent aliases female=yes|dedicated|no and worship:female=yes are also seamlessly recognized.'
+examples:
+  good:
+  - tags:
+      female:prayer_room: 'yes'
+  - tags:
+      female: 'yes'
+  bad:
+  - tags:
+      female: women
+    why:
+      ar: القيمة المعيارية هي yes أو no أو dedicated
+      en: Standard OSM values are yes, no, or dedicated
+rules: []
+wiki: https://wiki.openstreetmap.org/wiki/Key:female

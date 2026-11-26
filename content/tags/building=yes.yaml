@@ -1,0 +1,31 @@
+key: building
+value: 'yes'
+status: discouraged
+replaced_by:
+  building: mosque
+applies_to:
+- way
+- relation
+label:
+  ar: مبنى عام (غير محدد)
+  en: Generic building
+saudi_notes:
+  ar: غير محبذ لمباني المساجد في المملكة العربية السعودية. يُستبدل دائمًا بـ building=mosque
+    عندما يكون المبنى مسجدًا معروفًا.
+  en: Discouraged for mosque buildings in Saudi Arabia. Always upgrade to building=mosque
+    when the structure is known to be a mosque.
+examples:
+  good:
+  - tags:
+      building: mosque
+      amenity: place_of_worship
+  bad:
+  - tags:
+      building: 'yes'
+      amenity: place_of_worship
+    why:
+      ar: يجب ترقية الوسم إلى building=mosque
+      en: Upgrade building tag to building=mosque
+rules:
+- building_yes
+wiki: https://wiki.openstreetmap.org/wiki/Tag:building=yes

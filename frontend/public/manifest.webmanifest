@@ -1,0 +1,21 @@
+{
+  "name": "منارة — خارطة وتوثيق مساجد المملكة",
+  "short_name": "منارة",
+  "description": "خارطة تفاعلية ومسح ميداني لبيوت العبادة وفجوات التغطية في المملكة العربية السعودية",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0b10",
+  "theme_color": "#0a0b10",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

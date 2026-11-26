@@ -1,0 +1,26 @@
+key: amenity=mosque
+status: deprecated
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: وسم قديم مهمل (يجب استبداله بـ amenity=place_of_worship)
+  en: Deprecated legacy tag (replace with amenity=place_of_worship)
+saudi_notes:
+  ar: 'وسم مهمل قديماً في خريطة الشارع المفتوحة. يجب ترقيته تلقائياً إلى amenity=place_of_worship مع religion=muslim و building=mosque.'
+  en: 'Legacy deprecated tag in OpenStreetMap. Should be upgraded to amenity=place_of_worship with religion=muslim and building=mosque.'
+examples:
+  good:
+  - tags:
+      amenity: place_of_worship
+      religion: muslim
+      building: mosque
+  bad:
+  - tags:
+      amenity: mosque
+    why:
+      ar: وسم amenity=mosque مهمل منذ عام 2008، والمعيار العالمي هو amenity=place_of_worship + religion=muslim.
+      en: amenity=mosque was deprecated in 2008 in favor of amenity=place_of_worship + religion=muslim.
+rules: []
+wiki: https://wiki.openstreetmap.org/wiki/Deprecated_features#amenity=mosque

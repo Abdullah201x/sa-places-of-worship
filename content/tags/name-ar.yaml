@@ -1,0 +1,29 @@
+key: name:ar
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: الاسم بالعربية
+  en: Arabic name
+saudi_notes:
+  ar: 'الاسم الرسمي الكامل للمسجد بالأحرف العربية (مثل: جامع..., مسجد...). تأكد من
+    استخدام الهمزات الصحيحة وعدم إضافة عبارات وصفية ليست جزءاً من الاسم الرسمي.'
+  en: Official full Arabic name of the mosque (e.g. جامع..., مسجد...). Ensure standard
+    Arabic spelling without extraneous descriptive text.
+examples:
+  good:
+  - tags:
+      name: مسجد السلام
+      name:ar: مسجد السلام
+  bad:
+  - tags:
+      name: Mosque
+      name:ar: Mosque
+    why:
+      ar: لا تضع كلمات إنجليزية في وسم name:ar
+      en: Do not put English text in name:ar
+rules:
+- missing_name
+wiki: https://wiki.openstreetmap.org/wiki/Key:name:ar

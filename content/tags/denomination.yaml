@@ -1,0 +1,36 @@
+key: denomination
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: المذهب / الطائفة
+  en: Denomination
+saudi_notes:
+  ar: يحدد مذهب المسجد. القيم المعيارية المعتمدة هي sunni أو shia بالأحرف الإنجليزية
+    الصغيرة. تجنب الإملاءات غير المعيارية مثل Sunnite أو Shiite أو الكلمات العربية.
+  en: Specifies the denomination of the place of worship. Standard OSM values are
+    lowercase sunni or shia. Avoid non-standard spellings like Sunnite, Shiite, or
+    Arabic script.
+examples:
+  good:
+  - tags:
+      denomination: sunni
+  - tags:
+      denomination: shia
+  bad:
+  - tags:
+      denomination: Sunnite
+    why:
+      ar: صيغة قديمة، الصيغة المعيارية هي sunni
+      en: Outdated spelling; standard tag is sunni
+  - tags:
+      denomination: سنية
+    why:
+      ar: يجب استخدام القيمة الإنجليزية sunni
+      en: Use English value sunni
+rules:
+- missing_denom
+- outdated_tags
+wiki: https://wiki.openstreetmap.org/wiki/Key:denomination

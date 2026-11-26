@@ -1,0 +1,90 @@
+{% extends "base_seo.html" %}
+
+{% block title %}
+{% if place.name %}{{ place.name }} ({{ place.osm_type }}/{{ place.osm_id }}) | منارة{% else %}مكان عبادة ({{ place.osm_type }}/{{ place.osm_id }}) | منارة{% endif %}
+{% endblock %}
+
+{% block description %}
+بيانات المعلم {{ place.name or 'مكان عبادة' }} على OpenStreetMap في {{ region_name or 'المملكة العربية السعودية' }}، مع محاذاة القبلة والمساحة وروابط التحرير المباشر.
+{% endblock %}
+
+{% block json_ld %}
+<script type="application/ld+json">
+{{ json_ld | tojson | safe }}
+</script>
+{% endblock %}
+
+{% block content %}
+<article>
+  <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px;">
+    <code>{{ place.osm_type }}/{{ place.osm_id }}</code>
+    <h1>{{ place.name or 'مكان عبادة (بدون اسم)' }}</h1>
+  </div>
+  {% if place.name_en %}
+  <p class="subtitle" dir="ltr" style="text-align: start;">{{ place.name_en }}</p>
+  {% endif %}
+
+  <div class="panel">
+    <table class="seo-table">
+      <tbody>
+        <tr>
+          <th style="width: 200px;">المنطقة الإدارية</th>
+          <td>
+            {% if place.region_code %}
+            <a href="/region/{{ place.region_code }}">{{ region_name }} ({{ place.region_code }})</a>
+            {% else %}
+            غير محددة
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th>الديانة / المذهب</th>
+          <td>{{ place.religion or 'مسلم' }} {% if place.denomination %}({{ place.denomination }}){% endif %}</td>
+        </tr>
+        <tr>
+          <th>الإحداثيات الجغرافية</th>
+          <td dir="ltr" style="text-align: end;"><code>{{ "%.5f"|format(lat) }}, {{ "%.5f"|format(lon) }}</code></td>
+        </tr>
+        {% if place.area_m2 %}
+        <tr>
+          <th>مساحة بصمة المبنى</th>
+          <td>{{ "%.1f"|format(place.area_m2) }} م²</td>
+        </tr>
+        {% endif %}
+        {% if place.qibla_dev is not none %}
+        <tr>
+          <th>انحراف محور المبنى عن القبلة</th>
+          <td>
+            {{ "%.1f"|format(place.qibla_dev) }}°
+            {% if place.qibla_dev >= 20 %}
+            <span style="color: var(--color-amber); font-weight: 600;">(انحراف حاد ≥ 20°)</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        <tr>
+          <th>معرف OpenStreetMap</th>
+          <td>
+            <a href="https://www.openstreetmap.org/{{ place.osm_type }}/{{ place.osm_id }}" target="_blank" rel="noopener">
+              {{ place.osm_type }}/{{ place.osm_id }} ↗
+            </a>
+          </td>
+        </tr>
+        {% if place.version %}
+        <tr>
+          <th>إصدار العنصر في OSM</th>
+          <td>v{{ place.version }}</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top: 20px;">
+    <a href="/#map=18/{{ lat }}/{{ lon }}&place={{ place.osm_type }}/{{ place.osm_id }}" class="btn">🗺️ فتح على خارطة منارة التفاعلية</a>
+    <a href="https://www.openstreetmap.org/edit?editor=id&{{ place.osm_type }}={{ place.osm_id }}" target="_blank" rel="noopener" class="btn">✏️ تعديل عبر iD Web</a>
+    <a href="https://www.openstreetmap.org/{{ place.osm_type }}/{{ place.osm_id }}" target="_blank" rel="noopener" class="btn">🌐 صفحة المعلم على OSM</a>
+  </div>
+</article>
+{% endblock %}
+

@@ -1,0 +1,38 @@
+key: amenity
+value: place_of_worship
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: مكان عبادة
+  en: Place of worship
+saudi_notes:
+  ar: الوسم الأساسي لجميع المساجد والمصليات في المملكة العربية السعودية. يجب أن يترافق
+    دائمًا مع religion=muslim. إذا كان مبنى المسجد مرسومًا، ضع الوسم على المبنى نفسه
+    (أو على علاقة مبنى متعدد المضلعات) وتجنب تكرار وسم نقطة داخل المبنى.
+  en: The primary tag for all mosques and prayer halls in Saudi Arabia. Must always
+    accompany religion=muslim. If the mosque building outline is mapped, place this
+    tag directly on the building rather than as a duplicate POI node inside.
+examples:
+  good:
+  - tags:
+      amenity: place_of_worship
+      religion: muslim
+      building: mosque
+      name: جامع الملك فهد
+      name:en: King Fahd Mosque
+      denomination: sunni
+  bad:
+  - tags:
+      building: mosque
+    why:
+      ar: ينقص وسم مكان العبادة amenity=place_of_worship
+      en: Missing amenity=place_of_worship
+rules:
+- missing_amenity
+- stale_data
+- duplicate_poi
+id_preset: amenity/place_of_worship/muslim
+wiki: https://wiki.openstreetmap.org/wiki/Tag:amenity=place_of_worship

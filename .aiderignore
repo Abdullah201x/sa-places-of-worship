@@ -1,0 +1,56 @@
+# Secrets & local env
+.env
+.env.*
+!.env.example
+deploy/.env
+*.pem
+*.key
+
+# Large geospatial & database files
+*.osm.pbf
+*.pbf
+*.pmtiles
+*.geojson
+*.csv
+*.db
+*.sqlite
+*.db-wal
+*.db-shm
+by-region/
+
+# Generated root data dumps (keep config/schema JSONs like manifest.json, package.json, content/*.json)
+places_of_worship_sa.*
+suggested_mosques_sa.*
+worship_gaps_sa.*
+ai_detected_mosques_sa.*
+mosque_anomalies.json
+mosque_sizes.json
+tag_stats_sa.json
+active_learning_feedback.json
+ai_site_reviews.json
+summary.json
+tags.json
+.tmp_*.json
+
+# ML datasets, caches & model weights
+ML/
+poc_satellite_output/
+Training results/
+*.pt
+*.onnx
+*.zip
+
+# Build, cache & scratch directories
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+scratch/
+docs/local_notes/
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+test-results/

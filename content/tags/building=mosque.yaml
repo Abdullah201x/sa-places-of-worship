@@ -1,0 +1,36 @@
+key: building
+value: mosque
+status: approved
+applies_to:
+- way
+- relation
+label:
+  ar: مبنى مسجد
+  en: Mosque building
+saudi_notes:
+  ar: يستخدم لتحديد حدود مبنى المسجد الفعلية. تجنب استخدام building=yes للمساجد في
+    المملكة. يجب أن يتوافق اتجاه المبنى ومحراب الصلاة مع اتجاه القبلة نحو مكة المكرمة.
+  en: Used for the physical building outline of a mosque. Avoid generic building=yes.
+    Building orientation and prayer niche should align with the Qibla towards Mecca.
+examples:
+  good:
+  - tags:
+      building: mosque
+      amenity: place_of_worship
+      religion: muslim
+      name: مسجد النور
+  bad:
+  - tags:
+      building: 'yes'
+      amenity: place_of_worship
+    why:
+      ar: استخدام building=yes بدلاً من building=mosque
+      en: Uses generic building=yes instead of building=mosque
+rules:
+- missing_amenity
+- size_too_small
+- size_too_large
+- mapped_as_node
+- ml_geometry_anomaly
+- qibla_deviation
+wiki: https://wiki.openstreetmap.org/wiki/Tag:building=mosque

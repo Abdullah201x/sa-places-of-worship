@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>خارطة الكثافة وفجوات التغطية لأماكن العبادة بالمملكة</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🕌%3C/text%3E%3C/svg%3E">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0a0b10">
+  <link rel="canonical" href="https://manara.saudiosm.org/">
+  <meta name="description" content="خارطة تفاعلية لعرض التوزيع الجغرافي ونقاط الكثافة وفجوات التغطية لأماكن العبادة في المملكة العربية السعودية مع إمكانية التعديل عبر OpenStreetMap.">
+  <link rel="stylesheet" href="./src/styles/tokens.css">
+  <link rel="stylesheet" href="./src/styles/index.css">
+</head>
+<body>
+
+  <div id="app-container">
+    <!-- AppShell Top Bar (40px) -->
+    <header id="app-topbar" class="app-topbar" role="banner">
+      <div class="topbar-start">
+        <a href="/" class="topbar-brand" title="منارة — خارطة أماكن العبادة">
+          <span class="brand-badge">م</span>
+          <span class="brand-title">منارة</span>
+        </a>
+        <nav class="topbar-tabs" aria-label="مساحات العمل">
+          <button type="button" class="topbar-tab active" data-workspace="map" id="tab-workspace-map">
+            <span data-lang="ar">الخريطة</span><span data-lang="en">Map</span>
+          </button>
+          <button type="button" class="topbar-tab" data-workspace="qa" id="tab-workspace-qa">
+            <span data-lang="ar">الجودة</span><span data-lang="en">QA</span>
+          </button>
+          <button type="button" class="topbar-tab" data-workspace="changes" id="tab-workspace-changes">
+            <span data-lang="ar">التغييرات</span><span data-lang="en">Changes</span>
+          </button>
+          <a href="/tasks" class="topbar-tab">
+            <span data-lang="ar">الحملات</span><span data-lang="en">Tasks</span>
+          </a>
+          <a href="/tags" class="topbar-tab">
+            <span data-lang="ar">دليل الوسوم</span><span data-lang="en">Tags</span>
+          </a>
+          <a href="/data" class="topbar-tab">
+            <span data-lang="ar">البيانات</span><span data-lang="en">Data</span>
+          </a>
+          <a href="/community" class="topbar-tab">
+            <span data-lang="ar">المجتمع</span><span data-lang="en">Community</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="topbar-center">
+        <button type="button" id="btn-command-palette" class="topbar-search-trigger" title="لوحة الأوامر (Ctrl+K)">
+          <span class="search-trigger-icon">🔍</span>
+          <span class="search-trigger-text" data-lang="ar">ابحث أو نفّذ أمراً...</span>
+          <span class="search-trigger-text" data-lang="en">Search or command...</span>
+          <kbd class="search-trigger-kbd">⌘K</kbd>
+        </button>
+      </div>
+
+      <div class="topbar-end">
+        <div id="topbar-freshness" class="topbar-freshness" role="group" aria-label="حالة حداثة البيانات">
+          <div id="freshness-live-tag" class="freshness-tag" title="حداثة البث المباشر (OSM Live)">
+            <span class="freshness-dot dot-live">●</span>
+            <span class="freshness-lbl"><span data-lang="ar">مباشر:</span><span data-lang="en">Live:</span></span>
+            <time id="freshness-live-time" class="freshness-time" datetime="">–</time>
+          </div>
+          <div id="freshness-data-tag" class="freshness-tag" title="عمر بيانات الخريطة وقواعد الفحص">
+            <span class="freshness-dot dot-data">●</span>
+            <span class="freshness-lbl"><span data-lang="ar">بيانات:</span><span data-lang="en">Data:</span></span>
+            <time id="freshness-data-time" class="freshness-time" datetime="">–</time>
+          </div>
+        </div>
+        <button type="button" id="topbar-btn-field" class="topbar-btn" title="المسح الميداني الذكي (منارة فيلد)" aria-label="المسح الميداني الذكي">📱</button>
+        <button type="button" id="topbar-btn-lang" class="topbar-btn" title="English / العربية" lang="en">EN</button>
+        <button type="button" id="topbar-btn-auth" class="topbar-btn user-btn" title="تسجيل الدخول عبر OpenStreetMap">👤</button>
+      </div>
+    </header>
+    
+    <!-- Sidebar Controls -->
+    <aside id="sidebar">
+      <header>
+        <div class="title-container">
+          <div class="logo-glow"></div>
+          <h1>خارطة أماكن العبادة</h1>
+          <div class="header-actions">
+            <button type="button" id="btn-edit-history" class="header-action-btn">سجل تعديلاتي</button>
+            <button type="button" id="btn-toggle-lang" class="header-action-btn" lang="en">English</button>
+            <button type="button" id="btn-shortcuts" class="header-action-btn" title="اختصارات لوحة المفاتيح (?)" aria-label="اختصارات لوحة المفاتيح">?</button>
+          </div>
+        </div>
+        <p class="subtitle">عرض تفاعلي للتوزيع الجغرافي ونقاط الكثافة وفجوات التغطية لأماكن العبادة في المملكة العربية السعودية. تم تحليل البيانات خارج نطاق الإنترنت بالاعتماد على قاعدة بيانات OSM للخليج العربي.</p>
+        <p class="data-updated" id="data-updated" hidden></p>
+      </header>
+
+      <!-- User Profile Widget (OSM Auth) -->
+      <div id="user-profile-widget" class="user-profile-card" style="display: none;">
+        <div class="user-avatar" id="user-avatar-lbl">👤</div>
+        <div class="user-info">
+          <span class="user-status-text">مرحباً، <strong id="user-display-name">-</strong></span>
+          <span class="user-role-text">مساهم في OpenStreetMap</span>
+        </div>
+        <button id="btn-user-settings" class="user-settings-btn" title="إعدادات الحساب والخصوصية" aria-label="إعدادات الحساب والخصوصية" style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; color: var(--color-text-muted);">⚙️</button>
+        <button id="btn-osm-logout" class="osm-logout-btn" title="تسجيل الخروج">تسجيل خروج</button>
+      </div>
+
+      <!-- Mode Toggle -->
+      <div class="control-group">
+        <h2 class="section-title">وضع لوحة التحكم</h2>
+        <div class="mode-toggle-container">
+          <button class="mode-btn active" id="mode-poi" data-mode="poi">كثافة الأماكن</button>
+          <button class="mode-btn" id="mode-gap" data-mode="gap">فجوات التغطية</button>
+          <button class="mode-btn" id="mode-improve" data-mode="improve">تحسين البيانات</button>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <section class="stats-grid" aria-label="ملخص الإحصاءات">
+        <div class="stat-card">
+          <span class="stat-val highlight" id="total-count">0</span>
+          <span class="stat-lbl" id="total-count-label">إجمالي الأماكن</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-val" id="visible-count">0</span>
+          <span class="stat-lbl" id="visible-count-label">في النطاق المرئي</span>
+        </div>
+      </section>
+
+      <!-- Review queue: N / P step through the current list -->
+      <div id="review-nav-box" class="review-nav-box">
+        <button type="button" id="btn-review-prev" class="review-nav-btn" title="السابق (P)">▶</button>
+        <div class="review-nav-text">
+          <span id="review-nav-counter">-</span>
+          <span id="review-today-count" class="review-today" style="display: none;"></span>
+        </div>
+        <button type="button" id="btn-review-next" class="review-nav-btn" title="التالي (N)">◀</button>
+      </div>
+
+      <!-- Gap Info Box -->
+      <div id="gap-info-box" class="info-alert" style="display: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="alert-icon">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>توضح فجوات التغطية الخلايا الجغرافية المأهولة بالسكان (بناءً على شبكة الطرق المكتشفة) والتي تحتوي على <strong>صفر</strong> من المساجد أو أماكن العبادة. تمثل البؤر الحمراء والبرتقالية عجزاً كبيراً في التغطية.</span>
+      </div>
+
+      <!-- Gap Priority Urgency Filter -->
+      <div id="gap-filter-box" class="control-group" style="display: none;">
+        <h2 class="section-title">أولوية الفجوة السكنية (AI)</h2>
+        <div class="chips-container" id="gap-urgency-filters" role="group" aria-label="تصفية فجوات التغطية حسب الأولوية">
+          <button type="button" class="chip active" data-gap-urgency="all">جميع الفجوات</button>
+          <button type="button" class="chip" data-gap-urgency="high_urgency">🔥 الفجوات السكنية الحرجة فقط (أولوية ≥ 50)</button>
+        </div>
+      </div>
+
+      <!-- Gap Mode: Open Current Map Area in Editor to Survey/Add a Mosque -->
+      <div id="gap-josm-box" class="control-group" style="display: none;">
+        <h2 class="section-title">إضافة مسجد جديد</h2>
+        <p class="section-hint">بعد تحديد موقع الفجوة باستخدام مؤشر القبلة والخارطة، أضف المسجد كعقدة مباشرة من هنا أو افتح نطاق العرض في المحررات الخارجية.</p>
+        <div class="mapper-buttons">
+          <button type="button" id="btn-open-area-direct" class="mapper-btn direct-editor">⚡ إضافة كعقدة مباشرة (الموقع الحالي)</button>
+          <a id="btn-open-area-id" class="mapper-btn id-editor" href="#" target="_blank" rel="noopener noreferrer">إضافة عبر iD Editor (ويب)</a>
+          <button id="btn-open-area-josm" class="mapper-btn josm-editor">إضافة عبر JOSM (تحكم عن بعد)</button>
+        </div>
+      </div>
+
+      <!-- Base Map Selection -->
+      <div class="control-group" id="basemap-section">
+        <div class="section-header-row">
+          <h2 class="section-title">خارطة الأساس</h2>
+          <button type="button" id="btn-carto-config" class="carto-config-btn" title="إعدادات مزود CARTO API" aria-label="إعدادات مزود CARTO API">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2l-2 2m-1.5 6.1L16 11l-1.5-1.5L16 8l-1.5-1.5L13 8l-1.5-1.5L10 8 4 14l-2 5 5-2 6-6 1.5 1.5L16 11l1.5-1.5L16 8l1.5-1.5L19 8l1.5-1.5z"></path>
+            </svg>
+            <span id="carto-badge-text">مفتاح CARTO</span>
+          </button>
+        </div>
+        <div class="chips-container" id="basemap-filters" role="group" aria-label="أزرار اختيار خارطة الأساس">
+          <button class="chip active" data-basemap="dark">داكن (Dark)</button>
+          <button class="chip" data-basemap="satellite">أقمار صناعية (Esri)</button>
+          <button class="chip" data-basemap="light">فاتح (Light)</button>
+          <button class="chip" data-basemap="streets">شوارع (Streets)</button>
+        </div>
+      </div>
+
+      <!-- Qibla Compass Toggle -->
+      <div class="control-group" id="compass-toggle-section">
+        <h2 class="section-title">مؤشر اتجاه القبلة</h2>
+        <div class="switch-control-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="qibla-compass-toggle">
+            <span class="slider-switch round"></span>
+          </label>
+          <span class="switch-label" id="qibla-switch-label">عرض مؤشر القبلة في منتصف الخريطة</span>
+        </div>
+      </div>
+
+      <!-- Add Mosque Node Mode Toggle -->
+      <div class="control-group" id="mosque-mode-section">
+        <h2 class="section-title">إضافة مسجد كعقدة (OSM Node) 🕌</h2>
+        <p class="section-hint">فعّل هذا الوضع ثم انقر في أي مكان على الخريطة لتحديد موقع المسجد وإضافته مباشرة إلى OpenStreetMap دون مغادرة الموقع.</p>
+        <div class="switch-control-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="add-mosque-mode-toggle">
+            <span class="slider-switch round"></span>
+          </label>
+          <span class="switch-label">وضع إضافة مسجد (انقر على الخريطة)</span>
+        </div>
+      </div>
+
+      <!-- Add OSM Note Mode Toggle -->
+      <div class="control-group" id="note-mode-section">
+        <h2 class="section-title">إضافة ملاحظة OSM 📝</h2>
+        <p class="section-hint">فعّل هذا الوضع ثم اضغط في أي مكان على الخريطة لإضافة ملاحظة OSM. متاح للجميع، بمن فيهم الزوار بدون حساب OSM.</p>
+        <div class="switch-control-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="add-note-mode-toggle">
+            <span class="slider-switch round"></span>
+          </label>
+          <span class="switch-label">وضع إضافة ملاحظة (اضغط على الخريطة)</span>
+        </div>
+      </div>
+
+      <!-- Suggested Additions (Wikidata mosques missing in OSM) -->
+      <div class="control-group" id="suggestions-section" style="display: none;">
+        <div class="section-header-row">
+          <h2 class="section-title">اقتراحات ويكي بيانات 🕌</h2>
+          <span class="suggestions-count-badge" id="suggestions-badge" style="display: none;">0</span>
+        </div>
+        <p class="section-hint">مساجد موثقة في ويكي بيانات ومفقودة من OpenStreetMap (أبعد من 100م عن أي دار عبادة حالية). يمكنك فحصها بالأقمار الصناعية وإضافتها مباشرة عبر JOSM أو iD.</p>
+        
+        <div class="switch-control-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="suggestions-toggle">
+            <span class="slider-switch round"></span>
+          </label>
+          <span class="switch-label" id="suggestions-switch-label">عرض المساجد المقترحة للإضافة</span>
+        </div>
+
+        <!-- Filter chips for suggestions (shown when active) -->
+        <div class="suggestions-subcontrols" id="suggestions-subcontrols" style="display: none;">
+          <div class="suggestions-stats-row">
+            <span class="suggestions-viewport-text">في النطاق المرئي: <strong id="suggestions-viewport-count">0</strong></span>
+          </div>
+          <div class="chips-container" id="suggestions-filter-chips" role="group" aria-label="أزرار تصفية الاقتراحات">
+            <button class="chip active" data-sug-filter="all">الكل (<span id="sug-count-all">0</span>)</button>
+            <button class="chip" data-sug-filter="named">مسماة (<span id="sug-count-named">0</span>)</button>
+            <button class="chip" data-sug-filter="unnamed">عامة / بدون اسم (<span id="sug-count-unnamed">0</span>)</button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Satellite AI candidates (private, same audience as the Wikidata suggestions) -->
+      <div class="control-group" id="ai-section" style="display: none;">
+        <div class="section-header-row">
+          <h2 class="section-title">مرشحو الذكاء الاصطناعي 🛰️</h2>
+          <span class="suggestions-count-badge ai-count-badge" id="ai-badge" style="display: none;">0</span>
+        </div>
+        <p class="section-hint">مبانٍ رصدها نموذج ذكاء اصطناعي في صور الأقمار الصناعية داخل فجوات التغطية، وليست في OpenStreetMap بعد. راجع كل مرشح: مسجد أم لا؟ مراجعاتك تُدرّب النموذج القادم.</p>
+        <div class="switch-control-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="ai-toggle">
+            <span class="slider-switch round"></span>
+          </label>
+          <span class="switch-label">عرض مرشحي الذكاء الاصطناعي</span>
+        </div>
+        <div class="suggestions-stats-row ai-stats-row">
+          <span class="suggestions-viewport-text">بانتظار مراجعتك: <strong id="ai-count-pending">–</strong></span>
+          <span class="suggestions-viewport-text">المجموع: <strong id="ai-count-total">–</strong></span>
+        </div>
+        <button type="button" class="btn-sug-action btn-ai-start" id="ai-review-next">ابدأ المراجعة</button>
+      </div>
+
+      <!-- Search Section -->
+      <div class="control-group" id="search-section">
+        <h2 class="section-title">البحث عن موقع</h2>
+        <div class="search-wrapper">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="search-input" class="search-input" placeholder="ابحث بالاسم (بالعربية أو الإنجليزية)..." aria-label="البحث عن أماكن العبادة بالاسم">
+        </div>
+      </div>
+
+      <!-- Filters Section -->
+      <div class="control-group" id="filter-section">
+        <h2 class="section-title">تصفية حسب الديانة</h2>
+        <div class="chips-container" id="religion-filters" role="group" aria-label="أزرار اختيار الديانة">
+          <button class="chip active" data-religion="all">الكل</button>
+          <button class="chip" data-religion="muslim">مسلم (المساجد)</button>
+          <button class="chip" data-religion="musalla">مصلى</button>
+          <button class="chip" data-religion="other">أخرى / غير محدد</button>
+        </div>
+      </div>
+
+      <!-- Quality Issues Filters (Improvement Mode Only) -->
+      <div class="control-group" id="improve-filter-section" style="display: none;">
+        <div class="improve-section-header">
+          <div class="improve-header-title-wrap">
+            <h2 class="section-title">نوع مشكلة جودة البيانات</h2>
+            <span class="improve-header-badge" id="quality-total-issues-badge">-</span>
+          </div>
+          <button type="button" class="improve-reset-filter-btn" id="btn-reset-improve-filter" title="إعادة تعيين إلى جميع المشاكل">إعادة تعيين</button>
+        </div>
+        <p class="section-hint">اختر نوع التدقيق المكاني أو الوصفي لفحص الأماكن وتصحيحها عبر JOSM أو iD Editor.</p>
+
+        <!-- Master Hero Card for "All Issues" -->
+        <button type="button" class="improve-hero-card chip active" data-improve="all" id="btn-improve-all" aria-label="عرض جميع المشاكل المكتشفة">
+          <div class="improve-hero-content">
+            <div class="improve-hero-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            </div>
+            <div class="improve-hero-text">
+              <span class="improve-hero-title">جميع المشاكل المكتشفة</span>
+              <span class="improve-hero-subtitle">عرض كافة الأماكن المحتاجة للمراجعة والتحسين</span>
+            </div>
+          </div>
+          <div class="improve-hero-badge-wrap">
+            <span class="improve-count-pill highlight" id="count-improve-all">-</span>
+            <span class="improve-check-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </span>
+          </div>
+        </button>
+
+        <!-- Category Tabs -->
+        <div class="improve-category-tabs" role="tablist" aria-label="تصنيفات مشاكل البيانات">
+          <button type="button" class="category-tab active" data-category="all" role="tab" aria-selected="true">
+            <span>الكل</span>
+            <span class="category-tab-count" id="cat-count-all">-</span>
+          </button>
+          <button type="button" class="category-tab" data-category="ai" role="tab" aria-selected="false">
+            <span>🤖 ذكاء اصطناعي</span>
+            <span class="category-tab-count" id="cat-count-ai">-</span>
+          </button>
+          <button type="button" class="category-tab" data-category="geometry" role="tab" aria-selected="false">
+            <span>📐 الهندسة</span>
+            <span class="category-tab-count" id="cat-count-geometry">-</span>
+          </button>
+          <button type="button" class="category-tab" data-category="metadata" role="tab" aria-selected="false">
+            <span>📝 الوسوم والبيانات</span>
+            <span class="category-tab-count" id="cat-count-metadata">-</span>
+          </button>
+        </div>
+
+        <!-- Issue Cards List -->
+        <div class="improve-issues-list" id="improve-filters" role="group" aria-label="أزرار اختيار نوع مشكلة جودة البيانات">
+          
+          <!-- AI & Qibla Group -->
+          <button type="button" class="improve-item chip" data-improve="qibla_deviation" data-category="ai" aria-label="تصفية حسب انحراف القبلة">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-qibla">🕋</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">انحراف حاد عن القبلة</div>
+                <div class="improve-item-meta">محاذاة المحور المعماري للمبنى (<span id="qibla-threshold-label" dir="ltr">≥ 20°</span>)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-qibla_deviation">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="ml_geometry_anomaly" data-category="ai" aria-label="تصفية حسب الشذوذ الهندسي">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-ai">🤖</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">شذوذ هندسي (ذكاء اصطناعي)</div>
+                <div class="improve-item-meta">كشف الأشكال غير المعتادة بـ Isolation Forest</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-ml_geometry_anomaly">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <!-- Geometry Group -->
+          <button type="button" class="improve-item chip" data-improve="mapped_as_node" data-category="geometry" aria-label="تصفية حسب مرسوم كنقطة">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-node">📍</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مرسوم كنقطة وليس كمساحة</div>
+                <div class="improve-item-meta">يحتاج رسم حدود المبنى (Way/Polygon)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-mapped_as_node">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="size_too_small" data-category="geometry" aria-label="تصفية حسب مبنى أصغر من المعتاد">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-small">📐</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مبنى أصغر من المعتاد</div>
+                <div class="improve-item-meta">مساحة أصغر من الحد الأدنى (&lt; 20 م²)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-size_too_small">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="size_too_large" data-category="geometry" aria-label="تصفية حسب مبنى أكبر من المعتاد">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-large">🏢</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مبنى أكبر من المعتاد</div>
+                <div class="improve-item-meta">مساحة غير معتادة تتجاوز (&gt; 15,000 م²)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-size_too_large">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="building_yes" data-category="geometry" aria-label="تصفية حسب مبنى مصنف building=yes">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-tag">🏷️</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مبنى مصنف كـ building=yes</div>
+                <div class="improve-item-meta">يُفضل تعديله إلى building=mosque</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-building_yes">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <!-- Metadata & Tags Group -->
+          <button type="button" class="improve-item chip" data-improve="missing_amenity" data-category="metadata" aria-label="تصفية حسب مسجد بدون تصنيف دار عبادة">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-mosque">🕌</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مسجد بدون وسم دار عبادة</div>
+                <div class="improve-item-meta">مفقود وسم amenity=place_of_worship</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-missing_amenity">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="missing_name" data-category="metadata" aria-label="تصفية حسب اسم المسجد مفقود">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-name">✏️</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">اسم المسجد مفقود أو افتراضي</div>
+                <div class="improve-item-meta">اسم غير محدد أو مدخل كاسم عام "مسجد"</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-missing_name">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="missing_name_en" data-category="metadata" aria-label="تصفية حسب الاسم بالإنجليزية مفقود">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-lang">🌐</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">الاسم بالإنجليزية مفقود</div>
+                <div class="improve-item-meta">وسم name:en غير متوفر أو مطابق للاسم العربي</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-missing_name_en">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="missing_denom" data-category="metadata" aria-label="تصفية حسب المذهب غير محدد">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-denom">📜</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">المذهب غير محدد</div>
+                <div class="improve-item-meta">تحديد المذهب (سني / شيعي / أخرى)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-missing_denom">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="outdated_tags" data-category="metadata" aria-label="تصفية حسب وسوم قديمة">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-tag">🏷️</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">وسوم قديمة أو بصيغة غير معتمدة</div>
+                <div class="improve-item-meta">مثل denomination=سني بدلاً من sunni</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-outdated_tags">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="duplicate_poi" data-category="metadata" aria-label="تصفية حسب مكان مرسوم مرتين">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-tag">👯</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">مرسوم مرتين (مبنى + نقطة)</div>
+                <div class="improve-item-meta">المبنى ونقطة داخله كلاهما موسوم كدار عبادة</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-duplicate_poi">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+          <button type="button" class="improve-item chip" data-improve="stale_data" data-category="metadata" aria-label="تصفية حسب بيانات قديمة لم تُحدث">
+            <div class="improve-item-right">
+              <div class="improve-item-icon icon-stale">⏳</div>
+              <div class="improve-item-info">
+                <div class="improve-item-title">بيانات قديمة لم تُحدّث</div>
+                <div class="improve-item-meta">لم يتم مراجعته منذ إضافته الأولى (+5 سنوات)</div>
+              </div>
+            </div>
+            <div class="improve-item-left">
+              <span class="improve-count-pill" id="count-improve-stale_data">-</span>
+              <span class="improve-item-indicator"></span>
+            </div>
+          </button>
+
+        </div>
+
+        <div class="review-options">
+          <label class="review-option">
+            <input type="checkbox" id="hide-reviewed-toggle" checked>
+            <span>إخفاء ما راجعته (تم الإصلاح / تخطي)</span>
+          </label>
+          <label class="review-option">
+            <input type="checkbox" id="viewport-counts-toggle">
+            <span>حساب المشاكل في النطاق المرئي فقط</span>
+          </label>
+        </div>
+
+        <div class="threshold-controls" id="size-threshold-controls">
+          <div class="threshold-controls-header">
+            <span class="threshold-controls-title">نطاق المساحة الطبيعي للمبنى (م²)</span>
+            <button type="button" id="btn-reset-size-thresholds" class="threshold-reset-btn">إعادة تعيين</button>
+          </div>
+          <p class="section-hint">اضبط الحدود لتحديد المباني الأصغر أو الأكبر من المعتاد بشكل ملحوظ. الافتراضي: 20 - 15,000 م².</p>
+          <div class="threshold-fields">
+            <label class="threshold-field">
+              <span>الحد الأدنى</span>
+              <input type="number" id="size-min-input" class="threshold-input" min="0" step="1" value="20" aria-label="الحد الأدنى لمساحة المبنى بالمتر المربع">
+            </label>
+            <label class="threshold-field">
+              <span>الحد الأقصى</span>
+              <input type="number" id="size-max-input" class="threshold-input" min="0" step="1" value="15000" aria-label="الحد الأقصى لمساحة المبنى بالمتر المربع">
+            </label>
+          </div>
+        </div>
+
+        <!-- Qibla Deviation Controls (Improvement Mode Only) -->
+        <div class="threshold-controls" id="qibla-threshold-controls" style="display: none;">
+          <div class="threshold-controls-header">
+            <span class="threshold-controls-title">الحد الأدنى للانحراف عن القبلة (بالدرجات °)</span>
+            <button type="button" id="btn-reset-qibla-threshold" class="threshold-reset-btn">إعادة تعيين (20°)</button>
+          </div>
+          <p class="section-hint">تحديد المباني التي تنحرف محاورها المعمارية عن سمت الكعبة المشرفة بمقدار يتجاوز هذا الحد. الافتراضي: 20° (يمثل أشد 10% من المساجد انحرافاً).</p>
+          <div class="threshold-fields">
+            <label class="threshold-field">
+              <span>الحد الأدنى للانحراف</span>
+              <div class="threshold-slider-row">
+                <input type="range" id="qibla-dev-slider" class="slider" min="5" max="45" value="20" step="1" aria-label="منزلق حد انحراف القبلة">
+                <input type="number" id="qibla-dev-input" class="threshold-input" min="1" max="45" step="1" value="20" aria-label="قيمة حد انحراف القبلة">
+              </div>
+            </label>
+          </div>
+
+          <div class="qibla-sort-row">
+            <span class="qibla-sort-label">ترتيب المساجد:</span>
+            <select id="qibla-sort-select" class="threshold-input" aria-label="خيارات ترتيب المساجد حسب دقة القبلة">
+              <option value="least_accurate" selected>⚠️ من الأقل دقة إلى الأكثر دقة (الأشد انحرافاً)</option>
+              <option value="most_accurate">✨ من الأكثر دقة إلى الأقل دقة (الأقرب للقبلة)</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Date Filter Section -->
+      <div class="control-group" id="date-filter-section">
+        <h2 class="section-title">تصفية حسب تاريخ آخر تعديل</h2>
+        <div class="slider-container">
+          <div class="slider-labels">
+            <span>من</span>
+            <span id="date-from-val">-</span>
+          </div>
+          <input type="range" id="slider-date-from" class="slider" min="0" max="1" value="0" aria-label="من تاريخ آخر تعديل">
+        </div>
+        <br>
+        <div class="slider-container">
+          <div class="slider-labels">
+            <span>إلى</span>
+            <span id="date-to-val">-</span>
+          </div>
+          <input type="range" id="slider-date-to" class="slider" min="0" max="1" value="1" aria-label="إلى تاريخ آخر تعديل">
+        </div>
+      </div>
+
+      <!-- Export / hand-off of the current list -->
+      <div class="control-group" id="export-section">
+        <h2 class="section-title" id="export-title">📤 تصدير القائمة الحالية</h2>
+        <div class="export-buttons">
+          <button type="button" class="export-btn" id="btn-export-csv">CSV (Excel)</button>
+          <button type="button" class="export-btn" id="btn-export-maproulette">MapRoulette GeoJSON</button>
+          <button type="button" class="export-btn" id="btn-export-josm">تحميل المرئي في JOSM</button>
+          <button type="button" class="export-btn" id="btn-export-overpass">Overpass Turbo</button>
+        </div>
+      </div>
+
+      <!-- Heatmap Controls -->
+      <div class="control-group">
+        <h2 class="section-title">إعدادات الخارطة الحرارية</h2>
+        <div class="slider-container" id="radius-slider-container">
+          <div class="slider-labels">
+            <span>نصف قطر الانتشار</span>
+            <span id="radius-val">10px</span>
+          </div>
+          <input type="range" id="slider-radius" class="slider" min="5" max="60" value="10" aria-label="نصف قطر الانتشار">
+        </div>
+        <br>
+        <div class="slider-container">
+          <div class="slider-labels">
+            <span>مستوى التنعيم (التغبيش)</span>
+            <span id="blur-val">10px</span>
+          </div>
+          <input type="range" id="slider-blur" class="slider" min="5" max="40" value="10" aria-label="مستوى التنعيم">
+        </div>
+      </div>
+
+      <!-- Detail Card (populated on point click) -->
+      <section id="details-panel" aria-label="تفاصيل الموقع المحدد">
+        <h2 class="section-title">تفاصيل الموقع</h2>
+        <div class="details-card">
+          <div class="details-title-ar" id="details-name-ar">اسم المسجد</div>
+          <div class="details-title-en" id="details-name-en">Mosque Name</div>
+
+          <!-- Review marks (improve mode) -->
+          <div id="details-review-actions" class="review-actions" style="display: none;">
+            <span id="details-review-status" class="review-status"></span>
+            <button type="button" id="btn-review-fixed" class="review-action-btn fixed">✓</button>
+            <button type="button" id="btn-review-skip" class="review-action-btn">⏭</button>
+            <button type="button" id="btn-review-unmark" class="review-action-btn subtle">↺</button>
+          </div>
+
+          <!-- OSM Note shortcut: always visible, works for guests too -->
+          <button id="btn-add-note-here" class="mapper-btn">📝 إضافة ملاحظة OSM هنا</button>
+
+          <div class="details-row">
+            <span class="details-label">الديانة</span>
+            <span class="details-val accent" id="details-religion">مسلم</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">المذهب / الطائفة</span>
+            <span class="details-val" id="details-denom">سني</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">المدينة</span>
+            <span class="details-val" id="details-city">الرياض</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">الإحداثيات</span>
+            <span class="details-val" id="details-coords">24.7136, 46.6753</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">معرّف الخريطة (OSM ID)</span>
+            <span class="details-val" id="details-osm-id">12345678</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">آخر تعديل بواسطة</span>
+            <span class="details-val"><a id="details-user" class="details-link" href="#" target="_blank" rel="noopener noreferrer">مستخدم</a></span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">معرّف المستخدم (UID)</span>
+            <span class="details-val" id="details-uid">0</span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">رقم التغيير (Changeset)</span>
+            <span class="details-val"><a id="details-changeset" class="details-link" href="#" target="_blank" rel="noopener noreferrer">0</a></span>
+          </div>
+          <div class="details-row">
+            <span class="details-label">تاريخ آخر تعديل</span>
+            <span class="details-val" id="details-edited-at">-</span>
+          </div>
+          <div class="details-row" id="row-details-qibla" style="display: none;">
+            <span class="details-label">محاذاة القبلة 🕋</span>
+            <span class="details-val" id="details-qibla">-</span>
+          </div>
+
+          <!-- Quality Issues Warning Box -->
+          <div id="details-quality-issues" class="quality-issues-box">
+            <h3 class="quality-issues-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <span>مشاكل جودة البيانات المكتشفة</span>
+            </h3>
+            <ul id="details-issues-list" class="issues-list">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+
+          <!-- Live Duplicate POI Inspector & Diff -->
+          <div id="details-duplicate-diff" class="duplicate-diff-container" style="display: none;"></div>
+          
+          <!-- Quick tag fixes through the OSM API (js/editing.js) -->
+          <div id="details-quick-fixes" class="mapper-tools-box quick-fixes-box" style="display: none;"></div>
+
+          <!-- Mapper Editing Tools -->
+          <div id="details-mapper-tools" class="mapper-tools-box">
+            <h3 class="mapper-tools-title">🛠️ أدوات تعديل ومساهمة الخرائط</h3>
+            <div class="mapper-buttons">
+              <a id="btn-edit-osm" class="mapper-btn id-editor" href="#" target="_blank" rel="noopener noreferrer">تعديل عبر iD Editor (ويب)</a>
+              <button type="button" id="btn-edit-josm" class="mapper-btn josm-editor">تعديل عبر JOSM (تحكم عن بعد)</button>
+              <a id="btn-view-osm" class="mapper-btn osm-site" href="#" target="_blank" rel="noopener noreferrer">عرض المعلم على OSM</a>
+              <button type="button" id="btn-osmose-nearby" class="mapper-btn osmose-editor">
+                <span data-lang="ar">🔍 فحص تنبيهات Osmose القريبة</span>
+                <span data-lang="en">🔍 Check nearby Osmose alerts</span>
+              </button>
+            </div>
+            <div id="osmose-results-container" class="osmose-results-container" style="display: none; margin-top: 10px;"></div>
+          </div>
+
+          <!-- Guest Mode Editing Block -->
+          <div id="details-guest-tools-notice" class="info-alert" style="display: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="alert-icon">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>بيانات المساهمين التفصيلية (اسم المحرر ومعرف المستخدم ومجموعة التعديل) محجوبة كزائر بموجب GDPR. يمكنك <a href="#" id="link-guest-login">تسجيل الدخول بحساب OSM</a> لإظهارها.</span>
+          </div>
+        </div>
+      </section>
+
+      <nav class="site-links" aria-label="روابط الموقع">
+        <a href="/start">ابدأ هنا</a>
+        <a href="/guides">الأدلة</a>
+        <a href="/tasks">الحملات والمهام</a>
+        <a href="/tags">دليل الوسوم</a>
+        <a href="/data">مركز البيانات</a>
+        <a href="/community">إحصاءات المجتمع</a>
+        <a href="/about">عن المشروع</a>
+        <a href="/privacy">الخصوصية</a>
+        <a href="https://github.com/Abdullah201x/sa-places-of-worship" rel="noopener" target="_blank">GitHub</a>
+      </nav>
+    </aside>
+
+    <!-- Sidebar Collapse/Expand Toggle -->
+    <button id="sidebar-toggle" class="sidebar-toggle-btn" aria-label="إخفاء/إظهار اللوحة الجانبية" aria-expanded="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+
+    <!-- Map Container -->
+    <main id="map" aria-label="الخارطة التفاعلية"></main>
+    
+    <!-- Qibla Compass Center Overlay -->
+    <div id="qibla-compass" class="qibla-compass hidden" aria-hidden="true">
+      <div class="compass-needle-container">
+        <svg class="compass-needle-svg" viewBox="0 0 40 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- 3D Beveled Qibla/Kaaba Gold Pointer -->
+          <path d="M20 10 L10 50 L20 44 Z" fill="url(#qibla-needle-gold-light)" />
+          <path d="M20 10 L30 50 L20 44 Z" fill="url(#qibla-needle-gold-dark)" />
+          
+          <!-- 3D Beveled Counterweight Blue Pointer -->
+          <path d="M20 90 L12 50 L20 56 Z" fill="url(#qibla-needle-cyan-light)" opacity="0.75" />
+          <path d="M20 90 L28 50 L20 56 Z" fill="url(#qibla-needle-cyan-dark)" opacity="0.75" />
+          
+          <!-- Center Pivot -->
+          <circle cx="20" cy="50" r="4.5" fill="#ffffff" stroke="#ffb03a" stroke-width="1.5" />
+          <circle cx="20" cy="50" r="1.5" fill="#ffb03a" />
+          
+          <defs>
+            <linearGradient id="qibla-needle-gold-light" x1="15" y1="10" x2="20" y2="44" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#fff0aa" />
+              <stop offset="100%" stop-color="#ffd700" />
+            </linearGradient>
+            <linearGradient id="qibla-needle-gold-dark" x1="25" y1="10" x2="20" y2="44" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#ffd700" />
+              <stop offset="100%" stop-color="#c58b00" />
+            </linearGradient>
+            <linearGradient id="qibla-needle-cyan-light" x1="16" y1="50" x2="20" y2="90" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#8cffff" />
+              <stop offset="100%" stop-color="#00d2df" />
+            </linearGradient>
+            <linearGradient id="qibla-needle-cyan-dark" x1="24" y1="50" x2="20" y2="90" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#00d2df" />
+              <stop offset="100%" stop-color="#008ca0" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <!-- OSM Authentication Overlay -->
+    <div id="osm-auth-overlay" class="auth-overlay hidden">
+      <div class="auth-card">
+        <button id="btn-close-auth-modal" class="auth-close-btn" aria-label="إغلاق" title="إغلاق">&times;</button>
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">🗺️</div>
+          <h2>تسجيل الدخول عبر OpenStreetMap</h2>
+          <p>سجّل الدخول بحساب OpenStreetMap للمساهمة في تحسين بيانات المساجد وإضافة الملاحظات الميدانية.</p>
+        </div>
+        
+        <div class="auth-body">
+          <div class="auth-features">
+            <div class="auth-feature-item">
+              <span class="auth-feature-icon">✍️</span>
+              <div class="auth-feature-text">
+                <strong>تعديل بيانات ووسوم المساجد</strong>
+                <span>إصلاح الأسماء والقبلة والوسوم وتوثيق التعديل مباشرة على OSM</span>
+              </div>
+            </div>
+            <div class="auth-feature-item">
+              <span class="auth-feature-icon">📝</span>
+              <div class="auth-feature-text">
+                <strong>إضافة ملاحظات وبلاغات ميدانية</strong>
+                <span>إنشاء ملاحظات في OpenStreetMap ليراجعها مجتمع المخططين</span>
+              </div>
+            </div>
+            <div class="auth-feature-item">
+              <span class="auth-feature-icon">👤</span>
+              <div class="auth-feature-text">
+                <strong>عرض المساهمين وتاريخ التعديل</strong>
+                <span>كشف تفاصيل المساهمين وتاريخ التعديل (محجوبة للزوار بموجب GDPR)</span>
+              </div>
+            </div>
+          </div>
+
+          <button id="btn-osm-login" class="auth-submit-btn">
+            <span>تسجيل الدخول باستخدام حساب OSM</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h6v6"></path>
+              <path d="M10 14L21 3"></path>
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            </svg>
+          </button>
+
+          <div class="auth-divider">
+            <span>أو</span>
+          </div>
+
+          <button id="btn-osm-skip" class="auth-skip-btn">
+            <span>المتابعة كزائر (تصفح فقط)</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+
+          <details class="auth-advanced">
+            <summary>إعدادات متقدمة للمطورين (بيئة العمل ومعرّف العميل)</summary>
+            <div class="client-id-config mt-10">
+              <label for="osm-environment">بيئة العمل (OpenStreetMap Environment):</label>
+              <select id="osm-environment" class="auth-input field-start">
+                <option value="production">بيئة الإنتاج (Production - openstreetmap.org)</option>
+                <option value="dev">بيئة التطوير (Dev - apis.dev.openstreetmap.org)</option>
+              </select>
+            </div>
+
+            <div class="client-id-config mt-8">
+              <label for="osm-client-id">معرّف العميل (Client ID):</label>
+              <input type="text" id="osm-client-id" class="auth-input" placeholder="معرّف مخصص (اتركه فارغاً للافتراضي المدمج)" dir="ltr" />
+            </div>
+
+            <div class="client-id-config redirect-uri-box">
+              <div class="row-between">
+                <span class="box-label">عنوان العودة (Redirect URI):</span>
+                <button id="btn-copy-redirect-uri" class="copy-uri-btn" title="نسخ العنوان">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>نسخ</span>
+                </button>
+              </div>
+              <div id="osm-redirect-uri-display">https://manara.saudiosm.org/</div>
+            </div>
+          </details>
+        </div>
+        
+        <div class="auth-footer">
+          <span>مصدر البيانات: Geofabrik / OpenStreetMap contributors</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Mosque as OSM Node Overlay -->
+    <div id="add-mosque-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="add-mosque-modal-title">
+      <div class="auth-card add-mosque-card">
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">🕌</div>
+          <h2 id="add-mosque-modal-title">إضافة مسجد كعقدة (OSM Node)</h2>
+          <p>تتم إضافة المسجد مباشرة إلى قاعدة بيانات OpenStreetMap بحسابك كعقدة (Node) مع الوسوم المعتمدة.</p>
+        </div>
+
+        <div class="auth-body">
+          <!-- Coordinates & Hint -->
+          <div class="client-id-config coords-box coords-box--accent">
+            <div class="row-between">
+              <span class="box-label">الإحداثيات (WGS84):</span>
+              <span class="coords-hint">✓ يمكنك سحب المؤشر على الخارطة للضبط</span>
+            </div>
+            <div id="add-mosque-coords-display" class="coords-value">-</div>
+          </div>
+
+          <!-- Arabic Name with Quick Prefix Chips -->
+          <div class="client-id-config">
+            <label for="add-mosque-name-ar">اسم المسجد (بالعربية):</label>
+            <input type="text" id="add-mosque-name-ar" data-field="name:ar" class="auth-input field-start" placeholder="مثال: جامع الإيمان / مسجد النور">
+            <div class="chips-container" id="mosque-prefix-chips">
+              <button type="button" class="chip prefix-chip" data-prefix="جامع">جامع</button>
+              <button type="button" class="chip prefix-chip" data-prefix="مسجد">مسجد</button>
+              <button type="button" class="chip prefix-chip" data-prefix="مصلى">مصلى</button>
+            </div>
+          </div>
+
+          <!-- English Name with Smart Suggestion -->
+          <div class="client-id-config">
+            <div class="row-between">
+              <label for="add-mosque-name-en">الاسم بالإنجليزية (name:en):</label>
+              <button type="button" id="btn-suggest-mosque-en" class="quick-fix-btn">✨ اقتراح الاسم الذكي</button>
+            </div>
+            <input type="text" id="add-mosque-name-en" data-field="name:en" class="auth-input" dir="ltr" placeholder="e.g. Al-Iman Mosque">
+          </div>
+
+          <!-- Mosque preset fields (src/presets.js): denomination here, the
+               preset's moreFields in the accordion. Rendered by renderAddMosqueFields(). -->
+          <div id="add-mosque-fields" class="preset-fields"></div>
+
+          <!-- Additional Options Accordion -->
+          <details class="advanced-tags-details">
+            <summary>
+              وسوم إضافية اختيارية (مصلى نساء، مبنى، ويكي بيانات، السعة، أوقات الفتح)...
+            </summary>
+            <div id="add-mosque-more-fields" class="preset-fields"></div>
+          </details>
+
+          <!-- Source & Changeset Comment -->
+          <div class="client-id-config">
+            <label for="add-mosque-source">المصدر (source):</label>
+            <select id="add-mosque-source" class="auth-input">
+              <option value="local knowledge" selected>معرفة محلية (Local knowledge)</option>
+              <option value="survey">مسح ميداني (Survey)</option>
+              <option value="translating">ترجمة (Translating)</option>
+              <option value="Esri World Imagery">صور Esri الجوية (Esri World Imagery)</option>
+              <option value="wikidata">ويكي بيانات (Wikidata)</option>
+            </select>
+          </div>
+
+          <div class="client-id-config">
+            <label for="add-mosque-comment">تعليق مجموعة التغييرات (changeset comment):</label>
+            <input type="text" id="add-mosque-comment" class="auth-input" dir="ltr" maxlength="255">
+          </div>
+
+          <!-- Auth Status / Warning Banner -->
+          <div id="add-mosque-auth-status" class="input-help"></div>
+
+          <!-- Submit & Cancel Buttons -->
+          <button type="button" id="btn-submit-add-mosque" class="auth-submit-btn">
+            <span>رفع المسجد كعقدة إلى OpenStreetMap 🚀</span>
+          </button>
+
+          <button type="button" id="btn-cancel-add-mosque" class="auth-skip-btn">
+            <span>إلغاء</span>
+          </button>
+        </div>
+
+        <div class="auth-footer">
+          <span>يُنشر المعلم مباشرة على قاعدة بيانات OpenStreetMap مع وسم #sa-worship-map</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OSM Note Composer Overlay -->
+    <div id="note-composer-overlay" class="auth-overlay hidden">
+      <div class="auth-card">
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">📝</div>
+          <h2>إضافة ملاحظة OSM</h2>
+          <p>اكتب وصفاً واضحاً للمشكلة أو الاقتراح في هذا الموقع. تُنشر الملاحظات على خارطة OpenStreetMap العامة ويمكن لأي مساهم متابعتها.</p>
+        </div>
+
+        <div class="auth-body">
+          <div class="client-id-config coords-box">
+            <span class="box-label">الإحداثيات:</span>
+            <div id="note-composer-coords" class="coords-value">-</div>
+          </div>
+
+          <div class="client-id-config">
+            <label>نوع الملاحظة:</label>
+            <div class="chips-container" id="note-preset-chips" role="group" aria-label="نوع الملاحظة">
+              <button type="button" class="chip active" data-preset="freetext">نص حر</button>
+              <button type="button" class="chip" data-preset="worship">يوجد هنا مكان عبادة</button>
+              <button type="button" class="chip" data-preset="fixme">مشكلة (Fixme)</button>
+              <button type="button" class="chip" data-preset="gone">المكان غير موجود</button>
+            </div>
+          </div>
+
+          <div id="note-preset-freetext" class="client-id-config note-preset-group">
+            <label for="note-text-input">نص الملاحظة:</label>
+            <textarea id="note-text-input" class="auth-input field-start" rows="4" placeholder="مثال: هذا المسجد أُغلق نهائياً / الاسم غير صحيح / يوجد مسجد جديد هنا..."></textarea>
+          </div>
+
+          <div id="note-preset-worship" class="client-id-config note-preset-group hidden">
+            <label for="note-worship-name">اسم المكان (اختياري):</label>
+            <input type="text" id="note-worship-name" class="auth-input field-start" placeholder="مثال: مسجد الرحمة">
+            <label for="note-worship-religion" class="mt-8">الديانة / المذهب (اختياري):</label>
+            <select id="note-worship-religion" class="auth-input field-start">
+              <option value="">-- غير محدد --</option>
+              <option value="مسلم">مسلم (مسجد)</option>
+              <option value="مصلى">مصلى</option>
+              <option value="أخرى">أخرى</option>
+            </select>
+          </div>
+
+          <div id="note-preset-fixme" class="client-id-config note-preset-group hidden">
+            <label for="note-fixme-text">وصف المشكلة (fixme):</label>
+            <input type="text" id="note-fixme-text" class="auth-input field-start" placeholder="مثال: الطريق مغلق">
+          </div>
+
+          <div id="note-preset-gone" class="client-id-config note-preset-group hidden">
+            <label for="note-gone-name">اسم المعلم (POI name):</label>
+            <input type="text" id="note-gone-name" class="auth-input field-start" placeholder="مثال: مسجد النور">
+            <label for="note-gone-types" class="mt-8">نوع المعلم (POI types):</label>
+            <input type="text" id="note-gone-types" class="auth-input field-start" placeholder="مثال: amenity-place_of_worship">
+          </div>
+
+          <p id="note-composer-attribution" class="input-help">-</p>
+
+          <button id="btn-submit-note" class="auth-submit-btn">
+            <span>إرسال الملاحظة إلى OpenStreetMap</span>
+          </button>
+
+          <button id="btn-cancel-note" class="auth-skip-btn">
+            <span>إلغاء</span>
+          </button>
+        </div>
+
+        <div class="auth-footer">
+          <span>الملاحظات علنية وتُدار بواسطة مجتمع OpenStreetMap</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARTO Basemaps API Key Settings Overlay -->
+    <div id="carto-settings-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="carto-settings-title">
+      <div class="auth-card">
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">🗺️</div>
+          <h2 id="carto-settings-title">إعدادات مزود الخرائط (CARTO API)</h2>
+          <p>تعمل الخرائط الداكنة والفاتحة افتراضياً عبر <strong>Esri Canvas</strong> مجاناً وبدون أي علامة مائية. إذا كنت ترغب باستخدام خرائط <strong>CARTO</strong> (Dark Matter / Positron)، يمكنك إضافة مفتاح CARTO المجاني هنا.</p>
+        </div>
+
+        <div class="auth-body">
+          <div id="carto-key-status" class="carto-status-box default">
+            <span class="status-dot neutral"></span>
+            <span id="carto-status-text">الخرائط الافتراضية نشطة (Esri Canvas - بدون علامات مائية وبدون مفتاح).</span>
+          </div>
+
+          <div class="client-id-config">
+            <label for="carto-api-key-input">مفتاح CARTO API Key:</label>
+            <input type="text" id="carto-api-key-input" class="auth-input" placeholder="أدخل مفتاح CARTO هنا (أو اتركه فارغاً للوضع الافتراضي)..." dir="ltr" spellcheck="false" autocomplete="off" />
+            <p class="input-help">مفتاح CARTO مجاني تماماً حتى 5 ملايين طلب شهرياً ولا يتطلب بطاقة ائتمانية.</p>
+          </div>
+
+          <div class="carto-guide-shortcut">
+            <a href="https://carto.com/basemaps/apikey" target="_blank" rel="noopener noreferrer" class="carto-free-key-link">
+              <span>طلب مفتاح مجاني من موقع CARTO الرسمي</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+          </div>
+
+          <button id="btn-save-carto-key" class="auth-submit-btn">
+            <span>حفظ وتفعيل CARTO</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+
+          <button id="btn-clear-carto-key" class="carto-clear-btn" style="display: none;">
+            <span>استعادة الخرائط الافتراضية (Esri - حذف المفتاح)</span>
+          </button>
+
+          <button id="btn-close-carto-modal" class="auth-skip-btn">
+            <span>إغلاق</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Overlay -->
+    <div id="shortcuts-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+      <div class="auth-card">
+        <div class="auth-glow"></div>
+        <div class="auth-header">
+          <div class="auth-icon">⌨️</div>
+          <h2 id="shortcuts-title">اختصارات لوحة المفاتيح</h2>
+        </div>
+        <div class="auth-body">
+          <table class="shortcuts-table">
+            <tbody>
+              <tr><td><kbd>N</kbd> / <kbd>P</kbd></td><td>المكان التالي / السابق في القائمة</td></tr>
+              <tr><td><kbd>F</kbd></td><td>وضع علامة "تم الإصلاح" والانتقال للتالي</td></tr>
+                            <tr><td><kbd>L</kbd></td><td>مساحة عمل فحص الجودة (قائمة المهام)</td></tr>
+<tr><td><kbd>S</kbd></td><td>تخطي والانتقال للتالي</td></tr>
+              <tr><td><kbd>J</kbd></td><td>فتح المكان في JOSM</td></tr>
+              <tr><td><kbd>I</kbd></td><td>فتح المكان في iD</td></tr>
+              <tr><td><kbd>O</kbd></td><td>عرض المكان على openstreetmap.org</td></tr>
+              <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td><td>الكثافة / فجوات التغطية / تحسين البيانات</td></tr>
+              <tr><td><kbd>?</kbd></td><td>عرض هذه القائمة</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>إغلاق النوافذ</td></tr>
+            </tbody>
+          </table>
+          <p class="shortcuts-note">تعمل الاختصارات بموضع المفتاح، فتعمل أيضاً ولوحة المفاتيح بالعربية (مثلاً <kbd>N</kbd> هو مفتاح <kbd>ى</kbd>).</p>
+          <button id="btn-close-shortcuts" class="auth-skip-btn">
+            <span>إغلاق</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account & Privacy Modal (GDPR / Right to be forgotten) -->
+    <div id="account-privacy-dialog" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="account-privacy-title">
+      <div class="auth-card" style="max-width: 480px;">
+        <button id="btn-close-privacy-dialog" class="auth-close-btn" aria-label="إغلاق" title="إغلاق">&times;</button>
+        <div class="auth-header">
+          <h2 id="account-privacy-title">حسابك والخصوصية في منارة</h2>
+          <p>إدارة بياناتك المسجلة وحق النسيان الكامل بموجب معايير حماية البيانات والخصوصية.</p>
+        </div>
+        <div class="account-details-box" style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+            <div>
+              <div style="font-weight: 600;" id="privacy-user-name">-</div>
+              <div style="font-size: 11px; color: var(--color-text-muted);" id="privacy-user-uid">-</div>
+            </div>
+            <span class="badge-scope" id="privacy-edit-count">0 تعديل موثق</span>
+          </div>
+
+          <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+            <div>
+              <div style="font-weight: 600; font-size: 13px;">لوحة الشرف والمجتمع</div>
+              <div style="font-size: 11px; color: var(--color-text-muted);">إظهار اسمي في قائمة المتصدرين والمساهمين</div>
+            </div>
+            <input type="checkbox" id="chk-leaderboard-opt-in" style="width: 18px; height: 18px; accent-color: var(--color-primary); cursor: pointer;" />
+          </label>
+
+          <button type="button" id="btn-export-my-marks" class="btn-overpass" style="width: 100%; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: var(--color-text); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px;">
+            📥 تصدير علامات المراجعة الخاصة بي (JSON)
+          </button>
+
+          <div style="margin-top: 10px; padding-top: 14px; border-top: 1px solid rgba(255, 59, 48, 0.2);">
+            <div class="danger-zone-title">
+              ⚠️ منطقة الإجراءات الحساسة (حق النسيان الكامل):
+            </div>
+            <button type="button" id="btn-delete-account" class="carto-clear-btn" style="width: 100%;">
+              🗑️ حذف حسابي ومسح كافة سجلاتي نهائياً
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Field Surveyor Modal (Manara Field) -->
+    <div id="field-surveyor-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="field-surveyor-title">
+      <div class="auth-card" style="max-width: 520px; max-height: 85dvh; overflow-y: auto;">
+        <button id="btn-close-field-surveyor" class="auth-close-btn" aria-label="إغلاق" title="إغلاق">&times;</button>
+        <div id="field-surveyor-content"></div>
+      </div>
+    </div>
+
+    <!-- Edit / batch / history dialogs (content rendered by js/editing.js) -->
+    <div id="edit-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
+    <div id="batch-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
+    <div id="history-overlay" class="auth-overlay hidden" role="dialog" aria-modal="true"><div class="auth-card"></div></div>
+    <button type="button" id="batch-dock" class="batch-dock" style="display: none;"></button>
+    <!-- Focus Mode Floating HUD -->
+    <div id="focus-mode-hud" class="focus-mode-hud hidden" role="region" aria-label="وضع التركيز والتعديل السريع"></div>
+    <!-- QA Workspace (List-first issue triage view) -->
+    <section id="qa-workspace" class="qa-workspace hidden" aria-label="مساحة عمل فحص الجودة">
+      <div class="qa-workspace-container">
+        <header class="qa-workspace-header">
+          <div class="qa-header-start">
+            <span class="qa-title-icon">🛠️</span>
+            <h2 class="qa-title" data-lang="ar">فحص ومراجعة الجودة</h2>
+            <h2 class="qa-title" data-lang="en">Quality Assurance &amp; Triage</h2>
+            <span id="qa-count" class="qa-count-badge">0</span>
+          </div>
+
+          <div class="qa-filters-toolbar">
+            <div class="qa-filter-group">
+              <label for="qa-filter-rule" class="qa-filter-label"><span data-lang="ar">القاعدة:</span><span data-lang="en">Rule:</span></label>
+              <select id="qa-filter-rule" class="qa-select">
+                <option value="all">الكل / All Rules</option>
+                <option value="missing_name_en">missing_name_en (الاسم بالإنجليزي)</option>
+                <option value="missing_denom">missing_denom (المذهب)</option>
+                <option value="qibla_deviation">qibla_deviation (انحراف القبلة)</option>
+                <option value="ml_geometry_anomaly">ml_geometry_anomaly (شذوذ هندسي)</option>
+                <option value="building_yes">building_yes (تصنيف مبنى عام)</option>
+                <option value="missing_amenity">missing_amenity (مبنى بدون وسم)</option>
+                <option value="duplicate_poi">duplicate_poi (مكرر)</option>
+                <option value="mapped_as_node">mapped_as_node (نقطة بدلاً من مبنى)</option>
+                <option value="size_too_small">size_too_small (مساحة صغيرة)</option>
+                <option value="size_too_large">size_too_large (مساحة كبيرة)</option>
+                <option value="stale_data">stale_data (بيانات قديمة)</option>
+                <option value="outdated_tags">outdated_tags (وسوم قديمة)</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="qa-filter-region" class="qa-filter-label"><span data-lang="ar">المنطقة:</span><span data-lang="en">Region:</span></label>
+              <select id="qa-filter-region" class="qa-select">
+                <option value="all">جميع المناطق / All Regions</option>
+                <option value="SA-01">الرياض (SA-01)</option>
+                <option value="SA-02">مكة المكرمة (SA-02)</option>
+                <option value="SA-03">المدينة المنورة (SA-03)</option>
+                <option value="SA-04">المنطقة الشرقية (SA-04)</option>
+                <option value="SA-05">القصيم (SA-05)</option>
+                <option value="SA-06">حائل (SA-06)</option>
+                <option value="SA-07">تبوك (SA-07)</option>
+                <option value="SA-08">الحدود الشمالية (SA-08)</option>
+                <option value="SA-09">جازان (SA-09)</option>
+                <option value="SA-10">نجران (SA-10)</option>
+                <option value="SA-11">الباحة (SA-11)</option>
+                <option value="SA-12">الجوف (SA-12)</option>
+                <option value="SA-14">عسير (SA-14)</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="qa-filter-status" class="qa-filter-label"><span data-lang="ar">الحالة:</span><span data-lang="en">Status:</span></label>
+              <select id="qa-filter-status" class="qa-select">
+                <option value="all">الكل / All</option>
+                <option value="open" selected>مفتوحة / Open</option>
+                <option value="fixed">تم الإصلاح / Fixed</option>
+                <option value="skipped">تم التخطي / Skipped</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="qa-filter-sort" class="qa-filter-label"><span data-lang="ar">الترتيب:</span><span data-lang="en">Sort:</span></label>
+              <select id="qa-filter-sort" class="qa-select">
+                <option value="severity">الأهمية (الأشد أولاً) / Severity</option>
+                <option value="distance">الأقرب للخريطة / Distance</option>
+                <option value="name">أبجدياً بالاسم / Name</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="qa-header-actions">
+            <button type="button" id="qa-btn-focus" class="qa-focus-btn" title="بدء وضع التركيز (Fast Triage)">
+              <span data-lang="ar">🎯 وضع التركيز</span>
+              <span data-lang="en">🎯 Focus Mode</span>
+            </button>
+            <button type="button" id="qa-btn-close" class="qa-close-btn" title="العودة للخريطة (L أو Esc)">
+              <span data-lang="ar">✕ إغلاق</span>
+              <span data-lang="en">✕ Close</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="qa-table-wrap">
+          <table class="qa-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;"><span data-lang="ar">الأهمية</span><span data-lang="en">Severity</span></th>
+                <th><span data-lang="ar">اسم المكان</span><span data-lang="en">Place Name</span></th>
+                <th style="width: 140px;"><span data-lang="ar">العنصر</span><span data-lang="en">Object</span></th>
+                <th style="width: 180px;"><span data-lang="ar">قاعدة الفحص</span><span data-lang="en">Rule</span></th>
+                <th style="width: 90px;"><span data-lang="ar">المنطقة</span><span data-lang="en">Region</span></th>
+                <th style="width: 90px;"><span data-lang="ar">المسافة</span><span data-lang="en">Dist</span></th>
+                <th style="width: 110px;"><span data-lang="ar">الحالة</span><span data-lang="en">Status</span></th>
+              </tr>
+            </thead>
+            <tbody id="qa-table-body">
+              <!-- Rendered dynamically by qa_view.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="qa-workspace-footer">
+          <div class="qa-footer-hints">
+            <span><kbd>J</kbd> / <kbd>K</kbd> للتنقل</span>
+            <span>·</span>
+            <span><kbd>Enter</kbd> للمعاينة على الخريطة</span>
+            <span>·</span>
+            <span><kbd>F</kbd> تم الإصلاح</span>
+            <span>·</span>
+            <span><kbd>S</kbd> تخطي</span>
+            <span>·</span>
+            <span><kbd>L</kbd> أو <kbd>Esc</kbd> للعودة للخريطة</span>
+          </div>
+        </footer>
+      </div>
+    </section>
+
+    <!-- Changes Workspace (Live & daily edit monitor) -->
+    <section id="changes-workspace" class="qa-workspace hidden" aria-label="مساحة متابعة التغييرات والتحديثات">
+      <div class="qa-workspace-container">
+        <header class="qa-workspace-header">
+          <div class="qa-header-start">
+            <span class="qa-title-icon">📡</span>
+            <h2 class="qa-title" data-lang="ar">متابعة التغييرات والتحديثات</h2>
+            <h2 class="qa-title" data-lang="en">Changes &amp; Activity Monitor</h2>
+            <span id="changes-count" class="qa-count-badge">0</span>
+          </div>
+
+          <button type="button" id="changes-new-bar" class="changes-new-bar hidden" title="عرض التحديثات الجديدة (.)"></button>
+
+          <div class="qa-filters-toolbar">
+            <div class="qa-filter-group">
+              <label for="changes-filter-source" class="qa-filter-label"><span data-lang="ar">المصدر:</span><span data-lang="en">Source:</span></label>
+              <select id="changes-filter-source" class="qa-select">
+                <option value="all">الكل / All</option>
+                <option value="daily">يومي / Daily</option>
+                <option value="live">مباشر / Live</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="changes-filter-region" class="qa-filter-label"><span data-lang="ar">المنطقة:</span><span data-lang="en">Region:</span></label>
+              <select id="changes-filter-region" class="qa-select">
+                <option value="all">جميع المناطق / All Regions</option>
+                <option value="SA-01">الرياض (SA-01)</option>
+                <option value="SA-02">مكة المكرمة (SA-02)</option>
+                <option value="SA-03">المدينة المنورة (SA-03)</option>
+                <option value="SA-04">المنطقة الشرقية (SA-04)</option>
+                <option value="SA-05">القصيم (SA-05)</option>
+                <option value="SA-06">حائل (SA-06)</option>
+                <option value="SA-07">تبوك (SA-07)</option>
+                <option value="SA-08">الحدود الشمالية (SA-08)</option>
+                <option value="SA-09">جازان (SA-09)</option>
+                <option value="SA-10">نجران (SA-10)</option>
+                <option value="SA-11">الباحة (SA-11)</option>
+                <option value="SA-12">الجوف (SA-12)</option>
+                <option value="SA-14">عسير (SA-14)</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="changes-filter-kind" class="qa-filter-label"><span data-lang="ar">النوع:</span><span data-lang="en">Kind:</span></label>
+              <select id="changes-filter-kind" class="qa-select">
+                <option value="all">جميع الأنواع / All</option>
+                <option value="created">إضافة جديدة / Created</option>
+                <option value="modified">تعديل / Modified</option>
+                <option value="deleted">حذف / Deleted</option>
+                <option value="upgraded">ترقية لمبنى / Upgraded</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="changes-filter-flag" class="qa-filter-label"><span data-lang="ar">الإشارة:</span><span data-lang="en">Flag:</span></label>
+              <select id="changes-filter-flag" class="qa-select">
+                <option value="all">جميع الإشارات / All Flags</option>
+                <option value="deleted-named-mosque">deleted-named-mosque (حذف مسمى)</option>
+                <option value="name-removed">name-removed (إزالة اسم)</option>
+                <option value="religion-changed">religion-changed (تغيير مذهب/دين)</option>
+                <option value="amenity-removed">amenity-removed (إزالة وسم عبادة)</option>
+                <option value="building-downgraded">building-downgraded (تخفيض تصنيف)</option>
+                <option value="new-duplicate">new-duplicate (احتمال تكرار)</option>
+                <option value="name-ar-mismatch">name-ar-mismatch (تعارض الأسماء)</option>
+                <option value="left-boundary">left-boundary (خارج الحدود)</option>
+                <option value="issue-fixed">issue-fixed (تم الإصلاح)</option>
+              </select>
+            </div>
+
+            <div class="qa-filter-group">
+              <label for="changes-filter-status" class="qa-filter-label"><span data-lang="ar">المراجعة:</span><span data-lang="en">Triage:</span></label>
+              <select id="changes-filter-status" class="qa-select">
+                <option value="all">الكل / All</option>
+                <option value="unreviewed" selected>غير مراجع / Unreviewed</option>
+                <option value="reviewed">تمت المراجعة / Reviewed</option>
+                <option value="flagged">بحاجة لتراجع / Flagged</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="qa-header-actions">
+            <button type="button" id="changes-btn-close" class="qa-close-btn" title="العودة للخريطة (Esc)">
+              <span data-lang="ar">✕ إغلاق</span>
+              <span data-lang="en">✕ Close</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="qa-table-wrap">
+          <table class="qa-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;"><span data-lang="ar">الحدث</span><span data-lang="en">Event</span></th>
+                <th><span data-lang="ar">اسم المكان</span><span data-lang="en">Place Name</span></th>
+                <th style="width: 140px;"><span data-lang="ar">العنصر</span><span data-lang="en">Object</span></th>
+                <th><span data-lang="ar">فروقات الوسوم</span><span data-lang="en">Tag Diff</span></th>
+                <th style="width: 180px;"><span data-lang="ar">الإشارات</span><span data-lang="en">Flags</span></th>
+                <th style="width: 90px;"><span data-lang="ar">المنطقة</span><span data-lang="en">Region</span></th>
+                <th style="width: 110px;"><span data-lang="ar">المصدر</span><span data-lang="en">Source</span></th>
+                <th style="width: 110px;"><span data-lang="ar">الحالة</span><span data-lang="en">Triage</span></th>
+              </tr>
+            </thead>
+            <tbody id="changes-table-body">
+              <!-- Rendered dynamically by changes_view.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <footer class="qa-workspace-footer">
+          <div class="qa-footer-hints">
+            <span><kbd>J</kbd> / <kbd>K</kbd> للتنقل</span>
+            <span>·</span>
+            <span><kbd>Enter</kbd> للمعاينة على الخريطة</span>
+            <span>·</span>
+            <span><kbd>A</kbd> اعتماد (مراجعة)</span>
+            <span>·</span>
+            <span><kbd>R</kbd> تنبيه للتراجع</span>
+            <span>·</span>
+            <span><kbd>H</kbd> سجل OSM</span>
+            <span>·</span>
+            <span><kbd>C</kbd> OSMCha</span>
+            <span>·</span>
+            <span><kbd>M</kbd> Osmose القريب</span>
+            <span>·</span>
+            <span><kbd>Esc</kbd> إغلاق</span>
+          </div>
+        </footer>
+      </div>
+    </section>
+
+
+    <!-- Command Palette Dialog (Accessible combobox dialog) -->
+    <dialog id="command-palette-dialog" class="command-palette-dialog" aria-label="لوحة الأوامر والبحث السريع">
+      <div class="palette-box">
+        <div class="palette-input-wrap">
+          <span class="palette-search-icon">🔍</span>
+          <input type="search" id="command-palette-input" class="palette-input" placeholder="ابحث عن منطقة، أو قاعدة فحص، أو أمر..." autocomplete="off" spellcheck="false" />
+          <kbd class="palette-esc-badge">ESC</kbd>
+        </div>
+        <div id="command-palette-results" class="palette-results" role="listbox"></div>
+      </div>
+    </dialog>
+
+    <!-- AppShell Status Bar (24px) -->
+    <footer id="app-statusbar" class="app-statusbar" role="status">
+      <div class="statusbar-start">
+        <span id="sb-version">منارة v1.0</span>
+        <span class="statusbar-sep">·</span>
+        <span id="sb-visible-count">0 في العرض</span>
+      </div>
+      <div class="statusbar-center">
+        <span id="sb-selection">لم يتم تحديد مكان</span>
+      </div>
+      <div class="statusbar-end">
+        <span id="sb-batch" style="display: none;">دفعة: 0</span>
+        <span class="statusbar-sep" id="sb-batch-sep" style="display: none;">·</span>
+        <button type="button" id="sb-btn-shortcuts" class="statusbar-action" title="اختصارات لوحة المفاتيح (?)">? اختصارات</button>
+      </div>
+    </footer>
+
+    <!-- Loading / Error Overlay -->
+    <div id="loading-overlay" role="status" aria-live="polite">
+      <div class="loading-box">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <p id="loading-text">جارٍ تحميل بيانات الخريطة...</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

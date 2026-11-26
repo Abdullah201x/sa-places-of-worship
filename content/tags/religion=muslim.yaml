@@ -1,0 +1,29 @@
+key: religion
+value: muslim
+status: approved
+applies_to:
+- node
+- way
+- relation
+label:
+  ar: إسلامي
+  en: Muslim
+saudi_notes:
+  ar: إلزامي لجميع المساجد ومصليات العيد في المملكة. لا تستخدم إملاءات بديلة مثل islam
+    أو islamic.
+  en: Mandatory on all mosques and Eid prayer grounds across Saudi Arabia. Do not
+    use alternate values like islam or islamic.
+examples:
+  good:
+  - tags:
+      religion: muslim
+      amenity: place_of_worship
+  bad:
+  - tags:
+      religion: islam
+    why:
+      ar: القيمة المعيارية في خريطة الشارع المفتوحة هي muslim
+      en: Standard OSM value is muslim, not islam
+rules:
+- missing_amenity
+wiki: https://wiki.openstreetmap.org/wiki/Tag:religion=muslim

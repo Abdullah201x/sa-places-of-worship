@@ -1,0 +1,272 @@
+/* ==========================================================================
+   Manara - AppShell Topbar & Statusbar
+   ========================================================================== */
+/* ==========================================================================
+   AppShell Styles (Top Bar, Status Bar, Command Palette)
+   ========================================================================== */
+
+/* The top bar holds both languages in [data-lang] spans (as the content pages do);
+   show the one matching <html lang>. */
+html[lang="ar"] [data-lang="en"],
+html[lang="en"] [data-lang="ar"] {
+  display: none;
+}
+
+.app-topbar {
+  margin: 0; /* a generic header rule adds a 24px bottom margin */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 16px;
+  background: #0d0f17;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 20;
+  font-size: 13px;
+  user-select: none;
+}
+
+.topbar-start, .topbar-center, .topbar-end {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+.brand-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--color-primary);
+  color: #000;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.topbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.topbar-tab {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.topbar-tab:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.topbar-tab.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: 600;
+}
+
+.topbar-search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+  width: 280px;
+  transition: all 0.15s ease;
+}
+
+.topbar-search-trigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--color-text);
+}
+
+.search-trigger-kbd {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.topbar-freshness {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.freshness-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.freshness-dot {
+  font-size: 9px;
+}
+
+.dot-live {
+  color: #00ff87;
+}
+
+.dot-data {
+  color: #00f2fe;
+}
+
+.freshness-tag.warn .freshness-dot {
+  color: #ffb03a;
+}
+
+.freshness-tag.stale .freshness-dot {
+  color: #ff453a;
+}
+
+.freshness-lbl {
+  color: var(--color-text-muted);
+}
+
+.freshness-time {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.topbar-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.topbar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+
+/* AppShell Status Bar - Flex row below #map to prevent attribution collision */
+.app-statusbar {
+  position: relative;
+  flex: 0 0 24px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 16px;
+  background: #08090d;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  z-index: 20;
+  user-select: none;
+}
+.statusbar-start, .statusbar-center, .statusbar-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusbar-sep {
+  opacity: 0.4;
+}
+
+.statusbar-action {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.statusbar-action:hover {
+  color: var(--color-text);
+}
+
+
+/* Quick Fix & QA header buttons */
+.quick-fix-focus-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  background: rgba(0, 242, 254, 0.1);
+  color: var(--color-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.quick-fix-focus-btn:hover {
+  background: rgba(0, 242, 254, 0.2);
+  border-color: rgba(0, 242, 254, 0.7);
+}
+
+.qa-focus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  background: rgba(0, 242, 254, 0.12);
+  color: var(--color-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.qa-focus-btn:hover {
+  background: rgba(0, 242, 254, 0.25);
+  border-color: rgba(0, 242, 254, 0.8);
+}
+
