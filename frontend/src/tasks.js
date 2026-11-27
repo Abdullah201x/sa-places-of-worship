@@ -8,6 +8,7 @@ import { currentLang, setLanguage, addTranslations } from './i18n.js';
 import { initAnalytics } from './analytics.js';
 import { OsmApi } from './osm_api.js';
 import { showToast } from './ui.js';
+import { sendJosmCommand } from './josm.js';
 import { shortcutKey } from './keys.js';
 import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
@@ -793,13 +794,14 @@ function renderInspector(tile) {
 
   // Bind JOSM remote click
   document.getElementById('btn-josm-remote')?.addEventListener('click', async () => {
-    try {
-      await fetch(josmUrl, { mode: 'no-cors' });
+    const res = await sendJosmCommand(josmUrl);
+    if (res.ok) {
       showToast(isAr ? 'تم إرسال الأمر إلى JOSM بنجاح.' : 'Sent command to JOSM.', 'success');
-    } catch (err) {
-      console.warn('JOSM Remote Control call failed:', err);
+    } else {
       showToast(
-        isAr ? 'تعذر الاتصال بـ JOSM عبر المنفذ 8111. تأكد من تشغيل البرنامج وتفعيل Remote Control.' : 'Could not reach JOSM on port 8111. Ensure JOSM is running with Remote Control enabled.',
+        isAr
+          ? 'تعذر الاتصال بـ JOSM. شغّل JOSM وفعّل Remote Control واسمح بالوصول إلى localhost في المتصفح (مثل Brave Shields).'
+          : 'Could not reach JOSM. Start JOSM, enable Remote Control, and allow localhost access in your browser (e.g. Brave Shields).',
         'error'
       );
     }

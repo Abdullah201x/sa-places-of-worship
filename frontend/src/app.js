@@ -24,6 +24,7 @@ import { setupAiDetections } from './ai_detections.js';
 import { fetchNearbyOsmoseIssues, renderOsmoseResults } from './osmose.js';
 import { renderDuplicateInspector } from './duplicate_inspector.js';
 import { findNearbyPlaces, renderFieldSurveyorUI } from './field_mode.js';
+import { sendJosmCommand } from './josm.js';
 export let map;
 export let heatmapLayer = null;
 export let markerClusterLayer = null;
@@ -342,25 +343,23 @@ export function updateImprovementIssueCounts() {
   }
 }
 
-// Send load_and_zoom request to JOSM Remote Control port (8111)
+// Send load_and_zoom request to JOSM Remote Control (8111 HTTP / 8112 HTTPS fallback)
 export function editInJOSM(lat, lon, props) {
   // Merged places select both the building and the POI node inside it.
   const select = [`${osmTypeOf(props)}${props.osm_id}`];
   if (props.poi_node_id) select.push(`node${props.poi_node_id}`);
   const delta = 0.0015;
-  const url = `http://127.0.0.1:8111/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}&select=${select.join(',')}`;
+  const path = `/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}&select=${select.join(',')}`;
 
-  fetch(url)
-    .then(res => {
-      if (res.ok) {
-        showToast(t('josmSent'));
-      } else {
-        showToast(t('josmLoadFailed'), 'error');
-      }
-    })
-    .catch(err => {
+  sendJosmCommand(path).then(res => {
+    if (res.ok) {
+      showToast(t('josmSent'));
+    } else if (res.reachable) {
+      showToast(t('josmLoadFailed'), 'error');
+    } else {
       showToast(t('josmUnreachable'), 'error');
-    });
+    }
+  });
 }
 
 // Send the currently visible map viewport (used in Gap Mode after locating an
@@ -368,19 +367,17 @@ export function editInJOSM(lat, lon, props) {
 // the user can survey the area and add a new mosque node with its own ID.
 export function openAreaInJOSM() {
   const bounds = map.getBounds();
-  const url = `http://127.0.0.1:8111/load_and_zoom?left=${bounds.getWest()}&right=${bounds.getEast()}&top=${bounds.getNorth()}&bottom=${bounds.getSouth()}`;
+  const path = `/load_and_zoom?left=${bounds.getWest()}&right=${bounds.getEast()}&top=${bounds.getNorth()}&bottom=${bounds.getSouth()}`;
 
-  fetch(url)
-    .then(res => {
-      if (res.ok) {
-        showToast(t('josmAreaSent'));
-      } else {
-        showToast(t('josmAreaFailed'), 'error');
-      }
-    })
-    .catch(err => {
+  sendJosmCommand(path).then(res => {
+    if (res.ok) {
+      showToast(t('josmAreaSent'));
+    } else if (res.reachable) {
+      showToast(t('josmAreaFailed'), 'error');
+    } else {
       showToast(t('josmUnreachable'), 'error');
-    });
+    }
+  });
 }
 
 // Update the iD Editor link for the currently viewed map area so that the user
@@ -736,7 +733,7 @@ export function addSuggestionInJOSM(qid) {
   if (!s) return;
   const { lat, lon } = s;
   const delta = 0.0015;
-  const loadUrl = `http://127.0.0.1:8111/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}`;
+  const loadPath = `/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}`;
   
   let tags = `amenity=place_of_worship|religion=muslim|wikidata=${qid}`;
   if (!s.is_unnamed) {
@@ -745,24 +742,31 @@ export function addSuggestionInJOSM(qid) {
     else if (s.name_en) tags += `|name=${clean(s.name_en)}`;
     if (s.name_en) tags += `|name:en=${clean(s.name_en)}`;
   }
-  const addUrl = `http://127.0.0.1:8111/add_node?lon=${lon}&lat=${lat}&addtags=${encodeURIComponent(tags)}`;
+  const addPath = `/add_node?lon=${lon}&lat=${lat}&addtags=${encodeURIComponent(tags)}`;
 
   showToast(t('sugJosmWorking'));
-  fetch(loadUrl)
+  sendJosmCommand(loadPath)
     .then(res => {
-      if (!res.ok) throw new Error('Load failed');
-      return new Promise(resolve => setTimeout(resolve, 700));
+      if (!res.reachable) {
+        showToast(t('josmUnreachable'), 'error');
+        return null;
+      }
+      if (!res.ok) {
+        showToast(t('josmLoadFailed'), 'error');
+        return null;
+      }
+      return new Promise(resolve => setTimeout(resolve, 700))
+        .then(() => sendJosmCommand(addPath));
     })
-    .then(() => fetch(addUrl))
     .then(res => {
+      if (!res) return;
       if (res.ok) {
         showToast(t('sugJosmAdded'));
-      } else {
+      } else if (res.reachable) {
         showToast(t('sugJosmAddFailed'), 'error');
+      } else {
+        showToast(t('josmUnreachable'), 'error');
       }
-    })
-    .catch(() => {
-      showToast(t('josmUnreachable'), 'error');
     });
 }
 

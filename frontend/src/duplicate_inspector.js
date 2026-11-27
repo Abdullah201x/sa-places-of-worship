@@ -7,6 +7,7 @@ import { escapeHtml } from './escape.js';
 import { addTranslations, t, currentLang, fmtDate } from './i18n.js';
 import { OsmApi } from './osm_api.js';
 import { ReviewMarks, refreshAfterReviewChange } from './review.js';
+import { sendJosmCommand } from './josm.js';
 
 addTranslations({
   dupInspectorTitle: ['🔍 الفحص المباشر للازدواجية (OSM Live Diff)', '🔍 Live Duplicate Diff (OSM API)'],
@@ -490,10 +491,9 @@ function renderAnalysisView(containerEl, props, lat, lon, { wayEl, nodeEl, analy
     josmBtn.addEventListener('click', async () => {
       const select = [`${wayType}${wayId}`, `node${nodeId}`];
       const delta = 0.0015;
-      const url = `http://127.0.0.1:8111/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}&select=${select.join(',')}`;
-      try {
-        await fetch(url);
-      } catch {
+      const path = `/load_and_zoom?left=${lon - delta}&right=${lon + delta}&top=${lat + delta}&bottom=${lat - delta}&select=${select.join(',')}`;
+      const res = await sendJosmCommand(path);
+      if (!res.ok) {
         window.open(`${siteUrl}/edit?editor=id&${wayType}=${wayId}`, '_blank');
       }
     });

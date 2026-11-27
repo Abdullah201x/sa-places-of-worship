@@ -47,6 +47,7 @@ addTranslations({
   josmLoadFailed: ['فشل JOSM في تحميل المعلم. تأكد من تفعيل Remote Control.', 'JOSM could not load the object. Check that Remote Control is enabled.'],
   josmAreaSent: ['تم إرسال النطاق الحالي إلى JOSM. يمكنك الآن إضافة معلم المسجد.', 'Current view sent to JOSM. You can now add the mosque.'],
   josmAreaFailed: ['فشل JOSM في تحميل النطاق. تأكد من تفعيل Remote Control.', 'JOSM could not load the area. Check that Remote Control is enabled.'],
+  josmUnreachable: ['تعذر الاتصال بـ JOSM. شغّل JOSM وفعّل التحكم عن بعد (Remote Control)، واسمح بالوصول إلى localhost في المتصفح (مثل Brave Shields).', 'Could not reach JOSM. Start JOSM, enable Remote Control in preferences, and allow localhost access in your browser (e.g. Brave Shields).'],
 
   // Wikidata suggestions
   sugLoading: ['جارٍ تحميل اقتراحات ويكي بيانات...', 'Loading Wikidata suggestions...'],

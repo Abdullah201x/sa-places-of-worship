@@ -2,6 +2,7 @@
 // MappingTools in the osm x wikidata project (js/tools.js).
 import { addTranslations, currentLang, t, fmtNum } from './i18n.js';
 import { downloadFile } from './ui.js';
+import { sendJosmCommand } from './josm.js';
 import { map, filteredPlaces, currentMode, currentReligionFilter, currentImprovementFilter, osmTypeOf, getIssues, showToast } from './app.js';
 
 addTranslations({
@@ -15,7 +16,6 @@ addTranslations({
   josmVisibleNone: ['لا توجد أماكن ظاهرة في النطاق الحالي. قرّب الخريطة على منطقة.', 'No listed places in the current view. Zoom in on an area first.'],
   josmVisibleCapped: ['تم إرسال أول {n} مكان فقط إلى JOSM (قرّب الخريطة لتقليل العدد).', 'Only the first {n} places were sent to JOSM (zoom in to narrow the list).'],
   josmVisibleSent: ['تم إرسال {n} مكان إلى JOSM.', 'Sent {n} places to JOSM.'],
-  josmUnreachable: ['تعذر الاتصال بـ JOSM. يرجى تشغيل JOSM وتفعيل التحكم عن بعد (Remote Control) في الإعدادات.', 'Could not reach JOSM. Start JOSM and enable Remote Control in its preferences.'],
   overpassUnsupported: ['هذا الفحص محسوب من الهندسة أو التعلم الآلي ولا يمكن التعبير عنه في Overpass؛ يعرض الاستعلام كل أماكن العبادة في النطاق.', 'This check is computed from geometry/ML and cannot be expressed in Overpass; the query shows all places of worship in view.'],
   mrInstruction: ['راجع {name} ({osm}) وأصلح: {issues}', 'Review {name} ({osm}) and fix: {issues}'],
 });
@@ -117,14 +117,18 @@ export const Exporters = {
       ids.push(osmTypeOf(p)[0] + p.osm_id);
       if (p.poi_node_id) ids.push('n' + p.poi_node_id);
     });
-    fetch(`http://127.0.0.1:8111/load_object?new_layer=true&objects=${ids.join(',')}`)
+    sendJosmCommand(`/load_object?new_layer=true&objects=${ids.join(',')}`)
       .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        showToast(visible.length > capped.length
-          ? t('josmVisibleCapped', { n: fmtNum(capped.length) })
-          : t('josmVisibleSent', { n: fmtNum(capped.length) }));
-      })
-      .catch(() => showToast(t('josmUnreachable'), 'error'));
+        if (res.ok) {
+          showToast(visible.length > capped.length
+            ? t('josmVisibleCapped', { n: fmtNum(capped.length) })
+            : t('josmVisibleSent', { n: fmtNum(capped.length) }));
+        } else if (res.reachable) {
+          showToast(t('josmLoadFailed'), 'error');
+        } else {
+          showToast(t('josmUnreachable'), 'error');
+        }
+      });
   },
 
   // Overpass QL selecting what the active check flags, where the check is
